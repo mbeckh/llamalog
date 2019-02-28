@@ -1,0 +1,94 @@
+# Doxyfile 1.8.15
+
+#---------------------------------------------------------------------------
+# Project related configuration options
+#---------------------------------------------------------------------------
+PROJECT_NAME = "llamalog"
+PROJECT_NUMBER = 0.1.0
+PROJECT_BRIEF = "The lightweight lean and mean asynchronous logger."
+PROJECT_LOGO =
+OUTPUT_TEXT_DIRECTION = LTR
+STRIP_FROM_PATH = ../include/llamalog ../src
+ALIASES = "defaultconstructor=@brief Compiler generated default constructor." \
+          "defaultoperator=@brief Compiler generated default operator. @return `this`." \
+          "nocopyconstructor=@brief Deleted copy constructor because type MUST NOT be copied." \
+          "nomoveconstructor=@brief Deleted move constructor because type MUST NOT be moved." \
+		  "noassignmentoperator=@brief Deleted assignment operator because type MUST NOT be copied. @return `this`." \
+		  "nomoveoperator=@brief Deleted move operator because type MUST NOT be moved. @return `this`."
+OPTIMIZE_OUTPUT_FOR_C = YES
+BUILTIN_STL_SUPPORT = YES
+
+#---------------------------------------------------------------------------
+# Build related configuration options
+#---------------------------------------------------------------------------
+EXTRACT_LOCAL_CLASSES = NO
+CASE_SENSE_NAMES = YES
+SORT_BRIEF_DOCS = YES
+SORT_MEMBERS_CTORS_1ST = YES
+SORT_BY_SCOPE_NAME = YES
+SHOW_USED_FILES = NO
+
+#---------------------------------------------------------------------------
+# Configuration options related to warning and progress messages
+#---------------------------------------------------------------------------
+WARN_NO_PARAMDOC = YES
+
+#---------------------------------------------------------------------------
+# Configuration options related to the input files
+#---------------------------------------------------------------------------
+INPUT = ../include
+FILE_PATTERNS = *.h
+RECURSIVE = YES
+
+#---------------------------------------------------------------------------
+# Configuration options related to source browsing
+#---------------------------------------------------------------------------
+VERBATIM_HEADERS = NO
+
+#---------------------------------------------------------------------------
+# Configuration options related to the alphabetical class index
+#---------------------------------------------------------------------------
+COLS_IN_ALPHA_INDEX = 1
+
+#---------------------------------------------------------------------------
+# Configuration options related to the HTML output
+#---------------------------------------------------------------------------
+HTML_OUTPUT = html_public
+HTML_DYNAMIC_MENUS = NO
+HTML_INDEX_NUM_ENTRIES = 0
+DISABLE_INDEX = YES
+GENERATE_TREEVIEW = YES
+ENUM_VALUES_PER_LINE = 1
+
+#---------------------------------------------------------------------------
+# Configuration options related to the LaTeX output
+#---------------------------------------------------------------------------
+GENERATE_LATEX = NO
+
+#---------------------------------------------------------------------------
+# Configuration options related to the preprocessor
+#---------------------------------------------------------------------------
+MACRO_EXPANSION = YES
+EXPAND_ONLY_PREDEF = YES
+PREDEFINED = _In_= \
+             _In_opt_= \
+             _In_z_= \
+             _In_opt_z_= \
+			 _In_reads_bytes_(x)= \
+             _Inout_= \
+			 _Ret_notnull_= \
+			 __declspec(x)= \
+             __restrict=
+
+#---------------------------------------------------------------------------
+# Configuration options related to the dot tool
+#---------------------------------------------------------------------------
+CLASS_DIAGRAMS = NO
+HIDE_UNDOC_RELATIONS = NO
+HAVE_DOT = YES
+DOT_FONTNAME = sans-serif
+UML_LOOK = YES
+TEMPLATE_RELATIONS = YES
+DOT_IMAGE_FORMAT = svg
+DOT_MULTI_TARGETS = YES
+GENERATE_LEGEND = NO

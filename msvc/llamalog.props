@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <llamalogDirectory>$(MSBuildThisFileDirectory)..\</llamalogDirectory>
+	<IncludePath Condition="'$(ProjectGuid)'!='{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}'">$(llamalogDirectory)include;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories Condition="'$(ProjectGuid)'=='{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}'">$(llamalogDirectory)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup Condition="'$(ProjectGuid)'!='{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)llamalog\llamalog.vcxproj">
+      <Project>{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}</Project>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemGroup>
+</Project>

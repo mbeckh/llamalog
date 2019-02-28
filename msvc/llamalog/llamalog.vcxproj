@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}</ProjectGuid>
+    <RootNamespace>llamalog</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)msvc-common\ProjectConfiguration.props" />
+  <Import Project="$(SolutionDir)msvc\ProjectConfiguration.props" Condition="exists('$(SolutionDir)msvc\ProjectConfiguration.props')" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(SolutionDir)msvc-common\BuildConfiguration.props" />
+    <Import Project="$(SolutionDir)msvc-common\fmt.props" />
+    <Import Project="..\llamalog.props" />
+    <Import Project="$(SolutionDir)msvc\BuildConfiguration.props" Condition="exists('$(SolutionDir)msvc\BuildConfiguration.props')" />
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <ClCompile />
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\llamalog\CustomArgument.h" />
+    <ClInclude Include="..\..\include\llamalog\LogLine.h" />
+    <ClInclude Include="..\..\include\llamalog\llamalog.h" />
+    <ClInclude Include="..\..\include\llamalog\LogWriter.h" />
+    <ClInclude Include="..\..\include\llamalog\WindowsTypes.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\LogLine.cpp" />
+    <ClCompile Include="..\..\src\llamalog.cpp" />
+    <ClCompile Include="..\..\src\LogWriter.cpp" />
+    <ClCompile Include="..\..\src\ToDo.cpp" />
+    <ClCompile Include="..\..\src\WindowsTypes.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets" />
+</Project>
