@@ -1,0 +1,17 @@
+[submodule "fmt"]
+	path = lib/fmt
+	url = https://github.com/fmtlib/fmt.git
+	update = merge
+	branch = master
+	shallow = true
+[submodule "googletest"]
+	path = lib/googletest
+	url = https://github.com/google/googletest.git
+	update = merge
+	branch = master
+	shallow = true
+[submodule "msvc-common"]
+	path = msvc-common
+	url = https://github.com/mbeckh/msvc-common.git
+	update = rebase
+	branch = .
