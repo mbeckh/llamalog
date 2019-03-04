@@ -149,7 +149,7 @@ CheckOptions:
   - key:   readability-identifier-naming.ValueTemplateParameterCase
     value: 'camelBack'
   - key:   readability-identifier-naming.ParameterPackCase
-    value: 'CamelCase'
+    value: 'camelBack'
   - key:   readability-inconsistent-declaration-parameter-name.Strict
     value: '1'
   - key:   readability-simplify-boolean-expr.ChainedConditionalReturn
