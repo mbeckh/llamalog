@@ -299,7 +299,7 @@ private:
 	std::queue<std::unique_ptr<Buffer>> m_buffers;  ///< @brief The queue of buffers.
 };
 
-}  // anonymous namespace
+}  // namespace
 
 
 /// @brief The main logger class.
@@ -352,7 +352,7 @@ private:
 			std::this_thread::sleep_for(std::chrono::microseconds(50));
 		}
 
-		LogLine logLine(LogLevel::kInfo, nullptr, nullptr, 0, "");
+		LogLine logLine(LogLevel::kInfo, nullptr, 0, nullptr, "");
 
 		while (m_state.load() == State::kReady) {
 			if (m_buffer.TryPop(logLine)) {
@@ -423,14 +423,20 @@ void Log::operator+=(LogLine&& logLine) {
 }
 
 // Derived from `initialize` from NanoLog.
-void Initialize(std::unique_ptr<LogWriter>&& logWriter) {
-	g_logger = std::make_unique<Logger>(std::move(logWriter));
+void Initialize(std::unique_ptr<LogWriter>&& writer) {
+	g_logger = std::make_unique<Logger>(std::move(writer));
 	g_atomicLogger.store(g_logger.get(), std::memory_order_seq_cst);
 }
 
 // Derived from `initialize` from NanoLog.
 void Initialize() {
-	//Initialize(std::unique_ptr<LogWriter>(new DailyRollingFileWriter(LogLevel::Trace, "t:\\tmp\\", "llamalog.log")));
-	Initialize(std::unique_ptr<LogWriter>(new DebugWriter(LogLevel::kTrace)));
+	Initialize(std::unique_ptr<LogWriter>(new DailyRollingFileWriter(LogLevel::kTrace, "t:\\tmp\\", "llamalog.log")));
+	//Initialize(std::unique_ptr<LogWriter>(new DebugWriter(LogLevel::kTrace)));
 }
+
+void Shutdown() {
+	g_atomicLogger.store(nullptr);
+	g_logger.reset();
+}
+
 }  // namespace llamalog

@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "llamalog/WindowsTypes.h"
 
-#include "llamalog/CustomArgument.h"
+#include "llamalog/CustomTypes.h"
 #include "llamalog/LogLine.h"
 
 #include <fmt/core.h>
@@ -29,8 +29,7 @@ limitations under the License.
 
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT& arg) {
-	logLine.AddCustomArgument(arg);
-	return logLine;
+	return logLine.AddCustomArgument(arg);
 }
 
 /// @brief Specialization of `fmt::formatter` for a `POINT`.
@@ -74,8 +73,7 @@ private:
 
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT& arg) {
-	logLine.AddCustomArgument(arg);
-	return logLine;
+	return logLine.AddCustomArgument(arg);
 }
 
 /// @brief Specialization of `fmt::formatter` for a `RECT`.

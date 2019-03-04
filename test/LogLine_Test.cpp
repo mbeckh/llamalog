@@ -14,11 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <llamalog/LogLine.h>
+#include "llamalog/LogLine.h"
 
 #include <gmock/gmock.h>
 
 #include <cinttypes>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <string>
 
 #if 0
 #include "Foo.h"
@@ -34,9 +38,6 @@ limitations under the License.
 
 namespace llamalog::test {
 
-using std::string;
-using std::wstring;
-
 #if 0
 using m3c4t::IStream_Mock;
 using m3c4t::IStream_Stat;
@@ -51,31 +52,36 @@ using testing::Test;
 using testing::Unused;
 #endif
 
-static LogLine GetLogLine(const char* const szPattern = "{}") {
-	return LogLine(LogLevel::kDebug, __FILE__, __FUNCTION__, __LINE__, szPattern);
+namespace {
+
+LogLine GetLogLine(const char* const szPattern = "{}") {
+	return LogLine(LogLevel::kDebug, "file.cpp", 99, "myfunction()", szPattern);
 }
+
+}  // namespace
+
 //
 // bool
 //
 
-TEST(LogLineTest, bool_IsTrue_PrintValue) {
+TEST(LogLineTest, bool_IsTrue_PrintTrue) {
 	LogLine logLine = GetLogLine();
 	{
 		const bool arg = true;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("true", str);
 }
 
-TEST(LogLineTest, bool_IsFalse_PrintValue) {
+TEST(LogLineTest, bool_IsFalse_PrintFalse) {
 	LogLine logLine = GetLogLine();
 	{
 		const bool arg = false;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("false", str);
 }
@@ -86,7 +92,7 @@ TEST(LogLineTest, bool_IsTrueAsNumber_PrintOne) {
 		const bool arg = true;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("1", str);
 }
@@ -102,9 +108,20 @@ TEST(LogLineTest, char_IsCharacter_PrintCharacter) {
 		const char arg = 'a';
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("a", str);
+}
+
+TEST(LogLineTest, char_IsCharacterAsNumber_PrintNumber) {
+	LogLine logLine = GetLogLine("{:d}");
+	{
+		const char arg = 'a';
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("97", str);
 }
 
 TEST(LogLineTest, char_IsCharacterAsHex_PrintHex) {
@@ -113,7 +130,7 @@ TEST(LogLineTest, char_IsCharacterAsHex_PrintHex) {
 		const char arg = 'M';
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("4d", str);
 }
@@ -124,7 +141,7 @@ TEST(LogLineTest, char_IsEscaped_PrintEscaped) {
 		const char arg = '\n';
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("\\n", str);
 }
@@ -135,7 +152,7 @@ TEST(LogLineTest, char_IsEscapedDoNotEscape_PrintUnescaped) {
 		const char arg = '\n';
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("\n", str);
 }
@@ -148,12 +165,13 @@ TEST(LogLineTest, char_IsEscapedDoNotEscape_PrintUnescaped) {
 TEST(LogLineTest, unsignedchar_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const unsigned char arg = 8u;
+		const unsigned char arg = 179u;
+		static_assert(arg > SCHAR_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("179", str);
 }
 
 
@@ -164,23 +182,25 @@ TEST(LogLineTest, unsignedchar_IsValue_PrintValue) {
 TEST(LogLineTest, short_IsPositive_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const short arg = 8;
+		const short arg = 2790;
+		static_assert(arg > INT8_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("2790", str);
 }
 
 TEST(LogLineTest, short_IsNegative_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const short arg = -8;
+		const short arg = -2790;
+		static_assert(arg < INT8_MIN);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("-8", str);
+	EXPECT_EQ("-2790", str);
 }
 
 
@@ -191,12 +211,13 @@ TEST(LogLineTest, short_IsNegative_PrintValue) {
 TEST(LogLineTest, unsignedshort_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const unsigned short arg = 8u;
+		const unsigned short arg = 37900u;
+		static_assert(arg > SHRT_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("37900", str);
 }
 
 
@@ -207,23 +228,25 @@ TEST(LogLineTest, unsignedshort_IsValue_PrintValue) {
 TEST(LogLineTest, int_IsPositive_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const int arg = 8;
+		const int arg = 27900;
+		static_assert(arg > INT8_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("27900", str);
 }
 
 TEST(LogLineTest, int_IsNegative_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const int arg = -8;
+		const int arg = -27900;
+		static_assert(arg < INT8_MIN);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("-8", str);
+	EXPECT_EQ("-27900", str);
 }
 
 
@@ -234,12 +257,13 @@ TEST(LogLineTest, int_IsNegative_PrintValue) {
 TEST(LogLineTest, unsignedint_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const unsigned int arg = 8u;
+		const unsigned int arg = 37900u;
+		static_assert(arg > INT16_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("37900", str);
 }
 
 
@@ -250,23 +274,25 @@ TEST(LogLineTest, unsignedint_IsValue_PrintValue) {
 TEST(LogLineTest, long_IsPositive_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const long arg = 8L;
+		const long arg = 379000L;
+		static_assert(arg > INT16_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("379000", str);
 }
 
 TEST(LogLineTest, long_IsNegative_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const long arg = -8L;
+		const long arg = -379000L;
+		static_assert(arg < INT16_MIN);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("-8", str);
+	EXPECT_EQ("-379000", str);
 }
 
 
@@ -277,12 +303,13 @@ TEST(LogLineTest, long_IsNegative_PrintValue) {
 TEST(LogLineTest, unsignedlong_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const unsigned long arg = 8UL;
+		const unsigned long arg = 3790000000UL;
+		static_assert(arg > LONG_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("3790000000", str);
 }
 
 
@@ -293,23 +320,25 @@ TEST(LogLineTest, unsignedlong_IsValue_PrintValue) {
 TEST(LogLineTest, longlong_IsPositive_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const long long arg = 8LL;
+		const long long arg = 379000000000LL;
+		static_assert(arg > LONG_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("379000000000", str);
 }
 
 TEST(LogLineTest, longlong_IsNegative_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const long long arg = -8LL;
+		const long long arg = -379000000000LL;
+		static_assert(arg < LONG_MIN);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("-8", str);
+	EXPECT_EQ("-379000000000", str);
 }
 
 
@@ -320,12 +349,13 @@ TEST(LogLineTest, longlong_IsNegative_PrintValue) {
 TEST(LogLineTest, unsignedlonglong_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const unsigned long long arg = 8ULL;
+		const unsigned long long arg = 10790000000000000000ULL;
+		static_assert(arg > LLONG_MAX);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("8", str);
+	EXPECT_EQ("10790000000000000000", str);
 }
 
 
@@ -339,7 +369,7 @@ TEST(LogLineTest, float_IsValue_PrintValue) {
 		const float arg = 8.8f;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("8.8", str);
 }
@@ -350,7 +380,7 @@ TEST(LogLineTest, float_IsFltMin_PrintValue) {
 		const float arg = FLT_MIN;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	char sz[1024];
 	sprintf_s(sz, "%g", FLT_MIN);
@@ -363,7 +393,7 @@ TEST(LogLineTest, float_IsFltMax_PrintValue) {
 		const float arg = -FLT_MAX;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	char sz[1024];
 	sprintf_s(sz, "%g", -FLT_MAX);
@@ -381,7 +411,7 @@ TEST(LogLineTest, double_IsValue_PrintValue) {
 		const double arg = 8.8;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("8.8", str);
 }
@@ -392,7 +422,7 @@ TEST(LogLineTest, double_IsDblMin_PrintValue) {
 		const double arg = DBL_MIN;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	char sz[1024];
 	sprintf_s(sz, "%g", DBL_MIN);
@@ -405,7 +435,7 @@ TEST(LogLineTest, double_IsDblMax_PrintValue) {
 		const double arg = -DBL_MAX;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	char sz[1024];
 	sprintf_s(sz, "%g", -DBL_MAX);
@@ -423,7 +453,7 @@ TEST(LogLineTest, longdouble_IsValue_PrintValue) {
 		const long double arg = 8.8l;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("8.8", str);
 }
@@ -434,7 +464,7 @@ TEST(LogLineTest, longdouble_IsLdblMin_PrintValue) {
 		const long double arg = LDBL_MIN;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	char sz[1024];
 	sprintf_s(sz, "%g", LDBL_MIN);
@@ -447,7 +477,7 @@ TEST(LogLineTest, longdouble_IsLdblMax_PrintValue) {
 		const long double arg = LDBL_MAX;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	char sz[1024];
 	sprintf_s(sz, "%g", LDBL_MAX);
@@ -461,16 +491,13 @@ TEST(LogLineTest, longdouble_IsLdblMax_PrintValue) {
 
 TEST(LogLineTest, voidptr_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
-	char sz[1024];
 	{
-		int value = 9;
-		void* arg = &value;
-		sprintf_s(sz, "0x%" PRIxPTR, (uintptr_t) arg);
+		void* arg = reinterpret_cast<void*>(0x123);
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ(sz, str);
+	EXPECT_EQ("0x123", str);
 }
 
 TEST(LogLineTest, voidptr_IsNullptr_PrintZero) {
@@ -479,7 +506,7 @@ TEST(LogLineTest, voidptr_IsNullptr_PrintZero) {
 		const void* const arg = nullptr;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("0x0", str);
 }
@@ -495,7 +522,7 @@ TEST(LogLineTest, nullptr_IsValue_PrintNull) {
 		const nullptr_t arg = nullptr;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("0x0", str);
 }
@@ -510,7 +537,7 @@ TEST(LogLineTest, charptr_IsLiteral_PrintValue) {
 	{
 		logLine << "Test";
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test", str);
 }
@@ -521,7 +548,7 @@ TEST(LogLineTest, charptr_IsValue_PrintValue) {
 		const char* const arg = "Test";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test", str);
 }
@@ -531,12 +558,12 @@ TEST(LogLineTest, charptr_IsLongValue_PrintValue) {
 	LogLine logLine = GetLogLine("{} {}");
 	{
 		const char* const arg0 = "Test";
-		const string arg1 = string(1024, 'x');
-		logLine << arg0 << arg1;
+		const std::string arg1(1024, 'x');
+		logLine << arg0 << arg1.c_str();
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test " + string(1024, 'x'), str);
+	EXPECT_EQ("Test " + std::string(1024, 'x'), str);
 }
 
 TEST(LogLineTest, charptr_HasEscapedChar_PrintEscapeChar) {
@@ -545,7 +572,7 @@ TEST(LogLineTest, charptr_HasEscapedChar_PrintEscapeChar) {
 		const char* const arg = "Test\nNext Line";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test\\nNext Line", str);
 }
@@ -556,7 +583,7 @@ TEST(LogLineTest, charptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
 		const char* const arg = "Test\nNext Line";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test\nNext Line", str);
 }
@@ -567,7 +594,7 @@ TEST(LogLineTest, charptr_HasHexChar_PrintEscapedValue) {
 		const char* const arg = "Te\xE4st";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Te\\xE4st", str);
 }
@@ -578,7 +605,7 @@ TEST(LogLineTest, charptr_HasHexCharDoNotEscape_PrintUnescaped) {
 		const char* const arg = "Te\xE4st";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Te\xE4st", str);
 }
@@ -589,7 +616,7 @@ TEST(LogLineTest, charptr_IsNullptr_PrintZero) {
 		const char* const arg = nullptr;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("0x0", str);
 }
@@ -604,7 +631,7 @@ TEST(LogLineTest, wcharptr_IsLiteral_PrintValue) {
 	{
 		logLine << L"Test";
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test", str);
 }
@@ -615,7 +642,7 @@ TEST(LogLineTest, wcharptr_IsValue_PrintValue) {
 		const wchar_t* const arg = L"Test";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test", str);
 }
@@ -623,24 +650,24 @@ TEST(LogLineTest, wcharptr_IsValue_PrintValue) {
 TEST(LogLineTest, wcharptr_IsLongValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const wstring arg(257, L'x');
+		const std::wstring arg(257, L'x');
 		logLine << arg.c_str();
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ(string(257, 'x'), str);
+	EXPECT_EQ(std::string(257, 'x'), str);
 }
 
 TEST(LogLineTest, wcharptr_IsLongValueAfterConversion_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		wstring arg(255, L'x');
+		std::wstring arg(255, L'x');
 		arg.push_back(L'\xE4');
 		logLine << arg.c_str();
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ(string(255, 'x') + "\\xC3\\xA4", str);
+	EXPECT_EQ(std::string(255, 'x') + "\\xC3\\xA4", str);
 }
 
 TEST(LogLineTest, wcharptr_HasEscapedChar_PrintEscapedValue) {
@@ -649,7 +676,7 @@ TEST(LogLineTest, wcharptr_HasEscapedChar_PrintEscapedValue) {
 		const wchar_t* const arg = L"Test\nNext Line";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test\\nNext Line", str);
 }
@@ -660,7 +687,7 @@ TEST(LogLineTest, wcharptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
 		const wchar_t* const arg = L"Test\nNext Line";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test\nNext Line", str);
 }
@@ -671,7 +698,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtEnd_PrintUtf8Value) {
 		const wchar_t* const arg = L"Test\xE4";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test\\xC3\\xA4", str);
 }
@@ -682,7 +709,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtEndDoNotEscape_PrintUtf8Unescaped) {
 		const wchar_t* const arg = L"Test\xE4";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test\xC3\xA4", str);
 }
@@ -693,7 +720,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtStart_PrintUtf8Value) {
 		const wchar_t* const arg = L"\xE4Test";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("\\xC3\\xA4Test", str);
 }
@@ -704,7 +731,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharInMiddle_PrintUtf8Value) {
 		const wchar_t* const arg = L"Te\xE4st";
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Te\\xC3\\xA4st", str);
 }
@@ -715,9 +742,61 @@ TEST(LogLineTest, wcharptr_IsNullptr_PrintNull) {
 		const wchar_t* const arg = nullptr;
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("0x0", str);
+}
+
+
+//
+// string
+//
+
+TEST(LogLineTest, string_IsValue_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		logLine << std::string("Test");
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("Test", str);
+}
+
+TEST(LogLineTest, string_IsReference_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const std::string arg("Test");
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("Test", str);
+}
+
+
+//
+// wstring
+//
+
+TEST(LogLineTest, wstring_IsValue_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		logLine << std::wstring(L"Test\xE4");
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("Test\\xC3\\xA4", str);
+}
+
+TEST(LogLineTest, wstring_IsReference_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const std::wstring arg(L"Test\xE4");
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("Test\\xC3\\xA4", str);
 }
 
 
@@ -725,7 +804,7 @@ TEST(LogLineTest, wcharptr_IsNullptr_PrintNull) {
 // two arguments
 //
 
-TEST(LogLineTest, Multiple_TwoArguments_PrintValues) {
+TEST(LogLineTest, Multiple_ThreeArguments_PrintValues) {
 	LogLine logLine = GetLogLine("{} {} {}");
 	{
 		const char* arg0 = "Test";
@@ -733,7 +812,7 @@ TEST(LogLineTest, Multiple_TwoArguments_PrintValues) {
 		const int arg2 = 7;
 		logLine << arg0 << arg1 << arg2;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test Test 7", str);
 }

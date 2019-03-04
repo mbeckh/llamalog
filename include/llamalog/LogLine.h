@@ -75,24 +75,36 @@ public:
 	/// @details The timestamp is not set until `#GenerateTimestamp` is called.
 	/// @param logLevel The `#LogLevel`.
 	/// @param szFile The logged file name. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-	/// @param szFunction The logged function. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 	/// @param line The logged line number.
+	/// @param szFunction The logged function. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 	/// @param szMessage The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-	LogLine(LogLevel logLevel, _In_z_ const char* __restrict szFile, _In_z_ const char* __restrict szFunction, std::uint32_t line, _In_z_ const char* __restrict szMessage) noexcept;
+	LogLine(LogLevel logLevel, _In_z_ const char* __restrict szFile, std::uint32_t line, _In_z_ const char* __restrict szFunction, _In_z_ const char* __restrict szMessage) noexcept;
 
-	LogLine(const LogLine&) = delete;       ///< @nocopyconstructor
-	LogLine(LogLine&&) noexcept = default;  ///< @defaultconstructor
-	~LogLine() noexcept = default;
+	LogLine(const LogLine&) = delete;  ///< @nocopyconstructor
+	/// @brief Move the buffers.
+	/// @param logLine The source logline.
+	LogLine(LogLine&& logLine) noexcept;
+	/// @brief Calls the destructor of every custom argument.
+	~LogLine() noexcept;
 
 public:
-	LogLine& operator=(const LogLine&) = delete;       ///< @noassignmentoperator
-	LogLine& operator=(LogLine&&) noexcept = default;  ///< @defaultoperator
+	LogLine& operator=(const LogLine&) = delete;  ///< @noassignmentoperator
+	/// @brief Move the buffers.
+	/// @param logLine The source logline.
+	/// @return The current object for method chaining.
+	LogLine& operator=(LogLine&& logLine) noexcept;
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(int32_t)` from NanoLog.
 	LogLine& operator<<(bool arg);
+
+	/// @brief Add a log argument. @note A `char` is distinct from both `signed char` and `unsigned char`.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	/// @copyright Based on `NanoLogLine::operator<<(char)` from NanoLog.
+	LogLine& operator<<(char arg);
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
@@ -216,6 +228,7 @@ public:
 	const FILETIME& GetTimestamp() const noexcept {
 		return m_timestamp;
 	}
+
 	/// @brief Generate the timestamp for the log event.
 	/// @note Not part of the constructor to support setting it from the logger queue.
 	void GenerateTimestamp() noexcept {
@@ -252,12 +265,45 @@ public:
 		return m_line;
 	}
 
-	/// @brief Returns the formatted log message.
+	/// @brief Returns the formatted log message. @note The name `GetMessage` would conflict with the function from the
+	/// Windows API having the same name.
 	/// @return The log message.
 	/// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
-	std::string GetMessage() const;
+	std::string GetLogMessage() const;
+
+	/// @brief Copy a log argument of a custom type to the argument buffer.
+	/// @details This function handles types which are trivially copyable.
+	/// @remark Include `<llamalog/CustomTypes.h>` in your implementation file before calling this function.
+	/// @tparam T The type of the argument. This type MUST have a copy constructor.
+	/// @param arg The object.
+	/// @return The current object for method chaining.
+	template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int> = 0>
+	LogLine& AddCustomArgument(const T& arg);
+
+	/// @brief Copy a log argument of a custom type to the argument buffer.
+	/// @details This function handles types which are not trivially copyable. However, the type MUST support copy construction.
+	/// @remark Include `<llamalog/CustomTypes.h>` in your implementation file before calling this function.
+	/// @tparam T The type of the argument. This type MUST have a copy constructor.
+	/// @param arg The object.
+	/// @return The current object for method chaining.
+	template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
+	LogLine& AddCustomArgument(const T& arg);
+
+public:
+	class Internal;  // Allow access to internals in implementation through helper class.
 
 private:
+	/// @brief Type of the function to construct an argument in the buffer.
+	using Construct = void (*)(_In_ std::byte*, _Out_ std::byte*) noexcept;
+	/// @brief Type of the function to destruct an argument in the buffer.
+	using Destruct = void (*)(_Inout_ std::byte*) noexcept;
+
+private:
+	/// @brief Get the argument buffer for writing.
+	/// @return The start of the buffer.
+	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
+	_Ret_notnull_ __declspec(restrict) std::byte* GetBuffer() noexcept;
+
 	/// @brief Get the argument buffer.
 	/// @return The start of the buffer.
 	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
@@ -288,9 +334,9 @@ private:
 	void WriteString(_In_z_ const T* arg, std::size_t cchLength);
 
 	/// @brief Add a custom object to the argument buffer.
-	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, the
-	/// pointer to the function to create the formatter	argument, the size of the data, padding as required and finally
-	/// the bytes of @p ptr.
+	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, a pointer
+	/// to the function to create the formatter argument, the size of the data, padding as required and finally the
+	/// bytes of @p ptr.
 	/// @remark The function to create the formatter argument is supplied as a void pointer which removes the compile
 	/// time dependency to {fmt} from this header.
 	/// @param ptr A pointer to the argument data.
@@ -298,15 +344,25 @@ private:
 	/// @param cbAlign The alignment requirement of the type.
 	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::basic_format_arg` object.
-	void WriteCustomArgument(_In_reads_bytes_(cbSize) const std::byte* __restrict ptr, std::size_t cbObjectSize, std::size_t cbAlign, const void* createFormatArg);
+	void WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict ptr, std::size_t cbObjectSize, std::size_t cbAlign, _In_ const void* createFormatArg);
 
-public:
-	/// @brief Copy a log argument of a custom type to the argument buffer.
-	/// @remark Include `CustomArgument.h` in your implementation file before calling this function.
-	/// @tparam T The type of the argument. This type MUST be copyable using `std::memcpy`.
-	/// @param arg The object.
-	template <typename T>
-	void AddCustomArgument(const T& arg);
+	/// @brief Add a custom object to the argument buffer.
+	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, the pointer
+	/// to the function to move the argument, the pointer to the function to call the destructor of the custom type, a
+	/// pointer to the function to create the formatter argument, the size of the data, padding as required and finally
+	/// the bytes of the object.
+	/// @note This function does NOT copy the object but only returns the target address.
+	/// @remark The function to create the formatter argument is supplied as a void pointer which removes the compile
+	/// time dependency to {fmt} from this header.
+	/// @param cbObjectSize The size of the object.
+	/// @param cbAlign The alignment requirement of the type.
+	/// @param construct A pointer to a function which creates the custom type either by copy or move, whichever is
+	/// more efficient. Both adresses can be assumed to be properly aligned.
+	/// @param destruct A pointer to a function which calls the type's destructor.
+	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
+	/// newly created `fmt::basic_format_arg` object.
+	/// @return An adress where to copy the current argument.
+	__declspec(restrict) std::byte* WriteNonTriviallyCopyable(std::size_t cbObjectSize, std::size_t cbAlign, _In_ Construct construct, _In_ Destruct destruct, _In_ const void* createFormatArg);
 
 private:
 	/// @copyright Same as `NanoLogLine::m_bytes_used` from NanoLog. @hideinitializer
@@ -323,6 +379,7 @@ private:
 	std::byte m_stackBuffer[256
 							- sizeof(std::size_t) * 2
 							- sizeof(std::unique_ptr<std::byte[]>)
+							- sizeof(bool)
 							- sizeof(LogLevel)
 							- sizeof(DWORD)
 							- sizeof(std::uint32_t)
@@ -330,10 +387,11 @@ private:
 							- sizeof(const char*) * 3];
 
 	// The following fields start with the smallest aligning requirement to optimize the size of m_stackBuffer.
-	LogLevel m_logLevel;   ///< @brief The entry's log level.
-	DWORD m_threadId;      ///< @brief The id of the thread which created the log entry.
-	std::uint32_t m_line;  ///< @brief The line number in the source file.
-	FILETIME m_timestamp;  ///< @brief The timestamp at which this entry had been created.
+	bool m_hasNonTriviallyCopyable = false;  ///< @brief `true` if at least one argument needs special handling on buffer operations. @hideinitializer
+	LogLevel m_logLevel;                     ///< @brief The entry's log level.
+	DWORD m_threadId;                        ///< @brief The id of the thread which created the log entry.
+	std::uint32_t m_line;                    ///< @brief The line number in the source file.
+	FILETIME m_timestamp;                    ///< @brief The timestamp at which this entry had been created.
 
 	/// @details Only a pointer is stored, i.e. the string MUST NOT go out of scope.
 	const char* __restrict m_szFile;  ///< @brief The source file of the log statement creating this entry.

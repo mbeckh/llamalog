@@ -21,6 +21,7 @@ limitations under the License.
 
 #include <windows.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <chrono>
@@ -32,6 +33,7 @@ limitations under the License.
 #include <fstream>
 #include <iterator>
 #include <memory>
+#include <new>
 #include <ostream>
 #include <queue>
 #include <sstream>

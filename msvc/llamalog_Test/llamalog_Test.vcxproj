@@ -29,6 +29,7 @@
     <ClCompile />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\test\CustomTypes_Test.cpp" />
     <ClCompile Include="..\..\test\LogLine_Test.cpp" />
     <ClCompile Include="..\..\test\Log_Test.cpp" />
     <ClCompile Include="..\..\test\main.cpp" />

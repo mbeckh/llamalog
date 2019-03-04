@@ -27,7 +27,7 @@
     <ClCompile />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\llamalog\CustomArgument.h" />
+    <ClInclude Include="..\..\include\llamalog\CustomTypes.h" />
     <ClInclude Include="..\..\include\llamalog\LogLine.h" />
     <ClInclude Include="..\..\include\llamalog\llamalog.h" />
     <ClInclude Include="..\..\include\llamalog\LogWriter.h" />

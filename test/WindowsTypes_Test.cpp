@@ -14,22 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <llamalog/WindowsTypes.h>
+#include "llamalog/WindowsTypes.h"
+
+#include "llamalog/LogLine.h"
 
 #include <gmock/gmock.h>
 
-#include <Windows.h>
+#include <windows.h>
 
 #include <cinttypes>
+#include <cstdint>
+#include <cstdio>
+#include <string>
 
 
 namespace llamalog::test {
 
-using std::string;
+namespace {
 
-static LogLine GetLogLine(const char* const szPattern = "{}") {
-	return LogLine(LogLevel::kDebug, __FILE__, __FUNCTION__, __LINE__, szPattern);
+LogLine GetLogLine(const char* const szPattern = "{}") {
+	return LogLine(LogLevel::kDebug, "file.cpp", 99, "myfunction()", szPattern);
 }
+
+}  // namespace
 
 
 //
@@ -42,7 +49,7 @@ TEST(WindowsTypesTest, LARGEINTEGER_IsValue_PrintValue) {
 		const LARGE_INTEGER arg = {{0xFFu, -1L}};
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("-4294967041", str);
 }
@@ -58,7 +65,7 @@ TEST(WindowsTypesTest, ULARGEINTEGER_IsValue_PrintValue) {
 		const ULARGE_INTEGER arg = {{0xFFu, 0xFFu}};
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("1095216660735", str);
 }
@@ -76,7 +83,7 @@ TEST(WindowsTypesTest, HINSTANCE_IsValue_PrintValue) {
 		sprintf_s(sz, "0x%" PRIxPTR, reinterpret_cast<uintptr_t>(arg));
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ(sz, str);
 }
@@ -87,7 +94,7 @@ TEST(WindowsTypesTest, HINSTANCE_IsNullptr_PrintZero) {
 		const HINSTANCE arg = nullptr;  // NOLINT(misc-misplaced-const): We DO want a const variable.
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("0x0", str);
 }
@@ -103,7 +110,17 @@ TEST(WindowsTypesTest, POINT_IsValue_PrintValue) {
 		const POINT arg = {-10, 20};
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(-10, 20)", str);
+}
+
+TEST(WindowsTypesTest, POINT_IsInline_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		logLine << POINT{-10, 20};
+	}
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("(-10, 20)", str);
 }
@@ -114,7 +131,7 @@ TEST(WindowsTypesTest, POINT_IsValuePrintPadded_PrintPadded) {
 		const POINT arg = {-10, 20};
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("(-010,  020)", str);
 }
@@ -130,7 +147,7 @@ TEST(WindowsTypesTest, RECT_IsValue_PrintValue) {
 		const RECT arg = {-10, 20, 30, 40};
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("((-10, 20), (30, 40))", str);
 }
@@ -141,7 +158,7 @@ TEST(WindowsTypesTest, RECT_IsValuePrintPadded_PrintPadded) {
 		const RECT arg = {-10, 20, 30, 40};
 		logLine << arg;
 	}
-	const string str = logLine.GetMessage();
+	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("((-010,  020), ( 030,  040))", str);
 }

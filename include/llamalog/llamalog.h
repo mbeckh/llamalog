@@ -86,27 +86,29 @@ public:
 /// @brief Initialize the logger.
 /// @note `Initialize` MUST be called before any logging takes place.
 /// @copyright Derived from `initialize` from NanoLog.
-//void Initialize(std::unique_ptr<Appender>&& appender);
+void Initialize(std::unique_ptr<LogWriter>&& writer);
 void Initialize();
+void Shutdown();
 
-template <typename T>
-LogLine&& LogX(LogLine&& logLine) {
-	return logLine;
+inline void LogX2(LogLine&) {
 }
 
 template <typename T>
-LogLine&& LogX(LogLine&& logLine, T arg) {
-	return logLine << arg;
+void LogX2(LogLine& logLine, T&& arg) {
+	logLine << std::forward<T>(arg);
 }
 
 template <typename T, typename... R>
-LogLine&& LogX(LogLine&& logLine, T arg, R... args) {
-	return LogX(logLine << arg, args);
+void LogX2(LogLine& logLine, T&& arg, R&&... args) {
+	logLine << std::forward<T>(arg);
+	LogX2(logLine, std::forward<R>(args)...);
 }
 
 template <typename... T>
-void LogX(LogLevel level, const char* szFile, const char* szFunction, uint32_t line, const char* szMessage, T... args) {
-	llamalog::Log() += LogX(LogLine(level, szFile, szFunction, line, szMessage), args);
+void LogX(LogLevel level, const char* szFile, uint32_t line, const char* szFunction, const char* szMessage, T&&... args) {
+	LogLine logLine(level, szFile, line, szFunction, szMessage);
+	LogX2(logLine, std::forward<T>(args)...);
+	llamalog::Log() += logLine;
 }
 
 }  // namespace llamalog
@@ -115,7 +117,7 @@ void LogX(LogLevel level, const char* szFile, const char* szFunction, uint32_t l
 /// @param level_ The LogLevel.
 /// @param szMessage_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
 /// @copyright This macro is based on `NANO_LOG` from NanoLog.
-#define LLAMALOG_LOG(level_, szMessage_, ...) llamalog::LogX(level_, __FILE__, __func__, __LINE__, szMessage_, ...)
+#define LLAMALOG_LOG(level_, ...) llamalog::LogX(level_, __FILE__, __LINE__, __func__, __VA_ARGS__)
 
 //#define M3C_LOG(level_, szMessage_) llamalog::Log() += llamalog::LogLine(level_, __FILE__, __func__, __LINE__, szMessage_)
 //#define LOG_INFO(szMessage_) llamalog::IsLogged(llamalog::LogLevel::Info) && M3C_LOG(llamalog::LogLevel::Info, szMessage_)

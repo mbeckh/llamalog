@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <llamalog/LogLine.h>
-#include <llamalog/WindowsTypes.h>
+#include "llamalog/LogLine.h"
+#include "llamalog/WindowsTypes.h"
 
 #include <gmock/gmock.h>
 

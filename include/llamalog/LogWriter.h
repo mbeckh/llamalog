@@ -32,12 +32,10 @@ class LogLine;
 
 /// @brief The base class for all log writers.
 class LogWriter {
-protected:
+public:
 	/// @brief Creates a new log writer with a particular `#LogLevel`.
 	/// @param level Only events at this `#LogLevel` or above will be logged by this writer.
 	explicit LogWriter(LogLevel level) noexcept;
-
-public:
 	LogWriter(const LogWriter&) = delete;  ///< @nocopyconstructor
 	LogWriter(LogWriter&&) = delete;       ///< @nomoveconstructor
 	virtual ~LogWriter() noexcept = default;
@@ -62,6 +60,20 @@ public:
 	/// @param logLine The data.
 	virtual void Log(const LogLine& logLine) = 0;
 
+protected:
+	/// @brief Return a string for a `#LogLevel`.
+	/// @param logLevel A `#LogLevel`.
+	/// @return One of `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` - or `-` for unknown log levels.
+	/// @copyright Derived from `to_string(LogLevel)` from NanoLog.
+	char const* FormatLogLevel(LogLevel logLevel) noexcept;
+
+	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS`.
+	/// @details In case of an error, `0000-00-00 00:00:00.000` is returned.
+	/// @param timestamp The timestamp.
+	/// @return The timestamp as a string.
+	/// @copyright Derived from `format_timestamp` from NanoLog.
+	std::string FormatTimestamp(const FILETIME& timestamp);
+
 private:
 	std::atomic<LogLevel> m_logLevel;  ///< @brief Atomic store for the `#LogLevel`.
 };
@@ -69,10 +81,7 @@ private:
 
 /// @brief A `#LogWriter` sending all output to `OutputDebugString`.
 class DebugWriter : public LogWriter {
-public:
-	/// @brief Create the writer.
-	/// @param level Only events at this `#LogLevel` or above will be logged by this writer.
-	explicit DebugWriter(LogLevel level) noexcept;
+	using LogWriter::LogWriter;
 
 protected:
 	/// @brief Produce output for a `LogLine`.

@@ -49,7 +49,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 #include <fmt/format.h>
 
-#include <Windows.h>
+#include <windows.h>
 
 #include <atomic>
 #include <cstdint>
@@ -59,54 +59,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <utility>
 
 namespace llamalog {
-
-namespace {
-
-/// @brief Return a string for a `#LogLevel`.
-/// @param logLevel A `#LogLevel`.
-/// @return One of `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` - or `-` for unknown log levels.
-/// @copyright Derived from `to_string(LogLevel)` from NanoLog.
-char const* FormatLogLevel(const LogLevel logLevel) noexcept {
-	switch (logLevel) {
-	case LogLevel::kTrace:
-		return "TRACE";
-	case LogLevel::kDebug:
-		return "DEBUG";
-	case LogLevel::kInfo:
-		return "INFO";
-	case LogLevel::kWarn:
-		return "WARN";
-	case LogLevel::kError:
-		return "ERROR";
-	case LogLevel::kFatal:
-		return "FATAL";
-	default:
-		return "-";
-	}
-	__assume(false);
-}
-
-/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS`. @details In case of an error, `0000-00-00 00:00:00.000` is written.
-/// @param os The output stream.
-/// @param timestamp The timestamp.
-/// @copyright Derived from `format_timestamp` from NanoLog.
-void FormatTimestamp(std::ostream& os, const FILETIME& timestamp) {
-	SYSTEMTIME st;
-	if (FileTimeToSystemTime(&timestamp, &st) != FALSE) {
-		fmt::basic_memory_buffer<char, 24> buffer;
-		fmt::format_to(buffer, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
-		os.write(buffer.data(), buffer.size());
-	} else {
-		os << "0000-00-00 00:00:00.000";
-	}
-}
-
-}  // anonymous namespace
-
 
 //
 // LogWriter
@@ -127,26 +82,57 @@ void LogWriter::SetLogLevel(const LogLevel level) noexcept {
 	m_logLevel.store(level, std::memory_order_release);
 }
 
+// Derived from `to_string(LogLevel)` from NanoLog.
+char const* LogWriter::FormatLogLevel(const LogLevel logLevel) noexcept {
+	switch (logLevel) {
+	case LogLevel::kTrace:
+		return "TRACE";
+	case LogLevel::kDebug:
+		return "DEBUG";
+	case LogLevel::kInfo:
+		return "INFO";
+	case LogLevel::kWarn:
+		return "WARN";
+	case LogLevel::kError:
+		return "ERROR";
+	case LogLevel::kFatal:
+		return "FATAL";
+	default:
+		return "-";
+	}
+	__assume(false);
+}
+
+// Derived from `format_timestamp` from NanoLog.
+std::string LogWriter::FormatTimestamp(const FILETIME& timestamp) {
+	SYSTEMTIME st;
+	if (FileTimeToSystemTime(&timestamp, &st) != FALSE) {
+		static thread_local fmt::basic_memory_buffer<char, 23> buffer;
+		buffer.clear();
+		fmt::format_to(buffer, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+		return std::string(buffer.data(), buffer.size());
+	}
+	return "0000-00-00 00:00:00.000";
+}
+
 
 //
 // DebugWriter
 //
 
-DebugWriter::DebugWriter(const LogLevel level) noexcept
-	: LogWriter(level) {
-	// empty
-}
-
 // Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 void DebugWriter::Log(const LogLine& logLine) {
-	std::ostringstream os;
+	fmt::basic_memory_buffer<char, 256> buffer;
+	fmt::format_to(buffer, "{} {} [{}] {}:{} {} {}\n\0",
+				   FormatTimestamp(logLine.GetTimestamp()),
+				   FormatLogLevel(logLine.GetLevel()),
+				   logLine.GetThreadId(),
+				   logLine.GetFile(),
+				   logLine.GetLine(),
+				   logLine.GetFunction(),
+				   logLine.GetLogMessage());
 
-	FormatTimestamp(os, logLine.GetTimestamp());
-	os << ' ' << FormatLogLevel(logLine.GetLevel()) << " ["
-	   << logLine.GetThreadId() << "] "
-	   << logLine.GetFile() << ':' << logLine.GetFunction() << ':' << logLine.GetLine() << " "
-	   << logLine.GetMessage() << std::endl;
-	OutputDebugStringA(os.str().c_str());
+	OutputDebugStringA(buffer.data());
 }
 
 
@@ -167,11 +153,13 @@ void DailyRollingFileWriter::Log(const LogLine& logLine) {
 	if (CompareFileTime(&m_nextRollAt, &timestamp) != 1) {
 		RollFile();
 	}
-	FormatTimestamp(*m_os, timestamp);
-	*m_os << ' ' << FormatLogLevel(logLine.GetLevel()) << " ["
-		  << logLine.GetThreadId() << "] "
-		  << logLine.GetFile() << ':' << logLine.GetFunction() << ':' << logLine.GetLine() << " "
-		  << logLine.GetMessage() << std::endl;
+
+	*m_os << FormatTimestamp(timestamp) << ' '
+		  << FormatLogLevel(logLine.GetLevel())
+		  << " [" << logLine.GetThreadId() << "] "
+		  << logLine.GetFile() << ':' << logLine.GetLine() << ' '
+		  << logLine.GetFunction() << ' '
+		  << logLine.GetLogMessage() << std::endl;
 }
 
 void DailyRollingFileWriter::RollFile() {

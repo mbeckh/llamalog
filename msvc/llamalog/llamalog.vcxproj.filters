@@ -47,13 +47,13 @@
     <ClInclude Include="..\..\include\llamalog\LogLine.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\llamalog\CustomArgument.h">
-      <Filter>Header Files\llamalog</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\llamalog\WindowsTypes.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\llamalog\LogWriter.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\CustomTypes.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
   </ItemGroup>

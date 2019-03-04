@@ -49,6 +49,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 #include <windows.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -64,16 +65,47 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 namespace llamalog {
 
+/**
+Helper class to access internals of LogLine in the implementation file.
+*/
+class LogLine::Internal final {
+public:
+	// Do not allow creation of class.
+	Internal() = delete;
+	Internal(const Internal&) = delete;  ///< @nocopyconstructor
+	Internal(Internal&&) = delete;       ///< @nomoveconstructor
+	~Internal() = delete;
+
+public:
+	Internal& operator=(const Internal&) = delete;   ///< @noassignmentoperator
+	Internal& operator=(const Internal&&) = delete;  ///< @nomoveoperator
+
+public:
+	using Construct = LogLine::Construct;  ///< @brief Provide access to type outside of class.
+	using Destruct = LogLine::Destruct;    ///< @brief Provide access to type outside of class.
+};
+
 namespace {
 
 /// @brief The number of bytes to add to the argument buffer after it became too small.
 constexpr std::size_t kGrowBytes = 512;
 
+struct TriviallyCopyable final {
+	// marker type
+};
+
+struct NonTriviallyCopyable final {
+	// marker type
+};
+
+/// @brief Type of the function to create a formatter argument.
+using CreateFormatArg = fmt::basic_format_arg<fmt::format_context> (*)(const std::byte*) noexcept;
 
 /// @brief The types supported by the logger as arguments. Use `#kTypeId` to get the `#TypeId`.
 /// @copyright This type is derived from `SupportedTypes` from NanoLog.
 using Types = std::tuple<
 	bool,
+	char,
 	signed char,
 	unsigned char,
 	signed short,
@@ -87,11 +119,11 @@ using Types = std::tuple<
 	float,
 	double,
 	long double,
-	const void*,                                // MUST NOT cast this back to any object because the object might no longer exist when the message is logged
-	const char*,                                // string is stored WITHOUT a terminating null character
-	const wchar_t*,                             // string is stored WITHOUT a terminating null character
-	fmt::basic_format_arg<fmt::format_context>  // length DOES include padding because raw data is opaque to logger
-	>;
+	const void*,     // MUST NOT cast this back to any object because the object might no longer exist when the message is logged
+	const char*,     // string is stored WITHOUT a terminating null character
+	const wchar_t*,  // string is stored WITHOUT a terminating null character
+	TriviallyCopyable,
+	NonTriviallyCopyable>;
 
 /// @brief Get `#TypeId` of a type at compile time.
 /// @tparam T The type to get the id for.
@@ -129,11 +161,11 @@ static_assert(std::tuple_size_v<Types> <= UINT8_MAX, "too many types for uint8_t
 template <typename T>
 constexpr TypeId kTypeId = TypeIndex<T, Types>::kValue;
 
-
 /// @brief Pre-calculated array of sizes required to store values in the buffer. Use `#kSize` to get the size in code.
 /// @hideinitializer
 constexpr std::uint8_t kSizes[] = {
 	sizeof(TypeId) + sizeof(bool),
+	sizeof(TypeId) + sizeof(char),
 	sizeof(TypeId) + sizeof(signed char),
 	sizeof(TypeId) + sizeof(unsigned char),
 	sizeof(TypeId) + sizeof(signed short),
@@ -150,10 +182,11 @@ constexpr std::uint8_t kSizes[] = {
 	sizeof(TypeId) + sizeof(void*),
 	sizeof(TypeId) + sizeof(std::size_t) /* + padding + std::strlen(str) */,
 	sizeof(TypeId) + sizeof(std::size_t) /* + padding + std::wcslen(str) */,
-	sizeof(TypeId) + sizeof(std::uint8_t) + sizeof(fmt::basic_format_arg<fmt::format_context> (*)(const std::byte* const)) + sizeof(std::size_t) /* + padding + sizeof(arg) */
+	sizeof(TypeId) + sizeof(std::uint8_t) + sizeof(CreateFormatArg) + sizeof(std::size_t) /* + padding + sizeof(arg) */,
+	sizeof(TypeId) + sizeof(std::uint8_t) + sizeof(LogLine::Internal::Construct) + sizeof(LogLine::Internal::Destruct) + sizeof(CreateFormatArg) + sizeof(std::size_t) /* + padding + sizeof(arg) */
 };
-static_assert(sizeof(TypeId) + sizeof(std::uint8_t) + sizeof(fmt::basic_format_arg<fmt::format_context>(*)(const std::byte* const)) + sizeof(std::size_t) <= UINT8_MAX, "type for sizes is too small");
-static_assert(std::tuple_size_v<Types> == sizeof(kSizes) / sizeof(kSizes[0]), "length of array of sizes does not match number of types");
+static_assert(sizeof(TypeId) + sizeof(std::uint8_t) + sizeof(LogLine::Internal::Construct) + sizeof(LogLine::Internal::Destruct) + sizeof(CreateFormatArg) + sizeof(std::size_t) <= UINT8_MAX, "type for sizes is too small");
+static_assert(std::tuple_size_v<Types> == sizeof(kSizes) / sizeof(kSizes[0]), "length of kSizes does not match Types");
 
 /// @brief A constant to get the (basic) buffer size of a type at compile time.
 /// @tparam T The type to get the id for.
@@ -226,8 +259,8 @@ std::string EscapeC(const std::string_view& sv) {
 		if (c == '"' || c == '\\' || c < 0x20 || c > 0x7f) {
 			if (result.empty()) {
 				const std::size_t len = sv.length();
-				const std::size_t extra = std::distance(end, it) / 4;
-				result.reserve(len + max(extra, 2));
+				const std::size_t extra = std::distance(it, end) / 4;
+				result.reserve(len + std::max(extra, static_cast<size_t>(2)));
 			}
 			result.append(begin, it);
 			result.push_back('\\');
@@ -368,11 +401,12 @@ void DecodeArgument<const char*>(_Inout_ std::vector<fmt::basic_format_arg<fmt::
 
 
 /// @brief Helper class to pass a wide character string stored inline in the buffer to the formatter.
-struct InlineWideChar {
+struct InlineWideChar final {
 	std::byte pos;  ///< The address of this variable is placed above the address of the first character.
 };
 
-}  // anonymous namespace
+}  // namespace
+
 }  // namespace llamalog
 
 /// @brief Specialization of a `fmt::formatter` to perform automatic conversion of wide characters to UTF-8.
@@ -470,34 +504,250 @@ void DecodeArgument<const wchar_t*>(_Inout_ std::vector<fmt::basic_format_arg<fm
 
 /// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
 /// @p args. The value of @p cbPosition is advanced after decoding.
-/// This is the specialization used for custom types stored inline.
+/// This is the specialization used for trivially copyable custom types stored inline.
 /// @param args The vector of format arguments.
 /// @param buffer The argument buffer.
 /// @param cbPosition The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<fmt::basic_format_arg<fmt::format_context>>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ std::size_t& cbPosition) noexcept {
-	static constexpr std::size_t kCustomArgumentSize = kSize<fmt::basic_format_arg<fmt::format_context>>;
+void DecodeArgument<TriviallyCopyable>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ std::size_t& cbPosition) noexcept {
+	static constexpr std::size_t kArgSize = kSize<TriviallyCopyable>;
 
 	std::uint8_t cbPadding;
 	std::memcpy(&cbPadding, &buffer[cbPosition + sizeof(TypeId)], sizeof(cbPadding));
 
-	fmt::basic_format_arg<fmt::format_context> (*createFormatArg)(_In_ const std::byte* const) noexcept;
-	std::memcpy(&createFormatArg, &buffer[cbPosition + sizeof(cbPadding) + sizeof(TypeId)], sizeof(createFormatArg));
+	CreateFormatArg createFormatArg;
+	std::memcpy(&createFormatArg, &buffer[cbPosition + sizeof(TypeId) + sizeof(cbPadding)], sizeof(createFormatArg));
 
 	std::size_t cbLength;
 	std::memcpy(&cbLength, &buffer[cbPosition + sizeof(TypeId) + sizeof(cbPadding) + sizeof(createFormatArg)], sizeof(cbLength));
 
-	args.push_back(createFormatArg(&buffer[cbPosition + kCustomArgumentSize + cbPadding]));
+	args.push_back(createFormatArg(&buffer[cbPosition + kArgSize + cbPadding]));
 
-	cbPosition += kCustomArgumentSize + cbPadding + cbLength;
+	cbPosition += kArgSize + cbPadding + cbLength;
 }
 
-}  // anonymous namespace
+/// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
+/// @p args. The value of @p cbPosition is advanced after decoding.
+/// This is the specialization used for non-trivially copyable custom types stored inline.
+/// @param args The vector of format arguments.
+/// @param buffer The argument buffer.
+/// @param cbPosition The current read position.
+/// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
+template <>
+void DecodeArgument<NonTriviallyCopyable>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ std::size_t& cbPosition) noexcept {
+	static constexpr std::size_t kArgSize = kSize<NonTriviallyCopyable>;
+	std::uint8_t cbPadding;
+	std::memcpy(&cbPadding, &buffer[cbPosition + sizeof(TypeId)], sizeof(cbPadding));
+
+	CreateFormatArg createFormatArg;
+	std::memcpy(&createFormatArg, &buffer[cbPosition + sizeof(TypeId) + sizeof(cbPadding) + sizeof(LogLine::Internal::Construct) + sizeof(LogLine::Internal::Destruct)], sizeof(createFormatArg));
+
+	std::size_t cbLength;
+	std::memcpy(&cbLength, &buffer[cbPosition + sizeof(TypeId) + sizeof(cbPadding) + sizeof(LogLine::Internal::Construct) + sizeof(LogLine::Internal::Destruct) + sizeof(createFormatArg)], sizeof(cbLength));
+
+	args.push_back(createFormatArg(&buffer[cbPosition + kArgSize + cbPadding]));
+
+	cbPosition += kArgSize + cbPadding + cbLength;
+}
+
+/// @brief Skip a log argument of type inline string (either regular or wide character).
+/// @tparam The character type, i.e. either `char` or `wchar_t`.
+/// @param buffer The argument buffer.
+/// @param cbPosition The current read position.
+template <typename T>
+void SkipInlineString(_In_ const std::byte* __restrict const buffer, _Inout_ std::size_t& cbPosition) noexcept {
+	std::size_t cchLength;
+	std::memcpy(&cchLength, &buffer[cbPosition + sizeof(TypeId)], sizeof(cchLength));
+	const std::size_t cbOffset = cbPosition + kSize<const T*>;
+	const std::size_t cbPadding = GetPadding<const T*>(&buffer[cbOffset]);
+	cbPosition += kSize<const T*> + cbPadding + cchLength * sizeof(T);
+}
+
+/// @brief Skip a log argument of type inline string (either regular or wide character).
+/// @param buffer The argument buffer.
+/// @param cbPosition The current read position.
+void SkipTriviallyCopyable(_In_ const std::byte* __restrict const buffer, _Inout_ std::size_t& cbPosition) noexcept {
+	static constexpr std::size_t kArgSize = kSize<TriviallyCopyable>;
+
+	std::uint8_t cbPadding;
+	std::memcpy(&cbPadding, &buffer[cbPosition + sizeof(TypeId)], sizeof(cbPadding));
+
+	std::size_t cbLength;
+	std::memcpy(&cbLength, &buffer[cbPosition + sizeof(TypeId) + sizeof(cbPadding) + sizeof(CreateFormatArg)], sizeof(cbLength));
+
+	cbPosition += kArgSize + cbPadding + cbLength;
+}
+
+/// @brief Moves a custom type by calling construct (new) and destruct (old) and moves `cbPosition` to the next log argument.
+/// @param src The source argument buffer.
+/// @param dst The target argument buffer.
+/// @param cbPosition The current read position.
+void MoveNonTriviallyCopyable(_Inout_ std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ std::size_t& cbPosition) noexcept {
+	// assert that both buffers are equally aligned so that any offsets and padding values can be simply copied
+	assert(reinterpret_cast<uintptr_t>(src) % alignof(std::max_align_t) == reinterpret_cast<uintptr_t>(dst) % alignof(std::max_align_t));
+
+	static constexpr std::size_t kArgSize = kSize<NonTriviallyCopyable>;
+
+	std::uint8_t cbPadding;
+	std::memcpy(&cbPadding, &src[cbPosition + sizeof(TypeId)], sizeof(cbPadding));
+
+	LogLine::Internal::Construct construct;
+	std::memcpy(&construct, &src[cbPosition + sizeof(TypeId) + sizeof(cbPadding)], sizeof(construct));
+
+	LogLine::Internal::Destruct destruct;
+	std::memcpy(&destruct, &src[cbPosition + sizeof(TypeId) + sizeof(cbPadding) + sizeof(construct)], sizeof(destruct));
+
+	std::size_t cbLength;
+	std::memcpy(&cbLength, &src[cbPosition + sizeof(TypeId) + sizeof(cbPadding) + sizeof(construct) + sizeof(destruct) + sizeof(CreateFormatArg)], sizeof(cbLength));
+
+	// copy management data
+	std::memcpy(&dst[cbPosition], &src[cbPosition], kArgSize);
+
+	// create the argument in the new position
+	const std::size_t cbOffset = cbPosition + kArgSize + cbPadding;
+	construct(&src[cbOffset], &dst[cbOffset]);
+	// and destruct the copied-from version
+	destruct(&src[cbOffset]);
+
+	cbPosition = cbOffset + cbLength;
+}
+
+/// @brief Call the destructor of a custom type and moves `cbPosition` to the next log argument.
+/// @param buffer The argument buffer.
+/// @param cbPosition The current read position.
+void DestructNonTriviallyCopyable(_In_ std::byte* __restrict const buffer, _Inout_ std::size_t& cbPosition) noexcept {
+	static constexpr std::size_t kArgSize = kSize<NonTriviallyCopyable>;
+
+	std::uint8_t cbPadding;
+	std::memcpy(&cbPadding, &buffer[cbPosition + sizeof(TypeId)], sizeof(cbPadding));
+
+	LogLine::Internal::Destruct destruct;
+	std::memcpy(&destruct, &buffer[cbPosition + sizeof(TypeId) + sizeof(cbPadding) + sizeof(LogLine::Internal::Construct)], sizeof(destruct));
+
+	std::size_t cbLength;
+	std::memcpy(&cbLength, &buffer[cbPosition + sizeof(TypeId) + sizeof(cbPadding) + sizeof(LogLine::Internal::Construct) + sizeof(destruct) + sizeof(CreateFormatArg)], sizeof(cbLength));
+
+	const std::size_t cbOffset = cbPosition + kArgSize + cbPadding;
+	destruct(&buffer[cbOffset]);
+
+	cbPosition = cbOffset + cbLength;
+}
+
+/// @brief Move all objects from one buffer to another. @details The function also calls the moved-from's destructor.
+/// @details This function is used only if the buffer contains non-trivially copyable objects.
+/// @param src The source buffer.
+/// @param dst The target buffer.
+/// @param cbUsed The number of bytes used in the buffer.
+void MoveObjects(_In_reads_bytes_(cbUsed) std::byte* __restrict src, _Out_writes_bytes_(cbUsed) std::byte* __restrict dst, std::size_t cbUsed) noexcept {
+	for (std::size_t cbPosition = 0, cbStart = 0; cbPosition < cbUsed;) {
+		TypeId typeId;
+		std::memcpy(&typeId, &src[cbPosition], sizeof(typeId));
+
+#pragma push_macro("SKIP_")
+#define SKIP_(type_)                \
+	case kTypeId<type_>:            \
+		cbPosition += kSize<type_>; \
+		break
+
+		switch (typeId) {
+			SKIP_(bool);
+			SKIP_(char);
+			SKIP_(signed char);
+			SKIP_(unsigned char);
+			SKIP_(signed short);
+			SKIP_(unsigned short);
+			SKIP_(signed int);
+			SKIP_(unsigned int);
+			SKIP_(signed long);
+			SKIP_(unsigned long);
+			SKIP_(signed long long);
+			SKIP_(unsigned long long);
+			SKIP_(float);
+			SKIP_(double);
+			SKIP_(long double);
+			SKIP_(const void*);
+		case kTypeId<const char*>:
+			SkipInlineString<char>(src, cbPosition);
+			break;
+		case kTypeId<const wchar_t*>:
+			SkipInlineString<wchar_t>(src, cbPosition);
+			break;
+		case kTypeId<TriviallyCopyable>:
+			SkipTriviallyCopyable(src, cbPosition);
+			break;
+		case kTypeId<NonTriviallyCopyable>:
+			// first copy any trivially copyable objects up to here
+			std::memcpy(&dst[cbStart], &src[cbStart], cbPosition - cbStart);
+			MoveNonTriviallyCopyable(src, dst, cbPosition);
+			cbStart = cbPosition;
+			break;
+		default:
+			assert(false);
+			__assume(false);
+		}
+#pragma pop_macro("SKIP_")
+		// copy any remaining trivially copyable objects
+		std::memcpy(&dst[cbStart], &src[cbStart], cbUsed - cbStart);
+	}
+}
+
+/// @brief Call all the destructors of non-trivially copyable custom arguments in a buffer.
+/// @param buffer The buffer.
+/// @param cbUsed The number of bytes used in the buffer.
+void CallDestructors(_Inout_updates_bytes_(cbUsed) std::byte* __restrict buffer, std::size_t cbUsed) noexcept {
+	for (std::size_t cbPosition = 0; cbPosition < cbUsed;) {
+		TypeId typeId;
+		std::memcpy(&typeId, &buffer[cbPosition], sizeof(typeId));
+
+#pragma push_macro("SKIP_")
+#define SKIP_(type_)                \
+	case kTypeId<type_>:            \
+		cbPosition += kSize<type_>; \
+		break
+
+		switch (typeId) {
+			SKIP_(bool);
+			SKIP_(char);
+			SKIP_(signed char);
+			SKIP_(unsigned char);
+			SKIP_(signed short);
+			SKIP_(unsigned short);
+			SKIP_(signed int);
+			SKIP_(unsigned int);
+			SKIP_(signed long);
+			SKIP_(unsigned long);
+			SKIP_(signed long long);
+			SKIP_(unsigned long long);
+			SKIP_(float);
+			SKIP_(double);
+			SKIP_(long double);
+			SKIP_(const void*);
+		case kTypeId<const char*>:
+			SkipInlineString<char>(buffer, cbPosition);
+			break;
+		case kTypeId<const wchar_t*>:
+			SkipInlineString<wchar_t>(buffer, cbPosition);
+			break;
+		case kTypeId<TriviallyCopyable>:
+			SkipTriviallyCopyable(buffer, cbPosition);
+			break;
+		case kTypeId<NonTriviallyCopyable>:
+			DestructNonTriviallyCopyable(buffer, cbPosition);
+			break;
+		default:
+			assert(false);
+			__assume(false);
+		}
+#pragma pop_macro("SKIP_")
+	}
+}
+
+}  // namespace
 
 
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): m_stackBuffer and m_timestamp need no initialization.
-LogLine::LogLine(const LogLevel logLevel, _In_z_ const char* __restrict const szFile, _In_z_ const char* __restrict const szFunction, const std::uint32_t line, const char* __restrict const szMessage) noexcept
+LogLine::LogLine(const LogLevel logLevel, _In_z_ const char* __restrict const szFile, const std::uint32_t line, _In_z_ const char* __restrict const szFunction, const char* __restrict const szMessage) noexcept
 	: m_logLevel(logLevel)
 	, m_threadId(llamalog::GetCurrentThreadId())
 	, m_line(line)
@@ -516,6 +766,7 @@ LogLine::LogLine(const LogLevel logLevel, _In_z_ const char* __restrict const sz
 	static_assert(offsetof(LogLine, m_cbSize) == 8, "offset of m_cbSize != 8");
 	static_assert(offsetof(LogLine, m_heapBuffer) == 16, "offset of m_heapBuffer != 16");
 	static_assert(offsetof(LogLine, m_stackBuffer) == 24, "offset of m_stackBuffer != 24");
+	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == 214, "offset of m_hasNonTriviallyCopyable != 214");
 	static_assert(offsetof(LogLine, m_logLevel) == 215, "offset of m_logLevel != 215");
 	static_assert(offsetof(LogLine, m_threadId) == 216, "offset of m_threadId != 216");
 	static_assert(offsetof(LogLine, m_line) == 220, "offset of m_line != 220");
@@ -527,6 +778,7 @@ LogLine::LogLine(const LogLevel logLevel, _In_z_ const char* __restrict const sz
 	static_assert(offsetof(LogLine, m_cbSize) == 4, "offset of m_cbSize != 4");
 	static_assert(offsetof(LogLine, m_heapBuffer) == 8, "offset of m_heapBuffer != 8");
 	static_assert(offsetof(LogLine, m_stackBuffer) == 12, "offset of m_stackBuffer != 12");
+	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == 226, "offset of m_hasNonTriviallyCopyable != 226");
 	static_assert(offsetof(LogLine, m_logLevel) == 227, "offset of m_logLevel != 227");
 	static_assert(offsetof(LogLine, m_threadId) == 228, "offset of m_threadId != 228");
 	static_assert(offsetof(LogLine, m_line) == 232, "offset of m_line != 232");
@@ -542,8 +794,75 @@ LogLine::LogLine(const LogLevel logLevel, _In_z_ const char* __restrict const sz
 #endif
 }
 
+LogLine::LogLine(LogLine&& logLine) noexcept  // NOLINT(cppcoreguidelines-pro-type-member-init): m_stackBuffer does not need initialization in all cases.
+	: m_cbUsed(logLine.m_cbUsed)
+	, m_cbSize(logLine.m_cbSize)
+	, m_heapBuffer(std::move(logLine.m_heapBuffer))
+	, m_hasNonTriviallyCopyable(logLine.m_hasNonTriviallyCopyable)
+	, m_logLevel(logLine.m_logLevel)
+	, m_threadId(logLine.m_threadId)
+	, m_line(logLine.m_line)
+	, m_timestamp(logLine.m_timestamp)
+	, m_szFile(logLine.m_szFile)
+	, m_szFunction(logLine.m_szFunction)
+	, m_szMessage(logLine.m_szMessage) {
+	if (!m_heapBuffer) {
+		if (m_hasNonTriviallyCopyable) {
+			MoveObjects(logLine.m_stackBuffer, m_stackBuffer, m_cbUsed);
+		} else {
+			std::memcpy(m_stackBuffer, logLine.m_stackBuffer, m_cbUsed);
+		}
+	}
+	// leave source in a consistent state
+	logLine.m_cbUsed = 0;
+	logLine.m_cbSize = sizeof(m_stackBuffer);
+}
+
+LogLine::~LogLine() {
+	if (m_hasNonTriviallyCopyable) {
+		CallDestructors(GetBuffer(), m_cbUsed);
+	}
+}
+
+LogLine& LogLine::operator=(LogLine&& logLine) noexcept {
+	if (m_hasNonTriviallyCopyable) {
+		CallDestructors(GetBuffer(), m_cbUsed);
+	}
+
+	m_cbUsed = logLine.m_cbUsed;
+	m_cbSize = logLine.m_cbSize;
+	m_heapBuffer = std::move(logLine.m_heapBuffer);
+	m_hasNonTriviallyCopyable = logLine.m_hasNonTriviallyCopyable;
+	if (!m_heapBuffer) {
+		if (m_hasNonTriviallyCopyable) {
+			MoveObjects(logLine.m_stackBuffer, m_stackBuffer, m_cbUsed);
+		} else {
+			std::memcpy(m_stackBuffer, logLine.m_stackBuffer, m_cbUsed);
+		}
+	}
+	m_logLevel = logLine.m_logLevel;
+	m_threadId = logLine.m_threadId;
+	m_line = logLine.m_line;
+	m_timestamp = logLine.m_timestamp;
+	m_szFile = logLine.m_szFile;
+	m_szFunction = logLine.m_szFunction;
+	m_szMessage = logLine.m_szMessage;
+
+	// leave source in a consistent state
+	logLine.m_cbUsed = 0;
+	logLine.m_cbSize = sizeof(m_stackBuffer);
+
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(int32_t)` from NanoLog.
 LogLine& LogLine::operator<<(const bool arg) {
+	Write(arg);
+	return *this;
+}
+
+// Based on `NanoLogLine::operator<<(char)` from NanoLog.
+LogLine& LogLine::operator<<(const char arg) {
 	Write(arg);
 	return *this;
 }
@@ -671,7 +990,7 @@ LogLine& LogLine::operator<<(const std::wstring_view& arg) {
 }
 
 // Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
-std::string LogLine::GetMessage() const {
+std::string LogLine::GetLogMessage() const {
 	std::vector<fmt::basic_format_arg<fmt::format_context>> args;
 
 	const std::byte* __restrict const buffer = GetBuffer();
@@ -687,6 +1006,7 @@ std::string LogLine::GetMessage() const {
 
 		switch (typeId) {
 			DECODE_(bool);
+			DECODE_(char);
 			DECODE_(signed char);
 			DECODE_(unsigned char);
 			DECODE_(signed short);
@@ -703,10 +1023,11 @@ std::string LogLine::GetMessage() const {
 			DECODE_(const void*);
 			DECODE_(const char*);
 			DECODE_(const wchar_t*);
-			DECODE_(fmt::basic_format_arg<fmt::format_context>);
+			DECODE_(TriviallyCopyable);
+			DECODE_(NonTriviallyCopyable);
 		default:
 			assert(false);
-			__assume(0);
+			__assume(false);
 		}
 #pragma pop_macro("DECODE_")
 	}
@@ -715,6 +1036,11 @@ std::string LogLine::GetMessage() const {
 	fmt::memory_buffer buf;
 	fmt::vformat_to<EscapingFormatter>(buf, fmt::to_string_view(m_szMessage), formatArgs);
 	return fmt::to_string(buf);
+}
+
+// Derived from `NanoLogLine::buffer` from NanoLog.
+_Ret_notnull_ __declspec(restrict) std::byte* LogLine::GetBuffer() noexcept {
+	return !m_heapBuffer ? m_stackBuffer : m_heapBuffer.get();
 }
 
 // Derived from `NanoLogLine::buffer` from NanoLog.
@@ -731,14 +1057,22 @@ _Ret_notnull_ __declspec(restrict) std::byte* LogLine::GetWritePosition(const st
 	}
 
 	if (!m_heapBuffer) {
-		m_cbSize = max(kGrowBytes, GetNextPowerOf2(cbRequiredSize));
+		m_cbSize = std::max(kGrowBytes, GetNextPowerOf2(cbRequiredSize));
 		m_heapBuffer = std::make_unique<std::byte[]>(m_cbSize);
-		std::memcpy(m_heapBuffer.get(), m_stackBuffer, m_cbUsed);
+		if (m_hasNonTriviallyCopyable) {
+			MoveObjects(m_stackBuffer, m_heapBuffer.get(), m_cbUsed);
+		} else {
+			std::memcpy(m_heapBuffer.get(), m_stackBuffer, m_cbUsed);
+		}
 	} else {
-		m_cbSize = max(m_cbSize + kGrowBytes, GetNextPowerOf2(cbRequiredSize));
+		m_cbSize = std::max(m_cbSize + kGrowBytes, GetNextPowerOf2(cbRequiredSize));
 		std::unique_ptr<std::byte[]> newHeapBuffer(std::make_unique<std::byte[]>(m_cbSize));
-		std::memcpy(newHeapBuffer.get(), m_heapBuffer.get(), m_cbUsed);
-		m_heapBuffer.swap(newHeapBuffer);
+		if (m_hasNonTriviallyCopyable) {
+			MoveObjects(m_heapBuffer.get(), newHeapBuffer.get(), m_cbUsed);
+		} else {
+			std::memcpy(newHeapBuffer.get(), m_heapBuffer.get(), m_cbUsed);
+		}
+		m_heapBuffer = std::move(newHeapBuffer);
 	}
 	return &(m_heapBuffer.get())[m_cbUsed];
 }
@@ -767,14 +1101,11 @@ void LogLine::WriteString(_In_z_ const T* const arg, const std::size_t cchLength
 	const std::size_t cbPadding = GetPadding<const T*>(&buffer[kArgSize]);
 	if (cbPadding) {
 		// check if the buffer has enough space for the type AND the with padding
-		std::byte* __restrict const newBuffer = GetWritePosition(cbSize + cbPadding);
-		if (newBuffer != buffer) {
-			buffer = newBuffer;
-		}
+		buffer = GetWritePosition(cbSize + cbPadding);
 	}
 	assert(m_cbSize - m_cbUsed >= cbSize + cbPadding);
 	assert((reinterpret_cast<std::uintptr_t>(&buffer[kArgSize + cbPadding]) & (alignof(const T*) - 1)) == 0);
-	static_assert(alignof(const T*) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+	static_assert(alignof(const T*) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of type is too large");
 
 	std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
 	std::memcpy(&buffer[sizeof(kArgTypeId)], &cchLength, sizeof(cchLength));
@@ -782,19 +1113,16 @@ void LogLine::WriteString(_In_z_ const T* const arg, const std::size_t cchLength
 	m_cbUsed += cbSize + cbPadding;
 }
 
-void LogLine::WriteCustomArgument(_In_reads_bytes_(cbSize) const std::byte* __restrict const ptr, const std::size_t cbObjectSize, const std::size_t cbAlign, const void* const createFormatArg) {
-	static constexpr TypeId kArgTypeId = kTypeId<fmt::basic_format_arg<fmt::format_context>>;
-	static constexpr std::uint8_t kArgSize = kSize<fmt::basic_format_arg<fmt::format_context>>;
+void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict const ptr, const std::size_t cbObjectSize, const std::size_t cbAlign, const void* const createFormatArg) {
+	static constexpr TypeId kArgTypeId = kTypeId<TriviallyCopyable>;
+	static constexpr std::uint8_t kArgSize = kSize<TriviallyCopyable>;
 	const std::size_t cbSize = kArgSize + cbObjectSize;
 
 	std::byte* __restrict buffer = GetWritePosition(cbSize);
 	const std::size_t cbPadding = GetPadding(&buffer[kArgSize], cbAlign);
 	if (cbPadding != 0) {
 		// check if the buffer has enough space for the type AND the with padding
-		std::byte* __restrict const newBuffer = GetWritePosition(cbSize + cbPadding);
-		if (newBuffer != buffer) {
-			buffer = newBuffer;
-		}
+		buffer = GetWritePosition(cbSize + cbPadding);
 	}
 	assert(m_cbSize - m_cbUsed >= cbSize + cbPadding);
 	assert((reinterpret_cast<std::uintptr_t>(&buffer[kArgSize + cbPadding]) & (cbAlign - 1)) == 0);
@@ -809,6 +1137,37 @@ void LogLine::WriteCustomArgument(_In_reads_bytes_(cbSize) const std::byte* __re
 	std::memcpy(&buffer[kArgSize + cbPadding], ptr, cbObjectSize);
 
 	m_cbUsed += cbSize + cbPadding;
+}
+
+__declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const std::size_t cbObjectSize, const std::size_t cbAlign, const Construct construct, const Destruct destruct, const void* const createFormatArg) {
+	static constexpr TypeId kArgTypeId = kTypeId<NonTriviallyCopyable>;
+	static constexpr std::uint8_t kArgSize = kSize<NonTriviallyCopyable>;
+	const std::size_t cbSize = kArgSize + cbObjectSize;
+
+	std::byte* __restrict buffer = GetWritePosition(cbSize);
+	const std::size_t cbPadding = GetPadding(&buffer[kArgSize], cbAlign);
+	if (cbPadding != 0) {
+		// check if the buffer has enough space for the type AND the with padding
+		buffer = GetWritePosition(cbSize + cbPadding);
+	}
+	assert(m_cbSize - m_cbUsed >= cbSize + cbPadding);
+	assert((reinterpret_cast<std::uintptr_t>(&buffer[kArgSize + cbPadding]) & (cbAlign - 1)) == 0);
+	assert(cbAlign <= __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+
+	std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
+	assert(cbPadding <= UINT8_MAX);
+	const std::uint8_t padding = cbPadding & 0xFFu;
+	std::memcpy(&buffer[sizeof(kArgTypeId)], &padding, sizeof(padding));
+	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding)], &construct, sizeof(construct));
+	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding) + sizeof(construct)], &destruct, sizeof(destruct));
+	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding) + sizeof(construct) + sizeof(destruct)], &createFormatArg, sizeof(createFormatArg));
+	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding) + sizeof(construct) + sizeof(destruct) + sizeof(createFormatArg)], &cbObjectSize, sizeof(cbObjectSize));
+	std::byte* result = &buffer[kArgSize + cbPadding];
+
+	m_hasNonTriviallyCopyable = true;
+	m_cbUsed += cbSize + cbPadding;
+
+	return result;
 }
 
 }  // namespace llamalog
