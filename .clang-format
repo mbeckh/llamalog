@@ -12,9 +12,9 @@ IncludeBlocks: Regroup
 IncludeCategories: 
   - Regex:    '^<llamalog/.*\.h>'
     Priority: 2
-  - Regex:    '^<[[:alnum:]]+/.*\.h>'
+  - Regex:    '^<[[:alnum:]]+/.*\.h[hpx]{0,2}>'
     Priority: 3
-  - Regex:    '^<.*\.h>'
+  - Regex:    '^<.*\.h[hpx]{0,2}>'
     Priority: 4
   - Regex:    '^<.*>'
     Priority: 5
