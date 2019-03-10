@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "llamalog/LogLine.h"
 
-#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include <cinttypes>
 #include <cstddef>
@@ -24,33 +24,7 @@ limitations under the License.
 #include <cstdio>
 #include <string>
 
-#if 0
-#include "Foo.h"
-#include "stdafx.h"
-
-#include <m3c/ArgumentFormatter.h>
-#include <m3c/ArgumentFormatterCOM.h>
-#include <m3c/ArgumentFormatterWIC.h>
-#include <m3c/com_ptr.h>
-#include <m3c/finally.h>
-#include <m3c4t/IStream_Mock.h>
-#endif
-
 namespace llamalog::test {
-
-#if 0
-using m3c4t::IStream_Mock;
-using m3c4t::IStream_Stat;
-using m3c4t::MatchesRegex;
-
-using testing::_;
-using testing::DoAll;
-using testing::Invoke;
-using testing::NiceMock;
-using testing::Return;
-using testing::Test;
-using testing::Unused;
-#endif
 
 namespace {
 
@@ -818,133 +792,6 @@ TEST(LogLineTest, Multiple_ThreeArguments_PrintValues) {
 }
 
 #if 0
-
-//
-// return value
-//
-
-TEST(LogLineTest, ReturnValue_NoArguments_PrintEmpty) {
-	const string str = M3C_ARGUMENTS_TO_STRING(true);
-
-	EXPECT_EQ("", str);
-}
-
-TEST(ArgumentFormatterTest, ReturnValue_ReturnValueOnly_PrintReturnValue) {
-	const int arg = 3;
-	const string str = M3C_ARGUMENTS_TO_STRING(true, arg);
-
-	EXPECT_EQ("{_ret:3}", str);
-}
-
-TEST(ArgumentFormatterTest, ReturnValue_ReturnValueAndArgument_PrintReturnValueAndArgument) {
-	const int arg0 = 3;
-	const int arg1 = 7;
-	const string str = M3C_ARGUMENTS_TO_STRING(true, arg0, arg1);
-
-	EXPECT_EQ("{_ret:3,arg1:7}", str);
-}
-
-
-//
-// Custom formatting
-//
-
-struct TestValue {
-	int a = 3;
-	string b = "Test";
-};
-
-class TestFormat : public AbstractArgumentFormat {
-public:
-	constexpr TestFormat(const char* szName, const TestValue& x) noexcept
-		: AbstractArgumentFormat(szName)
-		, m_x(x) {
-		// empty
-	}
-public:
-	virtual void Append(ArgumentAppender appender) const final {
-		appender("{a:%d,b:\"%s\"}", m_x.a, m_x.b.c_str());
-	}
-private:
-	const TestValue& m_x;
-};
-
-TEST(ArgumentFormatterTest, CustomFormat_AsOnlyArgument_PrintValue) {
-	TestValue x;
-	const string str = M3C_ARGUMENTS_TO_STRING(false, TestFormat("x", x));
-
-	EXPECT_EQ("{x:{a:3,b:\"Test\"}}", str);
-}
-
-TEST(ArgumentFormatterTest, CustomFormat_AsFirstArgument_PrintValue) {
-	TestValue x;
-	const int arg = 3;
-	const string str = M3C_ARGUMENTS_TO_STRING(false, TestFormat("x", x), arg);
-
-	EXPECT_EQ("{x:{a:3,b:\"Test\"},arg:3}", str);
-}
-
-TEST(ArgumentFormatterTest, CustomFormat_AsLastArgument_PrintValue) {
-	const int arg = 3;
-	TestValue x;
-	const string str = M3C_ARGUMENTS_TO_STRING(false, arg, TestFormat("x", x));
-
-	EXPECT_EQ("{arg:3,x:{a:3,b:\"Test\"}}", str);
-}
-
-TEST(ArgumentFormatterTest, CustomFormat_AsReturnValue_PrintValue) {
-	TestValue x;
-	const string str = M3C_ARGUMENTS_TO_STRING(true, TestFormat("x", x));
-
-	EXPECT_EQ("{_ret:{a:3,b:\"Test\"}}", str);
-}
-
-TEST(ArgumentFormatterTest, CustomFormat_AsReturnValueWithArgument_PrintValue) {
-	TestValue x;
-	const int arg = 3;
-	const string str = M3C_ARGUMENTS_TO_STRING(true, TestFormat("x", x), arg);
-	
-	EXPECT_EQ("{_ret:{a:3,b:\"Test\"},arg:3}", str);
-}
-
-//
-// ArgumentCustomNameFormat
-//
-
-TEST(ArgumentFormatterTest, ArgumentCustomNameFormat_AsOnlyArgument_PrintValue) {
-	const int value = 7;
-	const string str = M3C_ARGUMENTS_TO_STRING(false, WithCustomName("x", value));
-
-	EXPECT_EQ("{x:7}", str);
-}
-
-TEST(ArgumentFormatterTest, ArgumentCustomNameFormat_AsReturnValueWithArgument_PrintValue) {
-	const int value = 7;
-	const int arg = 3;
-	const string str = M3C_ARGUMENTS_TO_STRING(true, WithCustomName(nullptr, value), arg);
-
-	EXPECT_EQ("{_ret:7,arg:3}", str);
-}
-
-
-//
-// Format HRESULT
-//
-
-TEST(ArgumentFormatterTest, FormatHRESULT_AsOnlyArgument_PrintValue) {
-	const string str = M3C_ARGUMENTS_TO_STRING(false, FormatHRESULT("hr", S_FALSE));
-
-	EXPECT_EQ("{hr:0x00000001}", str);
-}
-
-TEST(ArgumentFormatterTest, FormatHRESULT_AsReturnValueWithArgument_PrintValue) {
-	const int arg = 3;
-	const string str = M3C_ARGUMENTS_TO_STRING(true, FormatHRESULT(nullptr, E_INVALIDARG), arg);
-	
-	EXPECT_EQ("{_ret:0x80070057,arg:3}", str);
-}
-
-
 //
 // Exception handling
 //

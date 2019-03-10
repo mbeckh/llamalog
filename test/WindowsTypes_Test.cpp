@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "llamalog/LogLine.h"
 
-#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include <windows.h>
 

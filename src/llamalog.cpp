@@ -53,6 +53,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <new>
 #include <queue>
 #include <thread>
 #include <utility>
@@ -130,15 +131,16 @@ public:
 	}
 
 	/// @brief Gets an item from this buffer.
+	/// @remarks The function uses a placement `new` for creating the `LogLine`.
 	/// @warning This function MUST NOT be called more than once for each index because the data is moved internally.
 	/// @param readIndex The index to read.
-	/// @param logLine The `LogLine` receiving the next event.
-	/// @return Returns `true` if a value is available and has been copied to @p logLine.
+	/// @param pLogLine A pointer to the adress where the `LogLine` receiving the next event shall be created.
+	/// @return Returns `true` if a value is available and has been created in @p pLogLine.
 	/// @copyright Same as `Buffer::try_pop` from NanoLog.
-	bool TryPop(const std::uint_fast32_t readIndex, LogLine& logLine) noexcept {
+	bool TryPop(const std::uint_fast32_t readIndex, LogLine* const pLogLine) noexcept {
 		if (m_writeState[readIndex].load(std::memory_order_acquire)) {
 			Item& item = reinterpret_cast<Item*>(m_buffer)[readIndex];
-			logLine = std::move(item.logLine);
+			new (pLogLine) LogLine(std::move(item.logLine));
 			return true;
 		}
 		return false;
@@ -148,6 +150,7 @@ public:
 	/// @details The size of `m_buffer` is just under 8 MB (to account for the two atomic fields.
 	/// @copyright Same as `Buffer::size` from NanoLog.
 	static constexpr std::uint32_t kBufferSize = 32768 - 1;  ///< @brief The number of elements in the buffer.
+	static_assert(sizeof(std::atomic_uint32_t) + sizeof(std::atomic_bool) <= sizeof(Item));
 
 private:
 	/// @copyright Same as `Buffer::m_buffer` from NanoLog, but on stack instead of heap.
@@ -166,7 +169,7 @@ public:
 	/// @brief Get the spin lock.
 	/// @param flag The flag to lock. @details Only a reference is kept internally.
 	/// @copyright Same as `SpinLock::SpinLock` from NanoLog.
-	explicit SpinLock(std::atomic_flag& flag) noexcept
+	_Acquires_exclusive_lock_(m_flag) explicit SpinLock(std::atomic_flag& flag) noexcept
 		: m_flag(flag) {
 		while (m_flag.test_and_set(std::memory_order_acquire)) {
 			// empty
@@ -177,7 +180,7 @@ public:
 
 	/// @brief Release the spin lock.
 	/// @copyright Same as `SpinLock::~SpinLock` from NanoLog.
-	~SpinLock() noexcept {
+	_Releases_exclusive_lock_(m_flag) ~SpinLock() noexcept {
 		m_flag.clear(std::memory_order_release);
 	}
 
@@ -230,21 +233,21 @@ public:
 	}
 
 	/// @brief Read the next available `LogLine` from this queue.
-	/// @param logLine Receives the next entry.
-	/// @return `true` if data is available.
+	/// @param pLogLine A pointer to the adress where the `LogLine` receiving the next event shall be created.
+	/// @return `true` if data is available and a new `LogLine` has been created.
 	/// @copyright Same as `QueueBuffer::try_pop` from NanoLog.
-	bool TryPop(LogLine& logLine) noexcept {
-		if (m_currentReadBuffer == nullptr) {
+	bool TryPop(LogLine* const pLogLine) noexcept {
+		if (!m_currentReadBuffer) {
 			m_currentReadBuffer = GetNextReadBuffer();
 		}
 
 		Buffer* readBuffer = m_currentReadBuffer;
 
-		if (readBuffer == nullptr) {
+		if (!readBuffer) {
 			return false;
 		}
 
-		if (readBuffer->TryPop(m_readIndex, logLine)) {
+		if (readBuffer->TryPop(m_readIndex, pLogLine)) {
 			++m_readIndex;
 			if (m_readIndex == Buffer::kBufferSize) {
 				m_readIndex = 0;
@@ -296,22 +299,19 @@ private:
 	std::atomic_flag m_flag = ATOMIC_FLAG_INIT;  ///< @brief Flag protecting the `m_buffers` structure. @hideinitializer
 
 	/// @copyright Same as `QueueBuffer::m_buffers` from NanoLog.
-	std::queue<std::unique_ptr<Buffer>> m_buffers;  ///< @brief The queue of buffers.
+	_Guarded_by_(m_flag) std::queue<std::unique_ptr<Buffer>> m_buffers;  ///< @brief The queue of buffers.
 };
 
 }  // namespace
-
 
 /// @brief The main logger class.
 /// @copyright Derived from `NanoLogger` from NanoLog.
 class Logger final {
 public:
 	/// @brief Create a new logger connected to a writer.
-	/// @param logWriter The log writer.
 	/// @copyright Derived from `NanoLogger::NanoLogger` from NanoLog.
-	explicit Logger(std::unique_ptr<LogWriter>&& logWriter)
+	explicit Logger()
 		: m_thread(&Logger::Pop, this) {
-		m_logWriters.push_back(std::move(logWriter));
 		m_state.store(State::kReady, std::memory_order_release);
 	}
 
@@ -352,14 +352,45 @@ private:
 			std::this_thread::sleep_for(std::chrono::microseconds(50));
 		}
 
-		LogLine logLine(LogLevel::kInfo, nullptr, 0, nullptr, "");
+		// the place where the logline is copied to
+		std::byte buffer[sizeof(LogLine)];
+		LogLine* const pLogLine = reinterpret_cast<LogLine*>(buffer);
+
+		// Helper class to enable destructor call during stack unwinding for pLogLine.
+		class CallDestruct {
+		public:
+			constexpr explicit CallDestruct(LogLine* const pLogLine) noexcept
+				: m_pLogLine(pLogLine) {
+				// empty
+			}
+			CallDestruct(const CallDestruct&) = delete;
+			CallDestruct(CallDestruct&&) = delete;
+			~CallDestruct() noexcept {
+				m_pLogLine->~LogLine();
+			}
+
+		public:
+			CallDestruct& operator=(const CallDestruct&) = delete;
+			CallDestruct& operator=(CallDestruct&&) = delete;
+
+		private:
+			LogLine* const m_pLogLine;
+		};
 
 		while (m_state.load() == State::kReady) {
-			if (m_buffer.TryPop(logLine)) {
-				const LogLevel level = logLine.GetLevel();
+			if (m_buffer.TryPop(pLogLine)) {
+				// release any resources of the log line as quickly as possible
+				CallDestruct guard(pLogLine);
+
+				const LogLevel level = pLogLine->GetLevel();
+				if (m_logWriters.empty()) {
+					fprintf(stderr, "NO WRITERS\n");
+				}
 				for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 					if (logWriter->IsLogged(level)) {
-						logWriter->Log(logLine);
+						logWriter->Log(*pLogLine);
+					} else {
+						fprintf(stderr, "SWALLOW\n");
 					}
 				}
 			} else {
@@ -368,11 +399,14 @@ private:
 		}
 
 		// Pop and log all remaining entries
-		while (m_buffer.TryPop(logLine)) {
-			const LogLevel level = logLine.GetLevel();
+		while (m_buffer.TryPop(pLogLine)) {
+			// release any resources of the log line as quickly as possible
+			CallDestruct guard(pLogLine);
+
+			const LogLevel level = pLogLine->GetLevel();
 			for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 				if (logWriter->IsLogged(level)) {
-					logWriter->Log(logLine);
+					logWriter->Log(*pLogLine);
 				}
 			}
 		}
@@ -401,42 +435,37 @@ private:
 
 	/// @copyright Similar to `NanoLogger::m_file_writer` from NanoLog.
 	std::vector<std::unique_ptr<LogWriter>> m_logWriters;  ///< @brief A list of all log writers.
-};
+};                                                         // namespace llamalog
 
-static std::unique_ptr<Logger> g_logger;
-static std::atomic<Logger*> g_atomicLogger;
-
-
-Log& Log::operator+=(std::unique_ptr<LogWriter>&& logWriter) {
-	g_atomicLogger.load(std::memory_order_acquire)->AddWriter(std::move(logWriter));
-	return *this;
-}
-
-// Derived from `Log::operator==` from NanoLog.
-void Log::operator+=(LogLine& logLine) {
-	g_atomicLogger.load(std::memory_order_acquire)->AddLine(std::move(logLine));
-}
-
-// Derived from `Log::operator==` from NanoLog.
-void Log::operator+=(LogLine&& logLine) {
-	g_atomicLogger.load(std::memory_order_acquire)->AddLine(std::move(logLine));
-}
-
-// Derived from `initialize` from NanoLog.
-void Initialize(std::unique_ptr<LogWriter>&& writer) {
-	g_logger = std::make_unique<Logger>(std::move(writer));
-	g_atomicLogger.store(g_logger.get(), std::memory_order_seq_cst);
-}
+/// @brief The default logger.
+static std::unique_ptr<Logger> g_pLogger;
+/// @brief An atomic reference to the default logger.
+static std::atomic<Logger*> g_pAtomicLogger;
 
 // Derived from `initialize` from NanoLog.
 void Initialize() {
-	Initialize(std::unique_ptr<LogWriter>(new DailyRollingFileWriter(LogLevel::kTrace, "t:\\tmp\\", "llamalog.log")));
-	//Initialize(std::unique_ptr<LogWriter>(new DebugWriter(LogLevel::kTrace)));
+	g_pLogger = std::make_unique<Logger>();
+	g_pAtomicLogger.store(g_pLogger.get(), std::memory_order_release);
 }
 
-void Shutdown() {
-	g_atomicLogger.store(nullptr);
-	g_logger.reset();
+void AddWriter(std::unique_ptr<LogWriter>&& writer) {
+	g_pAtomicLogger.load(std::memory_order_acquire)->AddWriter(std::move(writer));
+	std::atomic_thread_fence(std::memory_order_release);
+}
+
+// Derived from `Log::operator==` from NanoLog.
+void Log(LogLine& logLine) {
+	g_pAtomicLogger.load(std::memory_order_acquire)->AddLine(std::move(logLine));
+}
+
+// Derived from `Log::operator==` from NanoLog.
+void Log(LogLine&& logLine) {
+	g_pAtomicLogger.load(std::memory_order_acquire)->AddLine(std::move(logLine));
+}
+
+void Shutdown() noexcept {
+	g_pAtomicLogger.store(nullptr);
+	g_pLogger.reset();
 }
 
 }  // namespace llamalog

@@ -89,10 +89,7 @@ public:
 
 public:
 	LogLine& operator=(const LogLine&) = delete;  ///< @noassignmentoperator
-	/// @brief Move the buffers.
-	/// @param logLine The source logline.
-	/// @return The current object for method chaining.
-	LogLine& operator=(LogLine&& logLine) noexcept;
+	LogLine& operator=(LogLine&&) = delete;       ///< @nomoveoperator
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
@@ -189,7 +186,7 @@ public:
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(uint64_t)` from NanoLog.
-	LogLine& operator<<(_In_opt_ const void* arg);
+	LogLine& operator<<(_In_opt_ const void* __restrict arg);
 
 	/// @brief Add a `nullptr`  as a log argument. @details The output is the same as providing a `void` pointer having
 	/// the value `nullptr`.
@@ -202,13 +199,13 @@ public:
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
-	LogLine& operator<<(_In_opt_z_ const char* arg);
+	LogLine& operator<<(_In_opt_z_ const char* __restrict arg);
 
 	/// @brief Add a log argument. @details The value is copied into the buffer.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
-	LogLine& operator<<(_In_opt_z_ const wchar_t* arg);
+	LogLine& operator<<(_In_opt_z_ const wchar_t* __restrict arg);
 
 	/// @brief Add a log argument. @details The value is copied into the buffer.
 	/// @param arg The argument.
@@ -249,26 +246,40 @@ public:
 
 	/// @brief Get the name of the file.
 	/// @return The file name.
-	const char* GetFile() const noexcept {
+	_Ret_z_ const char* GetFile() const noexcept {
 		return m_szFile;
-	}
-
-	/// @brief Get the name of the function.
-	/// @return The function name.
-	const char* GetFunction() const noexcept {
-		return m_szFunction;
 	}
 
 	/// @brief Get the source code line.
 	/// @return The line number.
-	uint32_t GetLine() const noexcept {
+	std::uint32_t GetLine() const noexcept {
 		return m_line;
 	}
+
+	/// @brief Get the name of the function.
+	/// @return The function name.
+	_Ret_z_ const char* GetFunction() const noexcept {
+		return m_szFunction;
+	}
+
+	/// @brief Get the unformatted log message, i.e. before patter replacement.
+	/// @return The message pattern.
+	_Ret_z_ const char* GetPattern() const noexcept {
+		return m_szMessage;
+	}
+
+	/// @brief Get the arguments for formatting the message.
+	/// @remarks Using a template removes the need to include the headers of {fmt} in all translation units.
+	/// MUST use argument for `std::vector` because guaranteed copy elision does not take place in debug builds.
+	/// @tparam T This MUST be `std::vector<fmt::basic_format_arg<fmt::format_context>>`.
+	/// @param args The `std::vector` to receive the message arguments.
+	/// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
+	template <typename T>
+	void CopyArgumentsTo(T& args) const;
 
 	/// @brief Returns the formatted log message. @note The name `GetMessage` would conflict with the function from the
 	/// Windows API having the same name.
 	/// @return The log message.
-	/// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 	std::string GetLogMessage() const;
 
 	/// @brief Copy a log argument of a custom type to the argument buffer.
@@ -294,9 +305,9 @@ public:
 
 private:
 	/// @brief Type of the function to construct an argument in the buffer.
-	using Construct = void (*)(_In_ std::byte*, _Out_ std::byte*) noexcept;
+	using Construct = void (*)(_In_ std::byte* __restrict, _Out_ std::byte* __restrict) noexcept;
 	/// @brief Type of the function to destruct an argument in the buffer.
-	using Destruct = void (*)(_Inout_ std::byte*) noexcept;
+	using Destruct = void (*)(_Inout_ std::byte* __restrict) noexcept;
 
 private:
 	/// @brief Get the argument buffer for writing.
@@ -331,7 +342,7 @@ private:
 	/// @param cchLength The string length in characters NOT including a terminating null character.
 	/// @copyright Derived from `NanoLogLine::encode_c_string` from NanoLog.
 	template <typename T, typename std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, wchar_t>, int> = 0>
-	void WriteString(_In_z_ const T* arg, std::size_t cchLength);
+	void WriteString(_In_z_ const T* __restrict arg, std::size_t cchLength);
 
 	/// @brief Add a custom object to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, a pointer

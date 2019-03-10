@@ -21,8 +21,6 @@ limitations under the License.
 
 #include <atomic>
 #include <cstdint>
-#include <fstream>
-#include <memory>
 #include <string>
 
 namespace llamalog {
@@ -31,6 +29,7 @@ enum class LogLevel : std::uint8_t;
 class LogLine;
 
 /// @brief The base class for all log writers.
+/// @details Except for the constructor and destructor, all access to a `LogWriter` is from a single thread.
 class LogWriter {
 public:
 	/// @brief Creates a new log writer with a particular `#LogLevel`.
@@ -65,14 +64,23 @@ protected:
 	/// @param logLevel A `#LogLevel`.
 	/// @return One of `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` - or `-` for unknown log levels.
 	/// @copyright Derived from `to_string(LogLevel)` from NanoLog.
-	char const* FormatLogLevel(LogLevel logLevel) noexcept;
+	_Ret_z_ const char* FormatLogLevel(LogLevel logLevel) const noexcept;
 
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS`.
 	/// @details In case of an error, `0000-00-00 00:00:00.000` is returned.
 	/// @param timestamp The timestamp.
 	/// @return The timestamp as a string.
-	/// @copyright Derived from `format_timestamp` from NanoLog.
-	std::string FormatTimestamp(const FILETIME& timestamp);
+	std::string FormatTimestamp(const FILETIME& timestamp) const noexcept;
+
+	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS` to a target buffer.
+	/// @details The buffer MUST be of type `fmt::basic_memory_buffer`.
+	/// In case of an error, `0000-00-00 00:00:00.000` is written.
+	/// @remarks Using a template instead of the concrete type removes the need to add {fmt} as a depency for this header.
+	/// @tparam Out The target buffer which MUST be of type `fmt::basic_memory_buffer`.
+	/// @param out The target buffer.
+	/// @param timestamp The timestamp.
+	template <typename Out>
+	void FormatTimestampTo(Out& out, const FILETIME& timestamp) const noexcept;
 
 private:
 	std::atomic<LogLevel> m_logLevel;  ///< @brief Atomic store for the `#LogLevel`.
@@ -94,13 +102,36 @@ protected:
 /// @brief A `LogWriter` that writes all output to a file.
 /// @details A new file is started each day at 00:00:00 UTC.
 /// @copyright Loosely based on `class FileWriter` from NanoLog.
-class DailyRollingFileWriter : public LogWriter {
+class RollingFileWriter : public LogWriter {
+public:
+	/// @brief The rolling frequency.
+	/// @details @internal The value specifies the number of 100 nanosecond intervals to match `FILETIME`.
+	enum class Frequency : std::uint8_t {
+		kMonthly,      ///< @brief Start a new file every month.
+		kDaily,        ///< @brief Start a new file every day.
+		kHourly,       ///< @brief Start a new file every hour.
+		kEveryMinute,  ///< @brief Start a new file every minute.
+		kEverySecond,  ///< @brief Start a new file every second. @note The main use is for testing.
+		kCount         ///< @brief Maximum value for calculations.
+	};
+
 public:
 	/// @brief Create the writer.
+	/// @warning The logger deletes any log files older than the neweset @p maxFiles files. Please ensure that any
+	/// files are copied to a different location if their contents are required for a longer period.
 	/// @param level Only events at this `#LogLevel` or above will be logged by this writer.
 	/// @param directory Directory where to store the log files.
 	/// @param fileName File name for the log files.
-	DailyRollingFileWriter(LogLevel level, std::string directory, std::string fileName);
+	/// @param frequency The interval at which a new the writer starts a new file.
+	/// @param maxFiles The maximum number of old log files which should be kept in @p directory.
+	RollingFileWriter(LogLevel level, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = 60);
+	RollingFileWriter(const RollingFileWriter&) = delete;  ///< @nocopyconstructor
+	RollingFileWriter(RollingFileWriter&&) = delete;       ///< @nomoveconstructor
+	~RollingFileWriter() noexcept override;
+
+public:
+	RollingFileWriter& operator=(const RollingFileWriter&) = delete;  ///< @noassignmentoperator
+	RollingFileWriter& operator=(RollingFileWriter&&) = delete;       ///< @nomoveoperator
 
 protected:
 	/// @brief Produce output for a `LogLine`.
@@ -110,15 +141,18 @@ protected:
 
 private:
 	/// @brief Start the next file.
-	void RollFile();
+	/// @param timestamp The timestamp of the `LogLine` which triggered the roll over.
+	void RollFile(const FILETIME& timestamp);
 
 private:
-	const std::string m_directory;  ///< @brief The directory.
-	const std::string m_fileName;   ///< @brief The file name.
+	const std::string m_directory;   ///< @brief The directory.
+	const std::string m_fileName;    ///< @brief The file name.
+	const Frequency m_frequency;     ///< @brief The rolling frequency.
+	const std::uint32_t m_maxFiles;  ///< @brief The maximum number of files to keep.
 
-	/// @copyright Same as `FileWriter::m_os` from NanoLog.
-	std::unique_ptr<std::ofstream> m_os;  ///< @brief The output stream.
-	FILETIME m_nextRollAt = {0};          ///< @brief Next time to roll over. @hideinitializer
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
+	HANDLE m_hFile = INVALID_HANDLE_VALUE;  ///< @brief The handle of the log file. @hideinitializer
+	FILETIME m_nextRollAt = {0};            ///< @brief Next time to roll over. @hideinitializer
 };
 
 }  // namespace llamalog

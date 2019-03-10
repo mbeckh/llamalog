@@ -14,14 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "llamalog/LogLine.h"
-#include "llamalog/WindowsTypes.h"
-
 #include <gmock/gmock.h>
-
-#include <rpc.h>
-
-#pragma comment(lib, "Rpcrt4")
 
 int main(int argc, char** argv) {
 	testing::InitGoogleMock(&argc, argv);

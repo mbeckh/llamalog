@@ -61,6 +61,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace llamalog {
@@ -99,7 +100,7 @@ struct NonTriviallyCopyable final {
 };
 
 /// @brief Type of the function to create a formatter argument.
-using CreateFormatArg = fmt::basic_format_arg<fmt::format_context> (*)(const std::byte*) noexcept;
+using CreateFormatArg = fmt::basic_format_arg<fmt::format_context> (*)(const std::byte* __restrict) noexcept;
 
 /// @brief The types supported by the logger as arguments. Use `#kTypeId` to get the `#TypeId`.
 /// @copyright This type is derived from `SupportedTypes` from NanoLog.
@@ -320,7 +321,7 @@ public:
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(char value) {
 		const fmt::format_specs* const specs = spec();
-		if ((specs == nullptr || specs->type == '\0') && (value < 0x20 || value > 0x7f)) {
+		if ((!specs || !specs->type) && (value < 0x20 || value > 0x7f)) {
 			std::string_view sv(&value, 1);
 			std::string str = EscapeC(sv);
 			if (!str.empty()) {
@@ -335,7 +336,7 @@ public:
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(const char* value) {
 		const fmt::format_specs* const specs = spec();
-		if (specs == nullptr || specs->type == '\0') {
+		if (!specs || !specs->type) {
 			std::string_view sv(value);
 			std::string str = EscapeC(sv);
 			if (!str.empty()) {
@@ -350,7 +351,7 @@ public:
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(fmt::basic_string_view<arg_formatter_base::char_type> value) {
 		const fmt::format_specs* const specs = spec();
-		if (specs == nullptr || specs->type == '\0') {
+		if (!specs || !specs->type) {
 			std::string_view sv(value.data(), value.size());
 			std::string str = EscapeC(sv);
 			if (!str.empty()) {
@@ -747,7 +748,7 @@ void CallDestructors(_Inout_updates_bytes_(cbUsed) std::byte* __restrict buffer,
 
 
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): m_stackBuffer and m_timestamp need no initialization.
-LogLine::LogLine(const LogLevel logLevel, _In_z_ const char* __restrict const szFile, const std::uint32_t line, _In_z_ const char* __restrict const szFunction, const char* __restrict const szMessage) noexcept
+LogLine::LogLine(const LogLevel logLevel, _In_z_ const char* __restrict const szFile, const std::uint32_t line, _In_z_ const char* __restrict const szFunction, _In_z_ const char* __restrict const szMessage) noexcept
 	: m_logLevel(logLevel)
 	, m_threadId(llamalog::GetCurrentThreadId())
 	, m_line(line)
@@ -822,37 +823,6 @@ LogLine::~LogLine() {
 	if (m_hasNonTriviallyCopyable) {
 		CallDestructors(GetBuffer(), m_cbUsed);
 	}
-}
-
-LogLine& LogLine::operator=(LogLine&& logLine) noexcept {
-	if (m_hasNonTriviallyCopyable) {
-		CallDestructors(GetBuffer(), m_cbUsed);
-	}
-
-	m_cbUsed = logLine.m_cbUsed;
-	m_cbSize = logLine.m_cbSize;
-	m_heapBuffer = std::move(logLine.m_heapBuffer);
-	m_hasNonTriviallyCopyable = logLine.m_hasNonTriviallyCopyable;
-	if (!m_heapBuffer) {
-		if (m_hasNonTriviallyCopyable) {
-			MoveObjects(logLine.m_stackBuffer, m_stackBuffer, m_cbUsed);
-		} else {
-			std::memcpy(m_stackBuffer, logLine.m_stackBuffer, m_cbUsed);
-		}
-	}
-	m_logLevel = logLine.m_logLevel;
-	m_threadId = logLine.m_threadId;
-	m_line = logLine.m_line;
-	m_timestamp = logLine.m_timestamp;
-	m_szFile = logLine.m_szFile;
-	m_szFunction = logLine.m_szFunction;
-	m_szMessage = logLine.m_szMessage;
-
-	// leave source in a consistent state
-	logLine.m_cbUsed = 0;
-	logLine.m_cbSize = sizeof(m_stackBuffer);
-
-	return *this;
 }
 
 // Based on `NanoLogLine::operator<<(int32_t)` from NanoLog.
@@ -946,7 +916,7 @@ LogLine& LogLine::operator<<(const long double arg) {
 }
 
 // Based on `NanoLogLine::operator<<(uint64_t)` from NanoLog.
-LogLine& LogLine::operator<<(_In_opt_ const void* const arg) {
+LogLine& LogLine::operator<<(_In_opt_ const void* __restrict const arg) {
 	Write(arg);
 	return *this;
 }
@@ -958,8 +928,8 @@ LogLine& LogLine::operator<<(_In_opt_ const std::nullptr_t arg) {
 }
 
 // Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
-LogLine& LogLine::operator<<(_In_opt_z_ const char* const arg) {
-	if (arg != nullptr) {
+LogLine& LogLine::operator<<(_In_opt_z_ const char* __restrict const arg) {
+	if (arg) {
 		WriteString<char>(arg, std::strlen(arg));
 	} else {
 		Write<const void*>(nullptr);
@@ -968,8 +938,8 @@ LogLine& LogLine::operator<<(_In_opt_z_ const char* const arg) {
 }
 
 // Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
-LogLine& LogLine::operator<<(_In_opt_z_ const wchar_t* const arg) {
-	if (arg != nullptr) {
+LogLine& LogLine::operator<<(_In_opt_z_ const wchar_t* __restrict const arg) {
+	if (arg) {
 		WriteString<wchar_t>(arg, std::wcslen(arg));
 	} else {
 		Write<const void*>(nullptr);
@@ -989,10 +959,11 @@ LogLine& LogLine::operator<<(const std::wstring_view& arg) {
 	return *this;
 }
 
-// Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
-std::string LogLine::GetLogMessage() const {
-	std::vector<fmt::basic_format_arg<fmt::format_context>> args;
-
+/// @brief The single specialization of `CopyArgumentsTo`.
+/// @param args The `std::vector` to receive the message arguments.
+/// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
+template <>
+void LogLine::CopyArgumentsTo<std::vector<fmt::basic_format_arg<fmt::format_context>>>(std::vector<fmt::basic_format_arg<fmt::format_context>>& args) const {
 	const std::byte* __restrict const buffer = GetBuffer();
 	for (std::size_t cbPosition = 0; cbPosition < m_cbUsed;) {
 		TypeId typeId;
@@ -1031,10 +1002,15 @@ std::string LogLine::GetLogMessage() const {
 		}
 #pragma pop_macro("DECODE_")
 	}
+}
 
-	fmt::basic_format_args<fmt::format_context> formatArgs(args.data(), static_cast<fmt::basic_format_args<fmt::format_context>::size_type>(args.size()));
-	fmt::memory_buffer buf;
-	fmt::vformat_to<EscapingFormatter>(buf, fmt::to_string_view(m_szMessage), formatArgs);
+std::string LogLine::GetLogMessage() const {
+	std::vector<fmt::basic_format_arg<fmt::format_context>> args;
+	CopyArgumentsTo(args);
+
+	fmt::basic_memory_buffer<char, 256> buf;
+	fmt::vformat_to<EscapingFormatter>(buf, fmt::to_string_view(m_szMessage),
+									   fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::basic_format_args<fmt::format_context>::size_type>(args.size())));
 	return fmt::to_string(buf);
 }
 
@@ -1091,7 +1067,7 @@ void LogLine::Write(T arg) {
 
 /// Derived from `NanoLogLine::encode_c_string` from NanoLog.
 template <typename T, typename std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, wchar_t>, int>>
-void LogLine::WriteString(_In_z_ const T* const arg, const std::size_t cchLength) {
+void LogLine::WriteString(_In_z_ const T* __restrict const arg, const std::size_t cchLength) {
 	static constexpr TypeId kArgTypeId = kTypeId<const T*>;
 	static constexpr std::uint8_t kArgSize = kSize<const T*>;
 	const std::size_t cbLength = cchLength * sizeof(T);
@@ -1113,7 +1089,7 @@ void LogLine::WriteString(_In_z_ const T* const arg, const std::size_t cchLength
 	m_cbUsed += cbSize + cbPadding;
 }
 
-void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict const ptr, const std::size_t cbObjectSize, const std::size_t cbAlign, const void* const createFormatArg) {
+void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict const ptr, const std::size_t cbObjectSize, const std::size_t cbAlign, _In_ const void* const createFormatArg) {
 	static constexpr TypeId kArgTypeId = kTypeId<TriviallyCopyable>;
 	static constexpr std::uint8_t kArgSize = kSize<TriviallyCopyable>;
 	const std::size_t cbSize = kArgSize + cbObjectSize;
@@ -1139,7 +1115,7 @@ void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::b
 	m_cbUsed += cbSize + cbPadding;
 }
 
-__declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const std::size_t cbObjectSize, const std::size_t cbAlign, const Construct construct, const Destruct destruct, const void* const createFormatArg) {
+__declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const std::size_t cbObjectSize, const std::size_t cbAlign, _In_ const Construct construct, _In_ const Destruct destruct, _In_ const void* const createFormatArg) {
 	static constexpr TypeId kArgTypeId = kTypeId<NonTriviallyCopyable>;
 	static constexpr std::uint8_t kArgSize = kSize<NonTriviallyCopyable>;
 	const std::size_t cbSize = kArgSize + cbObjectSize;

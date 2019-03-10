@@ -53,73 +53,102 @@ namespace llamalog {
 
 class LogWriter;
 
-/// @brief The public log interface.
-/// @copyright The idea for the public interface is based on `struct NanoLog` from NanoLog.
-class Log {
-public:
-	Log() noexcept = default;
-	Log(const Log&) = delete;  ///< @nocopyconstructor
-	Log(Log&&) = delete;       ///< @nomoveconstructor
-
-	~Log() noexcept = default;
-
-public:
-	Log& operator=(const Log&) = delete;  ///< @noassignmentoperator
-	Log& operator=(Log&&) = delete;       ///< @nomoveoperator
-
-	/// @brief Add a log writer.
-	/// @param logWriter The `LogWriter` to add.
-	/// @return This object to allow method chaining.
-	Log& operator+=(std::unique_ptr<LogWriter>&& logWriter);
-
-	/// @brief Add a `LogLine`.
-	/// @param logLine The `LogLine` to send to the logger.
-	/// @copyright Derived from `Log::operator==` from NanoLog.
-	void operator+=(LogLine& logLine);
-
-	/// @brief Add a `LogLine`.
-	/// @param logLine The `LogLine` to send to the logger.
-	/// @copyright Derived from `Log::operator==` from NanoLog.
-	void operator+=(LogLine&& logLine);
-};
-
 /// @brief Initialize the logger.
 /// @note `Initialize` MUST be called before any logging takes place.
 /// @copyright Derived from `initialize` from NanoLog.
-void Initialize(std::unique_ptr<LogWriter>&& writer);
 void Initialize();
-void Shutdown();
 
-inline void LogX2(LogLine&) {
+/// @brief Initialize the logger.
+/// @note `Initialize` MUST be called before any logging takes place.
+/// @tparam LogWriter MUST be of type `LogWriter`.
+/// @param writers One or more `LogWriter` objects.
+template <typename... LogWriter>
+void Initialize(std::unique_ptr<LogWriter>&&... writers) {
+	Initialize();
+	(..., AddWriter(std::move(writers)));
 }
 
-template <typename T>
-void LogX2(LogLine& logLine, T&& arg) {
-	logLine << std::forward<T>(arg);
-}
+/// @brief Add a log writer.
+/// @param writer The `LogWriter` to add.
+void AddWriter(std::unique_ptr<LogWriter>&& writer);
 
-template <typename T, typename... R>
-void LogX2(LogLine& logLine, T&& arg, R&&... args) {
-	logLine << std::forward<T>(arg);
-	LogX2(logLine, std::forward<R>(args)...);
-}
+/// @brief Log a `LogLine`.
+/// @param logLine The `LogLine` to send to the logger.
+/// @copyright Derived from `Log::operator==` from NanoLog.
+void Log(LogLine& logLine);
 
+/// @brief Log a `LogLine`.
+/// @param logLine The `LogLine` to send to the logger.
+/// @copyright Derived from `Log::operator==` from NanoLog.
+void Log(LogLine&& logLine);
+
+/// @brief Logs a new `LogLine`.
+/// @tparam T The types of the message arguments.
+/// @param level The `#LogLevel`.
+/// @param szFile The logged file name. This MUST be a literal string, typically from `__FILE__`, i.e. the value is not copied but always referenced by the pointer.
+/// @param line The logged line number, typically from `__LINE__`.
+/// @param szFunction The logged function, typically from `__func__`. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
+/// @param szMessage The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
+/// @param args Any args for @p szMessage.
 template <typename... T>
-void LogX(LogLevel level, const char* szFile, uint32_t line, const char* szFunction, const char* szMessage, T&&... args) {
-	LogLine logLine(level, szFile, line, szFunction, szMessage);
-	LogX2(logLine, std::forward<T>(args)...);
-	llamalog::Log() += logLine;
+void Log(const LogLevel level, _In_z_ const char* __restrict const szFile, const std::uint32_t line, _In_z_ const char* __restrict const szFunction, _In_z_ const char* __restrict const szMessage, T&&... args) {
+	Log((LogLine(level, szFile, line, szFunction, szMessage) << ... << args));
 }
+
+/// @brief End all logging. This MUST be the last function called.
+void Shutdown() noexcept;
+
+/// @brief Internal methods which are not part of the API but which must be included in a header for technical reasons.
+namespace internal {
+
+/// @brief Get the filename after the last slash or backslash character.
+/// @param szPath A path.
+/// @param szStart The character after the last seen path separator.
+/// @return Filename and extension after the last path separator.
+constexpr _Ret_z_ const char* GetFilename(_In_z_ const char* const szPath, _In_opt_z_ const char* const szStart = nullptr) noexcept {
+	if (!*szPath) {
+		return szStart ? szStart : szPath;
+	}
+	if (*szPath == '/' || *szPath == '\\') {
+		return GetFilename(szPath + 1, szPath + 1);
+	}
+	return GetFilename(szPath + 1, szStart);
+}
+
+}  // namespace internal
 
 }  // namespace llamalog
 
 /// @brief Emit a log line.
 /// @param level_ The LogLevel.
 /// @param szMessage_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
-/// @copyright This macro is based on `NANO_LOG` from NanoLog.
-#define LLAMALOG_LOG(level_, ...) llamalog::LogX(level_, __FILE__, __LINE__, __func__, __VA_ARGS__)
+#define LLAMALOG_LOG(level_, szMessage_, ...)                                        \
+	{                                                                                \
+		constexpr const char* szFile_ = llamalog::internal::GetFilename(__FILE__);   \
+		llamalog::Log(level_, szFile_, __LINE__, __func__, szMessage_, __VA_ARGS__); \
+	}                                                                                \
+	while (0)
 
-//#define M3C_LOG(level_, szMessage_) llamalog::Log() += llamalog::LogLine(level_, __FILE__, __func__, __LINE__, szMessage_)
-//#define LOG_INFO(szMessage_) llamalog::IsLogged(llamalog::LogLevel::Info) && M3C_LOG(llamalog::LogLevel::Info, szMessage_)
-//#define LOG_WARN(szMessage_) llamalog::IsLogged(llamalog::LogLevel::Warn) && M3C_LOG(llamalog::LogLevel::Warn, szMessage_)
-//#define LOG_ERROR(szMessage_) llamalog::IsLogged(llamalog::LogLevel::Error) && M3C_LOG(llamalog::LogLevel::Error, szMessage_)
+/// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kTrace`.
+/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
+#define LOG_TRACE(szMessage, ...) LLAMALOG_LOG(llamalog::LogLevel::kTrace, szMessage, __VA_ARGS__)
+
+/// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kDebug`.
+/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
+#define LOG_DEBUG(szMessage, ...) LLAMALOG_LOG(llamalog::LogLevel::kDebug, szMessage, __VA_ARGS__)
+
+/// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kInfo`.
+/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
+#define LOG_INFO(szMessage, ...) LLAMALOG_LOG(llamalog::LogLevel::kInfo, szMessage, __VA_ARGS__)
+
+/// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kWarn`.
+/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
+#define LOG_WARN(szMessage, ...) LLAMALOG_LOG(llamalog::LogLevel::kWarn, szMessage, __VA_ARGS__)
+
+/// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kError`.
+/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
+#define LOG_ERROR(szMessage, ...) LLAMALOG_LOG(llamalog::LogLevel::kError, szMessage, __VA_ARGS__)
+
+/// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kFatal`.
+/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
+#define LOG_FATAL(szMessage, ...) LLAMALOG_LOG(llamalog::LogLevel::kFatal, szMessage, __VA_ARGS__)

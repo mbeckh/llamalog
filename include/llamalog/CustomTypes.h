@@ -25,19 +25,20 @@ limitations under the License.
 #include <fmt/core.h>
 
 #include <cstddef>
+#include <memory>
 #include <new>
 #include <type_traits>
 
 namespace llamalog {
 
-namespace {  // NOLINT(cert-dcl59-cpp, google-build-namespaces): This file will be included in implementation files only.
+namespace internal {
 
 /// @brief Helper function to create a type-safe formatter argument.
 /// @tparam T The type of the argument.
 /// @param objectData The serialized byte stream of an object of type @p T.
 /// @return A newly created `fmt::basic_format_arg`.
 template <typename T>
-fmt::basic_format_arg<fmt::format_context> CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* const objectData) noexcept {
+static fmt::basic_format_arg<fmt::format_context> CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
 	return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const T*>(objectData));
 }
 
@@ -46,7 +47,7 @@ fmt::basic_format_arg<fmt::format_context> CreateFormatArg(_In_reads_bytes_(size
 /// @param src The source address.
 /// @param dst The target address.
 template <typename T, typename std::enable_if_t<std::is_nothrow_move_constructible_v<T>, int> = 0>
-void Construct(_In_reads_bytes_(sizeof(T)) std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* dst) noexcept {
+static void Construct(_In_reads_bytes_(sizeof(T)) std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
 	static_assert(!std::is_trivially_copyable_v<T>, "Construct MUST NOT be used for trivially copyable types");
 	new (dst) T(std::move(*reinterpret_cast<T*>(src)));
 }
@@ -57,7 +58,7 @@ void Construct(_In_reads_bytes_(sizeof(T)) std::byte* const src, _Out_writes_byt
 // @param src The source address.
 // @param dst The target address.
 template <typename T, typename std::enable_if_t<!std::is_nothrow_move_constructible_v<T>, int> = 0>
-void Construct(_In_reads_bytes_(sizeof(T)) std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* dst) noexcept {
+static void Construct(_In_reads_bytes_(sizeof(T)) std::byte* __restrict const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
 	static_assert(!std::is_trivially_copyable_v<T>, "Construct MUST NOT be used for trivially copyable types");
 	static_assert(std::is_nothrow_copy_constructible_v<T>, "type MUST be nothrow copy constructible of it's not nothrow move constructible");
 	new (dst) T(*reinterpret_cast<const T*>(src));
@@ -67,27 +68,26 @@ void Construct(_In_reads_bytes_(sizeof(T)) std::byte* const src, _Out_writes_byt
 /// @tparam T The type of the argument.
 /// @param obj The object.
 template <typename T>
-void Destruct(_Inout_updates_bytes_(sizeof(T)) std::byte* obj) noexcept {
+static void Destruct(_Inout_updates_bytes_(sizeof(T)) std::byte* __restrict const obj) noexcept {
 	static_assert(!std::is_trivially_copyable_v<T>, "Destruct MUST NOT be used for trivially copyable types");
 	static_assert(std::is_nothrow_destructible_v<T>, "type MUST be nothrow destructible");
 	reinterpret_cast<T*>(obj)->~T();
 }
 
-}  // namespace
+}  // namespace internal
 
 template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
-	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<const void*>(&CreateFormatArg<X>));
+	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<const void*>(&internal::CreateFormatArg<X>));
 	return *this;
 }
 
 template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
-	static_assert(std::is_same_v<X, llamalog::test::MoveConstructible> || std::is_same_v<X, llamalog::test::CopyConstructible>);
 	static_assert(std::is_nothrow_move_constructible_v<X> || std::is_nothrow_copy_constructible_v<X>, "type MUST either be nothrow move or copy constructible");
-	std::byte* __restrict ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), &llamalog::Construct<X>, &llamalog::Destruct<X>, reinterpret_cast<const void*>(&llamalog::CreateFormatArg<X>));
+	std::byte* __restrict ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), &internal::Construct<X>, &internal::Destruct<X>, reinterpret_cast<const void*>(&internal::CreateFormatArg<X>));
 	new (ptr) X(arg);
 	return *this;
 }
