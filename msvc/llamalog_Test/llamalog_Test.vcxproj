@@ -31,9 +31,8 @@
   <ItemGroup>
     <ClCompile Include="..\..\test\CustomTypes_Test.cpp" />
     <ClCompile Include="..\..\test\LogLine_Test.cpp" />
-    <ClCompile Include="..\..\test\Log_Test.cpp" />
+    <ClCompile Include="..\..\test\llamalog_Test.cpp" />
     <ClCompile Include="..\..\test\main.cpp" />
-    <ClCompile Include="..\..\test\ToDo.cpp" />
     <ClCompile Include="..\..\test\WindowsTypes_Test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

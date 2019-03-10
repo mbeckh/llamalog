@@ -37,7 +37,6 @@
     <ClCompile Include="..\..\src\LogLine.cpp" />
     <ClCompile Include="..\..\src\llamalog.cpp" />
     <ClCompile Include="..\..\src\LogWriter.cpp" />
-    <ClCompile Include="..\..\src\ToDo.cpp" />
     <ClCompile Include="..\..\src\WindowsTypes.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

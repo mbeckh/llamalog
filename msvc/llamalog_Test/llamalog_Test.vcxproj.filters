@@ -27,13 +27,10 @@
     <ClCompile Include="..\..\test\WindowsTypes_Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\test\ToDo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\test\Log_Test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\test\CustomTypes_Test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\test\llamalog_Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

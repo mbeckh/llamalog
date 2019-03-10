@@ -30,9 +30,6 @@
     <ClCompile Include="..\..\src\WindowsTypes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\ToDo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\LogWriter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
