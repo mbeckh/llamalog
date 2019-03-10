@@ -6,7 +6,7 @@
 PROJECT_NAME = "llamalog"
 PROJECT_NUMBER = 0.1.0
 PROJECT_BRIEF = "The lightweight lean and mean asynchronous logger."
-PROJECT_LOGO =
+PROJECT_LOGO = ../img/logo_75x75.png
 OUTPUT_TEXT_DIRECTION = LTR
 STRIP_FROM_PATH = ../include/llamalog ../src
 ALIASES = "defaultconstructor=@brief Compiler generated default constructor." \
@@ -77,6 +77,9 @@ PREDEFINED = _In_= \
 			 _In_reads_bytes_(x)= \
              _Inout_= \
 			 _Ret_notnull_= \
+			 _Guarded_by_(x)= \
+			 _Acquires_exclusive_lock_(x)= \
+			 _Releases_exclusive_lock_(x)= \
 			 __declspec(x)= \
              __restrict=
 
