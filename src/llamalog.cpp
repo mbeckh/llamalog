@@ -241,7 +241,7 @@ public:
 			m_currentReadBuffer = GetNextReadBuffer();
 		}
 
-		Buffer* readBuffer = m_currentReadBuffer;
+		Buffer* const readBuffer = m_currentReadBuffer;
 
 		if (!readBuffer) {
 			return false;
@@ -320,7 +320,7 @@ public:
 
 	/// @brief Waits for all entries to be written.
 	/// @copyright Derived from `NanoLogger::~NanoLogger` from NanoLog.
-	~Logger() {
+	~Logger() noexcept {
 		m_state.store(State::kShutdown);
 		m_thread.join();
 	}

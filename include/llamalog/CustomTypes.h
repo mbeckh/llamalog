@@ -87,7 +87,7 @@ template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>
 LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 	static_assert(std::is_nothrow_move_constructible_v<X> || std::is_nothrow_copy_constructible_v<X>, "type MUST either be nothrow move or copy constructible");
-	std::byte* __restrict ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), &internal::Construct<X>, &internal::Destruct<X>, reinterpret_cast<void (*)()>(&internal::CreateFormatArg<X>));
+	std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), &internal::Construct<X>, &internal::Destruct<X>, reinterpret_cast<void (*)()>(&internal::CreateFormatArg<X>));
 	new (ptr) X(arg);
 	return *this;
 }
