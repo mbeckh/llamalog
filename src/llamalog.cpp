@@ -322,6 +322,7 @@ public:
 		}
 
 		m_state.store(State::kReady, std::memory_order_release);
+		WakeConditionVariable(&m_wakeConsumer);
 	}
 
 	Logger(const Logger&) = delete;  ///< @nocopyconstructor
@@ -331,6 +332,7 @@ public:
 	/// @copyright Derived from `NanoLogger::~NanoLogger` from NanoLog.
 	~Logger() noexcept {
 		m_state.store(State::kShutdown);
+		WakeConditionVariable(&m_wakeConsumer);
 		m_thread.join();
 	}
 
@@ -350,15 +352,17 @@ public:
 	/// @copyright Same as `NanoLogger::add` from NanoLog.
 	void AddLine(LogLine&& logLine) {
 		m_buffer.Push(std::move(logLine));
+		WakeConditionVariable(&m_wakeConsumer);
 	}
 
 private:
 	/// @brief Main method of the writing thread.
 	/// @copyright Same as `NanoLogger::pop` from NanoLog.
 	void Pop() noexcept {
-		// Wait for constructor to complete and pull all stores done there to this thread / core.
+		SRWLOCK lock = SRWLOCK_INIT;
+		AcquireSRWLockExclusive(&lock);
 		while (m_state.load(std::memory_order_acquire) == State::kInit) {
-			std::this_thread::sleep_for(std::chrono::microseconds(50));
+			SleepConditionVariableSRW(&m_wakeConsumer, &lock, 5000, 0);
 		}
 
 		// the place where the logline is copied to
@@ -398,9 +402,10 @@ private:
 					}
 				}
 			} else {
-				std::this_thread::sleep_for(std::chrono::microseconds(50));
+				SleepConditionVariableSRW(&m_wakeConsumer, &lock, 5000, 0);
 			}
 		}
+		ReleaseSRWLockExclusive(&lock);
 
 		// Pop and log all remaining entries
 		while (m_buffer.TryPop(pLogLine)) {
@@ -433,6 +438,10 @@ private:
 
 	/// @copyright Same as `NanoLogger::m_buffer_base` from NanoLog but on stack insteaf of heap.
 	QueueBuffer m_buffer;  ///< @brief The buffer.
+
+	/// @brief A condition to trigger the worker thread. @hideinitializer
+	/// @note This MUST be declared before `m_thread` because the latter waits on this condition.
+	CONDITION_VARIABLE m_wakeConsumer = CONDITION_VARIABLE_INIT;
 
 	/// @copyright Same as `NanoLogger::m_thread` from NanoLog.
 	std::thread m_thread;  ///< @brief The thread writing the events.

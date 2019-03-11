@@ -9,6 +9,7 @@ llamalog is basically [NanoLog](https://github.com/Iyengar111/NanoLog) reloaded.
 
 The **main differences** are:
 - llamalog uses [{fmt}](https://github.com/fmtlib/fmt) for formatting. All formatting is still done asynchronously in a background thread.
+- The background thread does not perform near-busy waits in 50 microsecond intervals but instead is notified using conditions.
 - Support for formatting custom types (as long as they have a copy constructor). For better efficiency, the logger uses a move constructor if available.
 - Support for wide character strings which are very common in the Windows API. The output is encoded as UTF-8.
 - A time-based rolling file sink.
