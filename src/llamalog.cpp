@@ -312,6 +312,15 @@ public:
 	/// @copyright Derived from `NanoLogger::NanoLogger` from NanoLog.
 	explicit Logger()
 		: m_thread(&Logger::Pop, this) {
+		if (!SetThreadPriority(m_thread.native_handle(), THREAD_PRIORITY_BELOW_NORMAL)) {
+			LOG_WARN("Error configuring thread: {:#x}", GetLastError());
+		}
+		MEMORY_PRIORITY_INFORMATION mpi = {0};
+		mpi.MemoryPriority = MEMORY_PRIORITY_LOW;
+		if (!SetThreadInformation(m_thread.native_handle(), ThreadMemoryPriority, &mpi, sizeof(mpi))) {
+			LOG_WARN("Error configuring thread: {:#x}", GetLastError());
+		}
+
 		m_state.store(State::kReady, std::memory_order_release);
 	}
 
