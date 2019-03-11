@@ -119,15 +119,15 @@ constexpr _Ret_z_ const char* GetFilename(_In_z_ const char* const szPath, _In_o
 
 }  // namespace llamalog
 
-/// @brief Emit a log line.
+/// @brief Emit a log line. @details Without the explicit variable `szFile_` the compiler does not reliably evaluate
+/// `#llamalog::internal::GetFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
 /// @param level_ The LogLevel.
 /// @param szMessage_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
 #define LLAMALOG_LOG(level_, szMessage_, ...)                                        \
-	{                                                                                \
+	do {                                                                             \
 		constexpr const char* szFile_ = llamalog::internal::GetFilename(__FILE__);   \
 		llamalog::Log(level_, szFile_, __LINE__, __func__, szMessage_, __VA_ARGS__); \
-	}                                                                                \
-	while (0)
+	} while (0)
 
 /// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kTrace`.
 /// @param szMessage The message pattern which MAY use the syntax of {fmt}.
