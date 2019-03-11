@@ -348,14 +348,14 @@ private:
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, a pointer
 	/// to the function to create the formatter argument, the size of the data, padding as required and finally the
 	/// bytes of @p ptr.
-	/// @remark The function to create the formatter argument is supplied as a void pointer which removes the compile
+	/// @remark The function to create the formatter argument is supplied as a void (*)() pointer which removes the compile
 	/// time dependency to {fmt} from this header.
 	/// @param ptr A pointer to the argument data.
 	/// @param cbObjectSize The size of the object.
 	/// @param cbAlign The alignment requirement of the type.
 	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::basic_format_arg` object.
-	void WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict ptr, std::size_t cbObjectSize, std::size_t cbAlign, _In_ const void* createFormatArg);
+	void WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict ptr, std::size_t cbObjectSize, std::size_t cbAlign, _In_ void (*createFormatArg)());
 
 	/// @brief Add a custom object to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, the pointer
@@ -363,7 +363,7 @@ private:
 	/// pointer to the function to create the formatter argument, the size of the data, padding as required and finally
 	/// the bytes of the object.
 	/// @note This function does NOT copy the object but only returns the target address.
-	/// @remark The function to create the formatter argument is supplied as a void pointer which removes the compile
+	/// @remark The function to create the formatter argument is supplied as a void (*)() pointer which removes the compile
 	/// time dependency to {fmt} from this header.
 	/// @param cbObjectSize The size of the object.
 	/// @param cbAlign The alignment requirement of the type.
@@ -373,7 +373,7 @@ private:
 	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::basic_format_arg` object.
 	/// @return An adress where to copy the current argument.
-	__declspec(restrict) std::byte* WriteNonTriviallyCopyable(std::size_t cbObjectSize, std::size_t cbAlign, _In_ Construct construct, _In_ Destruct destruct, _In_ const void* createFormatArg);
+	__declspec(restrict) std::byte* WriteNonTriviallyCopyable(std::size_t cbObjectSize, std::size_t cbAlign, _In_ Construct construct, _In_ Destruct destruct, _In_ void (*createFormatArg)());
 
 private:
 	/// @copyright Same as `NanoLogLine::m_bytes_used` from NanoLog. @hideinitializer

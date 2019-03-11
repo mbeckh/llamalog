@@ -1089,7 +1089,9 @@ void LogLine::WriteString(_In_z_ const T* __restrict const arg, const std::size_
 	m_cbUsed += cbSize + cbPadding;
 }
 
-void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict const ptr, const std::size_t cbObjectSize, const std::size_t cbAlign, _In_ const void* const createFormatArg) {
+void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict const ptr, const std::size_t cbObjectSize, const std::size_t cbAlign, _In_ void (*const createFormatArg)()) {
+	static_assert(sizeof(createFormatArg) == sizeof(CreateFormatArg));
+
 	static constexpr TypeId kArgTypeId = kTypeId<TriviallyCopyable>;
 	static constexpr std::uint8_t kArgSize = kSize<TriviallyCopyable>;
 	const std::size_t cbSize = kArgSize + cbObjectSize;
@@ -1115,7 +1117,9 @@ void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::b
 	m_cbUsed += cbSize + cbPadding;
 }
 
-__declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const std::size_t cbObjectSize, const std::size_t cbAlign, _In_ const Construct construct, _In_ const Destruct destruct, _In_ const void* const createFormatArg) {
+__declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const std::size_t cbObjectSize, const std::size_t cbAlign, _In_ const Construct construct, _In_ const Destruct destruct, _In_ void (*const createFormatArg)()) {
+	static_assert(sizeof(createFormatArg) == sizeof(CreateFormatArg));
+
 	static constexpr TypeId kArgTypeId = kTypeId<NonTriviallyCopyable>;
 	static constexpr std::uint8_t kArgSize = kSize<NonTriviallyCopyable>;
 	const std::size_t cbSize = kArgSize + cbObjectSize;
