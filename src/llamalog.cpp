@@ -383,14 +383,9 @@ private:
 				CallDestruct guard(pLogLine);
 
 				const LogLevel level = pLogLine->GetLevel();
-				if (m_logWriters.empty()) {
-					fprintf(stderr, "NO WRITERS\n");
-				}
 				for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 					if (logWriter->IsLogged(level)) {
 						logWriter->Log(*pLogLine);
-					} else {
-						fprintf(stderr, "SWALLOW\n");
 					}
 				}
 			} else {

@@ -46,6 +46,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include "llamalog/LogWriter.h"
 
 #include "llamalog/LogLine.h"
+#include "llamalog/llamalog.h"
 
 #include <fmt/format.h>
 
@@ -203,14 +204,19 @@ RollingFileWriter::RollingFileWriter(const LogLevel level, std::string directory
 
 RollingFileWriter::~RollingFileWriter() noexcept {
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		CloseHandle(m_hFile);
+		if (!CloseHandle(m_hFile)) {
+			LOG_WARN("Error closing log: {:#x}", GetLastError());
+			assert(false);
+		}
 	}
 }
 
 // @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 void RollingFileWriter::Log(const LogLine& logLine) {
 	const FILETIME timestamp = logLine.GetTimestamp();
-	if (CompareFileTime(&m_nextRollAt, &timestamp) != 1) {
+
+	// also try to roll when the file is invalid
+	if (CompareFileTime(&m_nextRollAt, &timestamp) != 1 || m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		RollFile(timestamp);
 	}
 
@@ -235,10 +241,13 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 	const char* const __restrict data = buffer.data();
 	const std::size_t cbLength = buffer.size();
 	for (std::size_t cbPosition = 0; cbPosition < cbLength; cbPosition += cbWritten) {
-		// please contact me if you REALLY do log messages whose size does not fit in a DWORD... ;-)
-		DWORD count = static_cast<DWORD>(std::min<std::size_t>(std::numeric_limits<DWORD>::max(), cbLength - cbPosition));
+		// it will work, however please contact me if you REALLY do log messages whose size does not fit in a DWORD... ;-)
+		const DWORD count = static_cast<DWORD>(std::min<std::size_t>(std::numeric_limits<DWORD>::max(), cbLength - cbPosition));
 		if (!WriteFile(m_hFile, data + cbPosition, count, &cbWritten, nullptr)) {
-			fprintf(stderr, "WriteFile");
+			LOG_ERROR("Error writing {} bytes to log: {:#x}", count, GetLastError());
+			assert(false);
+			// try the next event
+			return;
 		}
 		if (cbWritten == cbLength) {
 			// spare an addition for the most common case
@@ -261,6 +270,10 @@ void RollingFileWriter::RollFile(const FILETIME& timestamp) {
 
 	SYSTEMTIME time;
 	if (!FileTimeToSystemTime(&timestamp, &time)) {
+		LOG_ERROR("Error rolling log: {:#x}", GetLastError());
+		assert(false);
+		// if we can't get the time, we can't roll the file
+		return;
 	}
 
 	std::filesystem::path path(m_directory);
@@ -284,44 +297,54 @@ void RollingFileWriter::RollFile(const FILETIME& timestamp) {
 	WIN32_FIND_DATAW findData;
 	HANDLE hFindResult = FindFirstFileExW(pattern.c_str(), FindExInfoBasic, &findData, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 	if (hFindResult == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		if (GetLastError() != ERROR_NO_MORE_FILES) {
-			fprintf(stderr, "FindFirstFileExW");
+		const DWORD lastError = GetLastError();
+		if (lastError != ERROR_FILE_NOT_FOUND) {
+			LOG_WARN("Error rolling log: {:#x}", lastError);
+			assert(false);
 		}
 	} else {
 		do {
 			files.emplace_back(findData.cFileName);
 		} while (FindNextFileW(hFindResult, &findData));  // NOLINT(readability-implicit-bool-conversion): Compare BOOL in a condition.
-		if (GetLastError() != ERROR_NO_MORE_FILES) {
-			fprintf(stderr, "FindNextFileW");
+		const DWORD lastError = GetLastError();
+		if (lastError != ERROR_NO_MORE_FILES) {
+			LOG_WARN("Error rolling log: {:#x}", lastError);
+			assert(false);
+			// do not try to delete anything on find errors
 		} else {
 			std::sort(files.begin(), files.end());
 			for (std::uint32_t i = 0, len = static_cast<std::uint32_t>(files.size()); i < len - std::min(len, m_maxFiles); ++i) {
 				std::filesystem::path file = std::filesystem::path(m_directory) / files[i];
 				if (!DeleteFileW(file.c_str())) {
-					fprintf(stderr, "DeleteFileW");
+					LOG_WARN("Error deleting log '{}': {:#x}", files[i], GetLastError());
+					assert(false);
+					// delete failed, but continue
 				}
 			}
 		}
 		if (!FindClose(hFindResult)) {
-			fprintf(stderr, "FindClose");
+			LOG_WARN("Error deleting log: {:#x}", lastError);
+			assert(false);
+			// just leave the handle open
 		}
 	}
 
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (!CloseHandle(m_hFile)) {
-			fprintf(stderr, "CloseHandle");
+			LOG_WARN("Error closing log: {:#x}", GetLastError());
+			assert(false);
+			// if we can't close the file, leave it open
 		}
 		m_hFile = INVALID_HANDLE_VALUE;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 	}
 	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
 	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		fprintf(stderr, "CreateFileW");
+		LOG_ERROR("Error creating log: {:#x}", GetLastError());
+		assert(false);
+		// no file created
 	}
-
-	if (!SetFilePointerEx(m_hFile, {0}, nullptr, FILE_END)) {
-		fprintf(stderr, "SetFilePointerEx");
-	}
+	// using CreateFile with FILE_APPEND_DATA does not requre a SetFilePointer to the end
 }
 
 }  // namespace llamalog
