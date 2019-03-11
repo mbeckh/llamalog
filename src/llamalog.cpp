@@ -439,7 +439,7 @@ private:
 
 	/// @copyright Similar to `NanoLogger::m_file_writer` from NanoLog.
 	std::vector<std::unique_ptr<LogWriter>> m_logWriters;  ///< @brief A list of all log writers.
-};                                                         // namespace llamalog
+};
 
 /// @brief The default logger.
 static std::unique_ptr<Logger> g_pLogger;
