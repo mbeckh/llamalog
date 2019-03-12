@@ -102,6 +102,10 @@ _Ret_z_ char const* LogWriter::FormatLogLevel(const LogLevel logLevel) const noe
 	case LogLevel::kFatal:
 		return "FATAL";
 	default:
+		// uneven levels mark internal events
+		if (static_cast<std::uint8_t>(logLevel) & 1) {
+			return FormatLogLevel(static_cast<LogLevel>(static_cast<std::uint8_t>(logLevel) & ~1));
+		}
 		assert(false);
 		return "-";
 	}
@@ -205,7 +209,7 @@ RollingFileWriter::RollingFileWriter(const LogLevel level, std::string directory
 RollingFileWriter::~RollingFileWriter() noexcept {
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (!CloseHandle(m_hFile)) {
-			LOG_WARN("Error closing log: {:#x}", GetLastError());
+			LOG_WARN_INTERNAL("Error closing log: {:#x}", GetLastError());
 			assert(false);
 		}
 	}
@@ -217,11 +221,11 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 
 	// also try to roll when the file is invalid
 	if (CompareFileTime(&m_nextRollAt, &timestamp) != 1 || m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		RollFile(timestamp);
+		RollFile(logLine);
 	}
 
 	fmt::basic_memory_buffer<char, 256> buffer;
-	FormatTimestampTo(buffer, logLine.GetTimestamp());
+	FormatTimestampTo(buffer, timestamp);
 	buffer.push_back(' ');
 	Append(buffer, FormatLogLevel(logLine.GetLevel()));
 	fmt::format_to(buffer, " [{}] ", logLine.GetThreadId());
@@ -244,8 +248,11 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 		// it will work, however please contact me if you REALLY do log messages whose size does not fit in a DWORD... ;-)
 		const DWORD count = static_cast<DWORD>(std::min<std::size_t>(std::numeric_limits<DWORD>::max(), cbLength - cbPosition));
 		if (!WriteFile(m_hFile, data + cbPosition, count, &cbWritten, nullptr)) {
-			LOG_ERROR("Error writing {} bytes to log: {:#x}", count, GetLastError());
-			assert(false);
+			if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
+				// no need to log if there is no file
+				LOG_ERROR_INTERNAL("Error writing {} bytes to log: {:#x}", count, GetLastError());
+				assert(false);
+			}
 			// try the next event
 			return;
 		}
@@ -256,7 +263,9 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 	}
 }
 
-void RollingFileWriter::RollFile(const FILETIME& timestamp) {
+void RollingFileWriter::RollFile(const LogLine& logLine) {
+	const FILETIME timestamp = logLine.GetTimestamp();
+
 	ULARGE_INTEGER nextRollAt;
 	nextRollAt.LowPart = timestamp.dwLowDateTime;
 	nextRollAt.HighPart = timestamp.dwHighDateTime;
@@ -270,9 +279,9 @@ void RollingFileWriter::RollFile(const FILETIME& timestamp) {
 
 	SYSTEMTIME time;
 	if (!FileTimeToSystemTime(&timestamp, &time)) {
-		LOG_ERROR("Error rolling log: {:#x}", GetLastError());
+		LOG_ERROR_INTERNAL("Error rolling log: {:#x}", GetLastError());
 		assert(false);
-		// if we can't get the time, we can't roll the file
+		// if we can't get the time, we can't roll the file, try again for next message
 		return;
 	}
 
@@ -293,13 +302,35 @@ void RollingFileWriter::RollFile(const FILETIME& timestamp) {
 	pattern += std::string_view(buffer.data(), buffer.size());
 	pattern += fileName.extension();
 
+	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
+		if (!CloseHandle(m_hFile)) {
+			LOG_WARN_INTERNAL("Error closing log: {:#x}", GetLastError());
+			assert(false);
+			// if we can't close the file, leave it open
+		}
+	}
+	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
+	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
+		if (!(static_cast<uint8_t>(logLine.GetLevel()) & 1)) {
+			// logging this error could trigger an infinite loop if it is _this_ error message
+			LOG_ERROR_INTERNAL("Error creating log: {:#x}", GetLastError());
+		}
+		assert(false);
+		// no file created, try again for next message
+		return;
+	}
+	// using CreateFile with FILE_APPEND_DATA does not requre a SetFilePointer to the end
+
+	// Now clean any old log files.
+	// This part comes after creating the new log file to be able to log any errors which might happen during cleanup.
 	std::vector<std::wstring> files;
 	WIN32_FIND_DATAW findData;
 	HANDLE hFindResult = FindFirstFileExW(pattern.c_str(), FindExInfoBasic, &findData, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 	if (hFindResult == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		const DWORD lastError = GetLastError();
 		if (lastError != ERROR_FILE_NOT_FOUND) {
-			LOG_WARN("Error rolling log: {:#x}", lastError);
+			LOG_WARN_INTERNAL("Error rolling log: {:#x}", lastError);
 			assert(false);
 		}
 	} else {
@@ -308,43 +339,27 @@ void RollingFileWriter::RollFile(const FILETIME& timestamp) {
 		} while (FindNextFileW(hFindResult, &findData));  // NOLINT(readability-implicit-bool-conversion): Compare BOOL in a condition.
 		const DWORD lastError = GetLastError();
 		if (lastError != ERROR_NO_MORE_FILES) {
-			LOG_WARN("Error rolling log: {:#x}", lastError);
+			LOG_WARN_INTERNAL("Error rolling log: {:#x}", lastError);
 			assert(false);
 			// do not try to delete anything on find errors
 		} else {
 			std::sort(files.begin(), files.end());
-			for (std::uint32_t i = 0, len = static_cast<std::uint32_t>(files.size()); i < len - std::min(len, m_maxFiles); ++i) {
+			// end at offset len -1 to keep most recent file opened above. files is guaranteed to have at least one entry
+			for (std::uint32_t i = 0, len = static_cast<std::uint32_t>(files.size() - 1); i < len - std::min(len, m_maxFiles); ++i) {
 				std::filesystem::path file = std::filesystem::path(m_directory) / files[i];
 				if (!DeleteFileW(file.c_str())) {
-					LOG_WARN("Error deleting log '{}': {:#x}", files[i], GetLastError());
+					LOG_WARN_INTERNAL("Error deleting log '{}': {:#x}", files[i], GetLastError());
 					assert(false);
 					// delete failed, but continue
 				}
 			}
 		}
 		if (!FindClose(hFindResult)) {
-			LOG_WARN("Error deleting log: {:#x}", lastError);
+			LOG_WARN_INTERNAL("Error deleting log: {:#x}", lastError);
 			assert(false);
 			// just leave the handle open
 		}
 	}
-
-	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		if (!CloseHandle(m_hFile)) {
-			LOG_WARN("Error closing log: {:#x}", GetLastError());
-			assert(false);
-			// if we can't close the file, leave it open
-		}
-		m_hFile = INVALID_HANDLE_VALUE;  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-	}
-	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
-	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		LOG_ERROR("Error creating log: {:#x}", GetLastError());
-		assert(false);
-		// no file created
-	}
-	// using CreateFile with FILE_APPEND_DATA does not requre a SetFilePointer to the end
 }
 
 }  // namespace llamalog

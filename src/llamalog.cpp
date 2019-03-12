@@ -313,12 +313,12 @@ public:
 	explicit Logger()
 		: m_thread(&Logger::Pop, this) {
 		if (!SetThreadPriority(m_thread.native_handle(), THREAD_PRIORITY_BELOW_NORMAL)) {
-			LOG_WARN("Error configuring thread: {:#x}", GetLastError());
+			LOG_WARN_INTERNAL("Error configuring thread: {:#x}", GetLastError());
 		}
 		MEMORY_PRIORITY_INFORMATION mpi = {0};
 		mpi.MemoryPriority = MEMORY_PRIORITY_LOW;
 		if (!SetThreadInformation(m_thread.native_handle(), ThreadMemoryPriority, &mpi, sizeof(mpi))) {
-			LOG_WARN("Error configuring thread: {:#x}", GetLastError());
+			LOG_WARN_INTERNAL("Error configuring thread: {:#x}", GetLastError());
 		}
 
 		m_state.store(State::kReady, std::memory_order_release);
@@ -390,6 +390,7 @@ private:
 			LogLine* const m_pLogLine;
 		};
 
+
 		while (m_state.load() == State::kReady) {
 			if (m_buffer.TryPop(pLogLine)) {
 				// release any resources of the log line as quickly as possible
@@ -398,7 +399,13 @@ private:
 				const LogLevel level = pLogLine->GetLevel();
 				for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 					if (logWriter->IsLogged(level)) {
-						logWriter->Log(*pLogLine);
+						try {
+							logWriter->Log(*pLogLine);
+						} catch (const std::exception& e) {
+							LOG_ERROR_INTERNAL("Error writing log: {}", e.what());
+						} catch (...) {
+							LOG_ERROR_INTERNAL("Error writing log");
+						}
 					}
 				}
 			} else {
@@ -415,7 +422,13 @@ private:
 			const LogLevel level = pLogLine->GetLevel();
 			for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 				if (logWriter->IsLogged(level)) {
-					logWriter->Log(*pLogLine);
+					try {
+						logWriter->Log(*pLogLine);
+					} catch (const std::exception& e) {
+						LOG_ERROR_INTERNAL("Error writing log: {}", e.what());
+					} catch (...) {
+						LOG_ERROR_INTERNAL("Error writing log");
+					}
 				}
 			}
 		}

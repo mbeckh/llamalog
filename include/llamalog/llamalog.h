@@ -46,6 +46,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 #include <llamalog/LogLine.h>
 
+#include <cstdint>
 #include <memory>
 
 /// @brief The main namespace.
@@ -152,3 +153,13 @@ constexpr _Ret_z_ const char* GetFilename(_In_z_ const char* const szPath, _In_o
 /// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kFatal`.
 /// @param szMessage The message pattern which MAY use the syntax of {fmt}.
 #define LOG_FATAL(szMessage, ...) LLAMALOG_LOG(llamalog::LogLevel::kFatal, szMessage, __VA_ARGS__)
+
+/// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kWarn + 1`.
+/// @note This macro SHALL be used by the logger itself and any `LogWriter`s.
+/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
+#define LOG_WARN_INTERNAL(szMessage, ...) LLAMALOG_LOG(static_cast<llamalog::LogLevel>(static_cast<std::uint8_t>(llamalog::LogLevel::kWarn) + 1), szMessage, __VA_ARGS__)
+
+/// @brief Log a message at `#llamalog::LogLevel` `#llamalog::LogLevel::kWarn + 1`.
+/// @note This macro SHALL be used by the logger itself and any `LogWriter`s.
+/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
+#define LOG_ERROR_INTERNAL(szMessage, ...) LLAMALOG_LOG(static_cast<llamalog::LogLevel>(static_cast<std::uint8_t>(llamalog::LogLevel::kError) + 1), szMessage, __VA_ARGS__)

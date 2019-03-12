@@ -57,14 +57,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 namespace llamalog {
 
 /// @brief Enum for different log levels.
+/// @note Uneven values one greater then the respective enum are reserved for log messages from the logger itself.
 /// @copyright This enum is based on `enum class LogLevel` from NanoLog.
 enum class LogLevel : std::uint8_t {
-	kTrace,  ///< Output useful for inspecting program flow.
-	kDebug,  ///< Output useful for debugging.
-	kInfo,   ///< Informational message which should be logged.
-	kWarn,   ///< A condition which should be inspected.
-	kError,  ///< A recoverable error.
-	kFatal   ///< A condition leading to program abort.
+	kTrace = 0,   ///< Output useful for inspecting program flow.
+	kDebug = 2,   ///< Output useful for debugging.
+	kInfo = 4,    ///< Informational message which should be logged.
+	kWarn = 8,    ///< A condition which should be inspected.
+	kError = 16,  ///< A recoverable error.
+	kFatal = 32   ///< A condition leading to program abort.
 };
 
 /// @brief The class contains all data for formatting and output which happens asynchronously.

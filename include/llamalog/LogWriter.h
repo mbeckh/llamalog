@@ -141,8 +141,8 @@ protected:
 
 private:
 	/// @brief Start the next file.
-	/// @param timestamp The timestamp of the `LogLine` which triggered the roll over.
-	void RollFile(const FILETIME& timestamp);
+	/// @param logLine The `LogLine` which triggered the roll over.
+	void RollFile(const LogLine& logLine);
 
 private:
 	const std::string m_directory;   ///< @brief The directory.
