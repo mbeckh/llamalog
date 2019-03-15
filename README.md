@@ -24,6 +24,17 @@ The following benchmarks were compiled using Microsoft Visual Studio 15.9.8 (Mic
 
 The benchmark compares llamalog to its ancester [NanoLog](https://github.com/Iyengar111/NanoLog), to [spdlog](https://github.com/gabime/spdlog) which claims to be very fast and also uses {fmt} and to [g3log](https://github.com/KjellKod/g3log) which has also been very thoroughly tested for performance.
 
+The following versions were used for the benchmark.
+
+|Project|Commit|
+|---|---|
+|fmt|287eaab3b2777daa5d0d0cf72d977196ba54efb7|
+|g3log|cb4a94da7ddaec239d6cd95d0dafa0545b3c7c47|
+|llamalog|102713b0d2c9548d20d8c07ee69aa87cc4bbb80d|
+|NanoLog|40a53c36e0336af45f7664abeb939f220f78273e|
+|spdlog|bdfc7d2a5a4ad9cc1cebe1feb7e6fcc703840d71|
+|msvc-common|12bcbf336e284294498298b0e7214d9ae28b58aa|
+
 The following tables show the average of three runs for each logger at each setting. Lower numbers are always better. Precentiles, worst and average duration for a logger call are given in microseconds. The total duration, which also includes writing all data to the log file, is stated as seconds.
 
 ### 1 Thread - 1,000,000 Messages
