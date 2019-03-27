@@ -170,21 +170,22 @@ try {
 }
 ```
 More than one argument specifier MAY be used, e.g. `{:%F:%L}` will print the file name and line number where the exception happened. The following specifiers are supported. If an exception does not have the information an empty string is used in the output.
+
 |Specifier|Output|
 |:---|:---|
+|`%m`|The log message.|
+|`%C`|The name of the error category for `std::system_error` and derived classes.|
+|`%c`|The error code for `std::system_error` and derived classes.|
+|`%e`|The exception message, i.e. the result of `std::exception` `what()`.|
 |`%T`|The timestamp as `yyyy-MM-dd HH:mm:ss.SSS`.|
 |`%t`|The thread id of the thread which has thrown the exception.|
 |`%F`|The file name where the exception was thrown.|
-|`%f`|The function name where the exception was thrown.|
 |`%L`|The line number where the exception was thrown.|
-|`%m`|The log message.|
-|`%m`|The exception message, i.e. the result of `std::exception` `what()`.|
-|`%c`|The error code for `std::system_error` and derived classes.|
-|`%C`|The name of the error category for `std::system_error` and derived classes.|
+|`%f`|The function name where the exception was thrown.|
 
 Exceptions are often caught using a base class. Therefore it is not known which data is actually available for logging. Using the pattern syntax above could either lead to ugly output (like in `An error with code {0:%c} has happened: {0:%e}` when the exception is not a `std::system_error` or overly complex catch clauses just to log the right data.
 
-llamalog therefore supports conditional patterns which are only printed if any one of the contained specifiers produced a non-empty output. The pattern from the previous paragraph would produce `An error with code  has happened: somemessage` for a `std::exception` (please also note the double space between "code" and "has"). The following pattern solves the problem: `An error {0:%[with code %c ]}has happened: {0:%e}` and will output `An error has happened: somemessage` if the exception is not a `std::system_error`. You may even nest `%[...]` blocks and you can also use formatter arguments inside these blocks, like in the following example:
+llamalog therefore supports conditional patterns which are only printed if any one of the contained specifiers produced a non-empty output. The pattern from the previous paragraph would produce <code>An error with code &nbsp;has happened: somemessage</code> for a `std::exception` (please also note the double space between "code" and "has"). The following pattern solves the problem: `An error {0:%[with code %c ]}has happened: {0:%e}` and will output `An error has happened: somemessage` if the exception is not a `std::system_error`. You may even nest `%[...]` blocks and you can also use formatter arguments inside these blocks, like in the following example:
 ```cpp
 try {
     // code could throw exceptions with extended logging context and without
