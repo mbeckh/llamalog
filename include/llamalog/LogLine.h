@@ -44,47 +44,63 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 */
 
-
 #include <windows.h>
 
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
+
+#ifndef LLAMALOG_LOGLINE_SIZE
+/// @brief The size of a log line in bytes.
+/// @details Defined as a macro to allow redefinition for different use cases.
+/// @note The value MUST be a power of 2, elso compilation will fail.
+#define LLAMALOG_LOGLINE_SIZE 256
+#endif
 
 namespace llamalog {
 
-/// @brief Enum for different log levels.
+class BaseException;
+
+/// @brief Enum for different log priorities.
 /// @note Uneven values one greater then the respective enum are reserved for log messages from the logger itself.
 /// @copyright This enum is based on `enum class LogLevel` from NanoLog.
-enum class LogLevel : std::uint8_t {
-	kTrace = 0,   ///< Output useful for inspecting program flow.
-	kDebug = 2,   ///< Output useful for debugging.
-	kInfo = 4,    ///< Informational message which should be logged.
-	kWarn = 8,    ///< A condition which should be inspected.
-	kError = 16,  ///< A recoverable error.
-	kFatal = 32   ///< A condition leading to program abort.
+enum class Priority : std::uint8_t {
+	kNone = 0,    ///< Value for "not set"
+	kTrace = 2,   ///< Output useful for inspecting program flow.
+	kDebug = 4,   ///< Output useful for debugging.
+	kInfo = 8,    ///< Informational message which should be logged.
+	kWarn = 16,   ///< A condition which should be inspected.
+	kError = 32,  ///< A recoverable error.
+	kFatal = 64   ///< A condition leading to program abort.
 };
 
 /// @brief The class contains all data for formatting and output which happens asynchronously.
+/// @details @internal The stack buffer is allocated in the base class for a better memory layout.
 /// @copyright The interface of this class is based on `class NanoLogLine` from NanoLog.
-class LogLine final {
+class alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) LogLine final {
 public:
 	/// @brief Create a new target for the various `operator<<` overloads.
 	/// @details The timestamp is not set until `#GenerateTimestamp` is called.
-	/// @param logLevel The `#LogLevel`.
+	/// @param priority The `#Priority`.
 	/// @param szFile The logged file name. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 	/// @param line The logged line number.
 	/// @param szFunction The logged function. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 	/// @param szMessage The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-	LogLine(LogLevel logLevel, _In_z_ const char* __restrict szFile, std::uint32_t line, _In_z_ const char* __restrict szFunction, _In_z_ const char* __restrict szMessage) noexcept;
+	LogLine(Priority priority, _In_z_ const char* __restrict szFile, std::uint32_t line, _In_z_ const char* __restrict szFunction, _In_z_ const char* __restrict szMessage) noexcept;
 
-	LogLine(const LogLine&) = delete;  ///< @nocopyconstructor
+	/// @brief Copy the buffers. @details The copy constructor is required for `std::curent_exception`.
+	/// @param logLine The source logline.
+	LogLine(const LogLine& logLine);
+
 	/// @brief Move the buffers.
 	/// @param logLine The source logline.
 	LogLine(LogLine&& logLine) noexcept;
+
 	/// @brief Calls the destructor of every custom argument.
 	~LogLine() noexcept;
 
@@ -196,29 +212,36 @@ public:
 	/// @copyright Based on `NanoLogLine::operator<<(uint64_t)` from NanoLog.
 	LogLine& operator<<(_In_opt_ std::nullptr_t arg);
 
-	/// @brief Add a log argument. @details The value is copied into the buffer.
+	/// @brief Add a log argument. @details The value is copied into the buffer. A maximum of 2^16 characters is printed.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
 	LogLine& operator<<(_In_opt_z_ const char* __restrict arg);
 
-	/// @brief Add a log argument. @details The value is copied into the buffer.
+	/// @brief Add a log argument. @details The value is copied into the buffer. A maximum of 2^16 characters is printed.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
 	LogLine& operator<<(_In_opt_z_ const wchar_t* __restrict arg);
 
-	/// @brief Add a log argument. @details The value is copied into the buffer.
+	/// @brief Add a log argument. @details The value is copied into the buffer. A maximum of 2^16 characters is printed.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
 	LogLine& operator<<(const std::string_view& arg);
 
-	/// @brief Add a log argument. @details The value is copied into the buffer.
+	/// @brief Add a log argument. @details The value is copied into the buffer. A maximum of 2^16 characters is printed.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
 	LogLine& operator<<(const std::wstring_view& arg);
+
+	/// @brief Add a `std::exception` as a argument.
+	/// @details If the `std::exception` is of type `std::system_error` the additional details are made available for formatting.
+	/// @note The function MUST be called from within a catch block.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	LogLine& operator<<(const std::exception& arg);
 
 public:
 	/// @brief Get the timestamp for the log event.
@@ -233,10 +256,10 @@ public:
 		GetSystemTimeAsFileTime(&m_timestamp);
 	}
 
-	/// @brief Get the log level.
-	/// @return The log level.
-	LogLevel GetLevel() const noexcept {
-		return m_logLevel;
+	/// @brief Get the priority.
+	/// @return The priority.
+	Priority GetPriority() const noexcept {
+		return m_priority;
 	}
 
 	/// @brief Get the thread if.
@@ -274,7 +297,6 @@ public:
 	/// MUST use argument for `std::vector` because guaranteed copy elision does not take place in debug builds.
 	/// @tparam T This MUST be `std::vector<fmt::basic_format_arg<fmt::format_context>>`.
 	/// @param args The `std::vector` to receive the message arguments.
-	/// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 	template <typename T>
 	void CopyArgumentsTo(T& args) const;
 
@@ -294,19 +316,25 @@ public:
 
 	/// @brief Copy a log argument of a custom type to the argument buffer.
 	/// @details This function handles types which are not trivially copyable. However, the type MUST support copy construction.
+	/// @note The type @p T MUST be both copy constructible and either nothrow move constructible or nothrow copy constructible.
 	/// @remark Include `<llamalog/CustomTypes.h>` in your implementation file before calling this function.
-	/// @tparam T The type of the argument. This type MUST have a copy constructor.
+	/// @tparam T The type of the argument.
 	/// @param arg The object.
 	/// @return The current object for method chaining.
 	template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
 	LogLine& AddCustomArgument(const T& arg);
 
 public:
-	class Internal;  // Allow access to internals in implementation through helper class.
+	class Internal;                // Allow access to internals in implementation through helper class.
+	using Size = std::uint32_t;    ///< @brief A data type for indexes in the buffer representing *bytes*.
+	using Length = std::uint16_t;  ///< @brief The length of a string in number of *characters*.
+	using Align = std::uint8_t;    ///<@ brief Alignment requirement of a data type in *bytes*.
 
 private:
-	/// @brief Type of the function to construct an argument in the buffer.
-	using Construct = void (*)(_In_ std::byte* __restrict, _Out_ std::byte* __restrict) noexcept;
+	/// @brief Type of the function to construct an argument in the buffer by copying.
+	using Copy = void (*)(_In_ const std::byte* __restrict, _Out_ std::byte* __restrict);
+	/// @brief Type of the function to construct an argument in the buffer by moving.
+	using Move = void (*)(_Inout_ std::byte* __restrict, _Out_ std::byte* __restrict) noexcept;
 	/// @brief Type of the function to destruct an argument in the buffer.
 	using Destruct = void (*)(_Inout_ std::byte* __restrict) noexcept;
 
@@ -322,10 +350,10 @@ private:
 	_Ret_notnull_ __declspec(restrict) const std::byte* GetBuffer() const noexcept;
 
 	/// @brief Get the current position in the argument buffer ensuring that enough space exists for the next argument.
-	/// @param cbAdditionalBytes The number of bytes that will be appended.
+	/// @param additionalBytes The number of bytes that will be appended.
 	/// @return The next write position.
 	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
-	_Ret_notnull_ __declspec(restrict) std::byte* GetWritePosition(std::size_t cbAdditionalBytes);
+	_Ret_notnull_ __declspec(restrict) std::byte* GetWritePosition(Size additionalBytes);
 
 	/// @brief Copy an argument to the buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the bytes of the value.
@@ -337,13 +365,31 @@ private:
 
 	/// @brief Copy a string to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the string in characters (NOT
+	/// including a terminating null character) and finally the string's characters (again NOT including a terminating null character).
+	/// This function is optimized compared to `WriteString(const wchar_t*, std::size_t)` because `char` has no alignment requirenents.
+	/// @remarks The type of @p len is `std::size_t` because the check if the length exceeds the capacity of `#Length` happens inside this function.
+	/// @param arg The string to add.
+	/// @param len The string length in characters NOT including a terminating null character.
+	/// @copyright Derived from `NanoLogLine::encode_c_string` from NanoLog.
+	void WriteString(_In_reads_(len) const char* __restrict arg, std::size_t len);
+
+	/// @brief Copy a string to the argument buffer.
+	/// @details @internal The internal layout is the `TypeId` followed by the size of the string in characters (NOT
 	/// including a terminating null character), optional padding as required and finally the string's characters (again
 	/// NOT including a terminating null character).
+	/// @remarks The type of @p len is `std::size_t` because the check if the length exceeds the capacity of `#Length` happens inside this function.
 	/// @param arg The string to add.
-	/// @param cchLength The string length in characters NOT including a terminating null character.
+	/// @param len The string length in characters NOT including a terminating null character.
 	/// @copyright Derived from `NanoLogLine::encode_c_string` from NanoLog.
-	template <typename T, typename std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, wchar_t>, int> = 0>
-	void WriteString(_In_z_ const T* __restrict arg, std::size_t cchLength);
+	void WriteString(_In_reads_(len) const wchar_t* __restrict arg, std::size_t len);
+
+	/// @brief Add an exception object to the argument buffer.
+	/// @param message The exception message.
+	/// @param pBaseException The (optional) `BaseException` object carrying additional logging information.
+	/// @param isSystemError `true` if the exception is or is derived from `std::system_error`.
+	/// @param code The error code for `std::system_error`s.
+	/// @param category The category name for `std::system_error`s.
+	void WriteException(_In_z_ const char* message, _In_opt_ const BaseException* pBaseException, bool isSystemError, int code, _In_opt_z_ const char* category);
 
 	/// @brief Add a custom object to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, a pointer
@@ -352,11 +398,11 @@ private:
 	/// @remark The function to create the formatter argument is supplied as a void (*)() pointer which removes the compile
 	/// time dependency to {fmt} from this header.
 	/// @param ptr A pointer to the argument data.
-	/// @param cbObjectSize The size of the object.
-	/// @param cbAlign The alignment requirement of the type.
+	/// @param objectSize The size of the object.
+	/// @param align The alignment requirement of the type.
 	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::basic_format_arg` object.
-	void WriteTriviallyCopyable(_In_reads_bytes_(cbObjectSize) const std::byte* __restrict ptr, std::size_t cbObjectSize, std::size_t cbAlign, _In_ void (*createFormatArg)());
+	void WriteTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byte* __restrict ptr, Size objectSize, Align align, _In_ void (*createFormatArg)());
 
 	/// @brief Add a custom object to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, the pointer
@@ -366,43 +412,32 @@ private:
 	/// @note This function does NOT copy the object but only returns the target address.
 	/// @remark The function to create the formatter argument is supplied as a void (*)() pointer which removes the compile
 	/// time dependency to {fmt} from this header.
-	/// @param cbObjectSize The size of the object.
-	/// @param cbAlign The alignment requirement of the type.
-	/// @param construct A pointer to a function which creates the custom type either by copy or move, whichever is
+	/// @param objectSize The size of the object.
+	/// @param align The alignment requirement of the type.
+	/// @param copy A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
+	/// @param move A pointer to a function which creates the custom type either by copy or move, whichever is
 	/// more efficient. Both adresses can be assumed to be properly aligned.
 	/// @param destruct A pointer to a function which calls the type's destructor.
 	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::basic_format_arg` object.
 	/// @return An adress where to copy the current argument.
-	__declspec(restrict) std::byte* WriteNonTriviallyCopyable(std::size_t cbObjectSize, std::size_t cbAlign, _In_ Construct construct, _In_ Destruct destruct, _In_ void (*createFormatArg)());
+	__declspec(restrict) std::byte* WriteNonTriviallyCopyable(Size objectSize, Align align, _In_ Copy copy, _In_ Move move, _In_ Destruct destruct, _In_ void (*createFormatArg)());
 
 private:
-	/// @copyright Same as `NanoLogLine::m_bytes_used` from NanoLog. @hideinitializer
-	std::size_t m_cbUsed = 0;  ///< @brief The number of bytes used in the buffer.
-
-	/// @copyright Same as `NanoLogLine::m_buffer_size` from NanoLog. @hideinitializer
-	std::size_t m_cbSize = sizeof(m_stackBuffer);  ///< @brief The current capacity of the buffer in bytes.
-
-	/// @copyright Same as `NanoLogLine::m_heap_buffer` from NanoLog.
-	std::unique_ptr<std::byte[]> m_heapBuffer;  ///< The buffer on the heap if the stack buffer became too small.
-
-	/// @brief The stack buffer used for small payloads.
+	///< @brief The stack buffer used for small payloads.
 	/// @copyright Same as `NanoLogLine::m_stack_buffer` from NanoLog.
-	std::byte m_stackBuffer[256
-							- sizeof(std::size_t) * 2
-							- sizeof(std::unique_ptr<std::byte[]>)
-							- sizeof(bool)
-							- sizeof(LogLevel)
-							- sizeof(DWORD)
-							- sizeof(std::uint32_t)
-							- sizeof(FILETIME)
-							- sizeof(const char*) * 3];
+	std::byte m_stackBuffer[LLAMALOG_LOGLINE_SIZE                     // target size
+							- sizeof(Priority)                        // m_priority
+							- sizeof(bool)                            // m_hasNonTriviallyCopyable
+							- sizeof(FILETIME)                        // m_timestamp
+							- sizeof(const char*) * 3                 // m_szFile, m_szFunction, m_szMessage
+							- sizeof(DWORD)                           // m_threadId
+							- sizeof(std::uint32_t)                   // m_line
+							- sizeof(Size) * 2                        // m_cbUsed, m_cbSize
+							- sizeof(std::unique_ptr<std::byte[]>)];  // m_heapBuffer
 
-	// The following fields start with the smallest aligning requirement to optimize the size of m_stackBuffer.
+	Priority m_priority;                     ///< @brief The entry's priority.
 	bool m_hasNonTriviallyCopyable = false;  ///< @brief `true` if at least one argument needs special handling on buffer operations. @hideinitializer
-	LogLevel m_logLevel;                     ///< @brief The entry's log level.
-	DWORD m_threadId;                        ///< @brief The id of the thread which created the log entry.
-	std::uint32_t m_line;                    ///< @brief The line number in the source file.
 	FILETIME m_timestamp;                    ///< @brief The timestamp at which this entry had been created.
 
 	/// @details Only a pointer is stored, i.e. the string MUST NOT go out of scope.
@@ -413,6 +448,18 @@ private:
 
 	/// @details Only a pointer is stored, i.e. the string MUST NOT go out of scope.
 	const char* __restrict m_szMessage;  ///< @brief The log message.
+
+	DWORD m_threadId;      ///< @brief The id of the thread which created the log entry.
+	std::uint32_t m_line;  ///< @brief The line number in the source file.
+
+	/// @copyright Same as `NanoLogLine::m_bytes_used` from NanoLog. @hideinitializer
+	Size m_cbUsed = 0;  ///< @brief The number of bytes used in the buffer.
+
+	/// @copyright Same as `NanoLogLine::m_buffer_size` from NanoLog. @hideinitializer
+	Size m_cbSize = sizeof(m_stackBuffer);  ///< @brief The current capacity of the buffer in bytes.
+
+	/// @copyright Same as `NanoLogLine::m_heap_buffer` from NanoLog.
+	std::unique_ptr<std::byte[]> m_heapBuffer;  ///< The buffer on the heap if the stack buffer became too small.
 };
 
 }  // namespace llamalog

@@ -78,7 +78,7 @@ public:
 		: m_value(value) {
 		// empty
 	}
-	MoveConstructible(const MoveConstructible& other)
+	MoveConstructible(const MoveConstructible& other) noexcept
 		: m_value(other.m_value) {
 		++g_copyConstructorCalled;
 	}
@@ -210,7 +210,7 @@ namespace llamalog::test {
 namespace {
 
 LogLine GetLogLine(const char* const szPattern = "{}") {
-	return LogLine(LogLevel::kDebug, "file.cpp", 99, "myfunction()", szPattern);
+	return LogLine(Priority::kDebug, "file.cpp", 99, "myfunction()", szPattern);
 }
 
 }  // namespace

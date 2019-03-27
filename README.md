@@ -134,8 +134,74 @@ This produces the following log line, given the code is stored as `main.cpp` and
 2019-03-31 15:27:12.283 INFO [9234] main.cpp:19 main Program L:\\llamalog.exe called with 1 arguments.
 ```
 
+
+## Formatting
+The patterns use the standard {fmt} syntax with the following enhancements:
+- Output can be escaped using the syntax for strings in C.
+- Exceptions are supported as formatter arguments.
+
+### Escaping
+Any character and string arguments are escaped. To prevent escaping, add the type specifier in the format string, i.e. `{0}` prints escaped, while `{0:s}` prints the raw string.
+
+### Exception Formatting
+Exceptions can be formatted as first-class arguments, though adding the exception as a logger argument MUST happen inside the catch clause. The following code shows a valid usage pattern:
+```cpp
+try {
+    THROW(std::invalid_argument("somearg"), "Value {} is invalid", val);
+} catch (const std::exception& e) {
+    LOG_INFO("An exception has occurred: {}", e);
+}
+```
+It is also possible to log plain C++ exceptions like in the following example. Yet, no extended logging context is available.
+```cpp
+try {
+    throw std::invalid_argument("somearg");
+} catch (const std::exception& e) {
+    LOG_INFO("An exception has occurred: {}", e);
+}
+```
+
+Exceptions are formatted using a default pattern, however a custom pattern MAY be used as in the following example where only the exception message (i.e. `e.what()`) is logged.
+```cpp
+try {
+    throw std::invalid_argument("somearg");
+} catch (const std::exception& e) {
+    LOG_INFO("An exception has occurred: {:%e}", e);
+}
+```
+More than one argument specifier MAY be used, e.g. `{:%F:%L}` will print the file name and line number where the exception happened. The following specifiers are supported. If an exception does not have the information an empty string is used in the output.
+|Specifier|Output|
+|:---|:---|
+|`%T`|The timestamp as `yyyy-MM-dd HH:mm:ss.SSS`.|
+|`%t`|The thread id of the thread which has thrown the exception.|
+|`%F`|The file name where the exception was thrown.|
+|`%f`|The function name where the exception was thrown.|
+|`%L`|The line number where the exception was thrown.|
+|`%m`|The log message.|
+|`%m`|The exception message, i.e. the result of `std::exception` `what()`.|
+|`%c`|The error code for `std::system_error` and derived classes.|
+|`%C`|The name of the error category for `std::system_error` and derived classes.|
+
+Exceptions are often caught using a base class. Therefore it is not known which data is actually available for logging. Using the pattern syntax above could either lead to ugly output (like in `An error with code {0:%c} has happened: {0:%e}` when the exception is not a `std::system_error` or overly complex catch clauses just to log the right data.
+
+llamalog therefore supports conditional patterns which are only printed if any one of the contained specifiers produced a non-empty output. The pattern from the previous paragraph would produce `An error with code  has happened: somemessage` for a `std::exception` (please also note the double space between "code" and "has"). The following pattern solves the problem: `An error {0:%[with code %c ]}has happened: {0:%e}` and will output `An error has happened: somemessage` if the exception is not a `std::system_error`. You may even nest `%[...]` blocks and you can also use formatter arguments inside these blocks, like in the following example:
+```cpp
+try {
+    // code could throw exceptions with extended logging context and without
+} catch (const std::exception& e) {
+    LOG_INFO("An exception has occurred: {:%e%[ {0}%F:%L]}", e, "location=");
+}
+```
+This sample logs the exception message and - if extended logging data is available - a space character, the text "location=" followed by file and line number.
+
+Using this syntax, the default exception pattern is `%[%m: ]%[(%C %c) ]%e%[ @\{%T \[%t\] %f(%F:%L)\}]` which produces output like `An exception has happened: (system 22) Invalid argument @{2019-03-27 22:18:23.231 [9384] myfunction(myfile.cpp:87)}`.
+
+By the way: Was I carried away by the formatting syntax? Maybe. Is it useful? Indeed. Does it hurt, if anyone does not want to use it? Not really. So I keep the feature although the default formatting will probably be sufficient for most purposes. :sunglasses:
+
+
 ## Documentation
 Run doxygen on `doc/public.doxy` for a user documentation and on `doc/developer.doxy` for a documentation also including all internals.
+
 
 ## History
 While writing a Windows desktop application I wanted to do some logging from a COM DLL. Experimenting with the usual logging macros which write to a file etc. did just not feel right. Also doing a lot of work in Java, I was used to highly configurable and fast loggers. There are many logging frameworks for C++, but either they required a config file (which I did not want to ship with just a small DLL), they were code-heavy or they required including tons of headers adding to the time needed for compilation. I also wanted to have a text-based log file which I could use for debugging right away without having to resort to some tool for decrypting or unpacking a log file.
@@ -143,6 +209,7 @@ While writing a Windows desktop application I wanted to do some logging from a C
 After a little research I found the marvelous [NanoLog](https://github.com/Iyengar111/NanoLog) written by Karthik Iyengar. The library is small, fast and did nearly everything I wanted. Benchmarks are well documented. So - perfect? Not quite, especially the formatting part did not make me really happy. Using the << operator for adding log arguments and having to interleave arguments and message text (e.g. `LOG_INFO("There are ") << count << " items."`) just felt awkward.
 
 So I started to add some features, change a little bit here, add a little bit there, refactor just slightly... And after some time coding, here we are now.
+
 
 ## Where Does the Name Come From?
 llamalog stands for (l)ightweight (l)ean (a)nd (m)ean (a)synchronous (log)ger for C++. As a plus, there are not yet so many hits in Google. And of course because llamas are cute and everybody likes them. :wink:

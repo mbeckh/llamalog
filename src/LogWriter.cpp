@@ -71,40 +71,40 @@ namespace llamalog {
 // LogWriter
 //
 
-LogWriter::LogWriter(const LogLevel level) noexcept
-	: m_logLevel(level) {
+LogWriter::LogWriter(const Priority priority) noexcept
+	: m_priority(priority) {
 	std::atomic_thread_fence(std::memory_order_release);
 }
 
 // Derived from `is_logged(LogLevel)` from NanoLog.
-bool LogWriter::IsLogged(const LogLevel level) const noexcept {
-	return level >= m_logLevel.load(std::memory_order_relaxed);
+bool LogWriter::IsLogged(const Priority priority) const noexcept {
+	return priority >= m_priority.load(std::memory_order_relaxed);
 }
 
 // Derived from `set_log_level(LogLevel)` from NanoLog.
-void LogWriter::SetLogLevel(const LogLevel level) noexcept {
-	m_logLevel.store(level, std::memory_order_release);
+void LogWriter::SetPriority(const Priority priority) noexcept {
+	m_priority.store(priority, std::memory_order_release);
 }
 
 // Derived from `to_string(LogLevel)` from NanoLog.
-_Ret_z_ char const* LogWriter::FormatLogLevel(const LogLevel logLevel) const noexcept {
-	switch (logLevel) {
-	case LogLevel::kTrace:
+__declspec(noalias) _Ret_z_ char const* LogWriter::FormatPriority(const Priority priority) noexcept {
+	switch (priority) {
+	case Priority::kTrace:
 		return "TRACE";
-	case LogLevel::kDebug:
+	case Priority::kDebug:
 		return "DEBUG";
-	case LogLevel::kInfo:
+	case Priority::kInfo:
 		return "INFO";
-	case LogLevel::kWarn:
+	case Priority::kWarn:
 		return "WARN";
-	case LogLevel::kError:
+	case Priority::kError:
 		return "ERROR";
-	case LogLevel::kFatal:
+	case Priority::kFatal:
 		return "FATAL";
 	default:
-		// uneven levels mark internal events
-		if (static_cast<std::uint8_t>(logLevel) & 1) {
-			return FormatLogLevel(static_cast<LogLevel>(static_cast<std::uint8_t>(logLevel) & ~1));
+		// uneven priorities mark internal events
+		if (static_cast<std::uint8_t>(priority) & 1u) {
+			return FormatPriority(static_cast<Priority>(static_cast<std::uint8_t>(priority) & ~1u));
 		}
 		assert(false);
 		return "-";
@@ -113,14 +113,14 @@ _Ret_z_ char const* LogWriter::FormatLogLevel(const LogLevel logLevel) const noe
 }
 
 // Derived from `format_timestamp` from NanoLog.
-std::string LogWriter::FormatTimestamp(const FILETIME& timestamp) const noexcept {
+std::string LogWriter::FormatTimestamp(const FILETIME& timestamp) noexcept {
 	fmt::basic_memory_buffer<char, 23> buffer;
 	FormatTimestampTo(buffer, timestamp);
 	return fmt::to_string(buffer);
 }
 
 template <typename Out>
-void LogWriter::FormatTimestampTo(Out& out, const FILETIME& timestamp) const noexcept {
+void LogWriter::FormatTimestampTo(Out& out, const FILETIME& timestamp) noexcept {
 	SYSTEMTIME st;
 	if (!FileTimeToSystemTime(&timestamp, &st)) {
 		st = {0};
@@ -151,7 +151,7 @@ void DebugWriter::Log(const LogLine& logLine) {
 
 	FormatTimestampTo(buffer, logLine.GetTimestamp());
 	buffer.push_back(' ');
-	Append(buffer, FormatLogLevel(logLine.GetLevel()));
+	Append(buffer, FormatPriority(logLine.GetPriority()));
 	fmt::format_to(buffer, " [{}] ", logLine.GetThreadId());
 
 	Append(buffer, logLine.GetFile());
@@ -197,8 +197,8 @@ static_assert(sizeof(kFrequencyInfos) / sizeof(kFrequencyInfos[0]) == static_cas
 
 }  // namespace
 
-RollingFileWriter::RollingFileWriter(const LogLevel level, std::string directory, std::string fileName, const Frequency frequency, const std::uint32_t maxFiles)
-	: LogWriter(level)
+RollingFileWriter::RollingFileWriter(const Priority priority, std::string directory, std::string fileName, const Frequency frequency, const std::uint32_t maxFiles)
+	: LogWriter(priority)
 	, m_directory(std::move(directory))
 	, m_fileName(std::move(fileName))
 	, m_frequency(frequency)
@@ -227,7 +227,7 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 	fmt::basic_memory_buffer<char, 256> buffer;
 	FormatTimestampTo(buffer, timestamp);
 	buffer.push_back(' ');
-	Append(buffer, FormatLogLevel(logLine.GetLevel()));
+	Append(buffer, FormatPriority(logLine.GetPriority()));
 	fmt::format_to(buffer, " [{}] ", logLine.GetThreadId());
 
 	Append(buffer, logLine.GetFile());
@@ -312,7 +312,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
 	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		if (!(static_cast<uint8_t>(logLine.GetLevel()) & 1)) {
+		if (!(static_cast<uint8_t>(logLine.GetPriority()) & 1u)) {
 			// logging this error could trigger an infinite loop if it is _this_ error message
 			LOG_ERROR_INTERNAL("Error creating log: {:#x}", GetLastError());
 		}

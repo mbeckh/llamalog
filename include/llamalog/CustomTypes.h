@@ -38,8 +38,17 @@ namespace internal {
 /// @param objectData The serialized byte stream of an object of type @p T.
 /// @return A newly created `fmt::basic_format_arg`.
 template <typename T>
-static fmt::basic_format_arg<fmt::format_context> CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
+fmt::basic_format_arg<fmt::format_context> CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
 	return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const T*>(objectData));
+}
+
+/// @brief Helper function to create a type by copying from the source.
+/// @tparam T The type of the argument.
+/// @param src The source address.
+/// @param dst The target address.
+template <typename T>
+void Copy(_In_reads_bytes_(sizeof(T)) const std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) {
+	new (dst) T(*reinterpret_cast<const T*>(src));
 }
 
 /// @brief Helper function to create a type by moving from the source.
@@ -47,19 +56,19 @@ static fmt::basic_format_arg<fmt::format_context> CreateFormatArg(_In_reads_byte
 /// @param src The source address.
 /// @param dst The target address.
 template <typename T, typename std::enable_if_t<std::is_nothrow_move_constructible_v<T>, int> = 0>
-static void Construct(_In_reads_bytes_(sizeof(T)) std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
-	static_assert(!std::is_trivially_copyable_v<T>, "Construct MUST NOT be used for trivially copyable types");
+void Move(_Inout_updates_bytes_(sizeof(T)) std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
+	static_assert(!std::is_trivially_copyable_v<T>, "Move MUST NOT be used for trivially copyable types");
 	new (dst) T(std::move(*reinterpret_cast<T*>(src)));
 }
 
-// @brief Helper function to create a type by copying from the source.
-// @details This version is used if the type does not support moving.
-// @tparam T The type of the argument.
-// @param src The source address.
-// @param dst The target address.
+/// @brief Helper function to create a type by copying from the source.
+/// @details This version is used if the type does not support moving.
+/// @tparam T The type of the argument.
+/// @param src The source address.
+/// @param dst The target address.
 template <typename T, typename std::enable_if_t<!std::is_nothrow_move_constructible_v<T>, int> = 0>
-static void Construct(_In_reads_bytes_(sizeof(T)) std::byte* __restrict const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
-	static_assert(!std::is_trivially_copyable_v<T>, "Construct MUST NOT be used for trivially copyable types");
+void Move(_In_reads_bytes_(sizeof(T)) std::byte* __restrict const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
+	static_assert(!std::is_trivially_copyable_v<T>, "Move MUST NOT be used for trivially copyable types");
 	static_assert(std::is_nothrow_copy_constructible_v<T>, "type MUST be nothrow copy constructible of it's not nothrow move constructible");
 	new (dst) T(*reinterpret_cast<const T*>(src));
 }
@@ -68,7 +77,7 @@ static void Construct(_In_reads_bytes_(sizeof(T)) std::byte* __restrict const sr
 /// @tparam T The type of the argument.
 /// @param obj The object.
 template <typename T>
-static void Destruct(_Inout_updates_bytes_(sizeof(T)) std::byte* __restrict const obj) noexcept {
+void Destruct(_Inout_updates_bytes_(sizeof(T)) std::byte* __restrict const obj) noexcept {
 	static_assert(!std::is_trivially_copyable_v<T>, "Destruct MUST NOT be used for trivially copyable types");
 	static_assert(std::is_nothrow_destructible_v<T>, "type MUST be nothrow destructible");
 	reinterpret_cast<T*>(obj)->~T();
@@ -79,6 +88,8 @@ static void Destruct(_Inout_updates_bytes_(sizeof(T)) std::byte* __restrict cons
 template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
+	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
+	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression): comparison with constant is intended
 	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(&internal::CreateFormatArg<X>));
 	return *this;
 }
@@ -86,8 +97,11 @@ LogLine& LogLine::AddCustomArgument(const T& arg) {
 template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
-	static_assert(std::is_nothrow_move_constructible_v<X> || std::is_nothrow_copy_constructible_v<X>, "type MUST either be nothrow move or copy constructible");
-	std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), &internal::Construct<X>, &internal::Destruct<X>, reinterpret_cast<void (*)()>(&internal::CreateFormatArg<X>));
+	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
+	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression): comparison with constant is intended
+	static_assert(std::is_copy_constructible_v<X>, "type MUST be copy constructible");
+	// mus use fully qualified name at least for Construct and Destruct to prevent a compiler error
+	std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), &internal::Copy<X>, &internal::Move<X>, &internal::Destruct<X>, reinterpret_cast<void (*)()>(&internal::CreateFormatArg<X>));
 	new (ptr) X(arg);
 	return *this;
 }

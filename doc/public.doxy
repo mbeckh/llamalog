@@ -70,7 +70,8 @@ GENERATE_LATEX = NO
 #---------------------------------------------------------------------------
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
-PREDEFINED = _In_= \
+PREDEFINED = DOXYGEN_ONLY \
+             _In_= \
              _In_opt_= \
              _In_z_= \
              _In_opt_z_= \

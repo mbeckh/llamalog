@@ -25,16 +25,16 @@ limitations under the License.
 
 namespace llamalog {
 
-enum class LogLevel : std::uint8_t;
+enum class Priority : std::uint8_t;
 class LogLine;
 
 /// @brief The base class for all log writers.
 /// @details Except for the constructor and destructor, all access to a `LogWriter` is from a single thread.
-class LogWriter {
+class __declspec(novtable) LogWriter {
 public:
-	/// @brief Creates a new log writer with a particular `#LogLevel`.
-	/// @param level Only events at this `#LogLevel` or above will be logged by this writer.
-	explicit LogWriter(LogLevel level) noexcept;
+	/// @brief Creates a new log writer with a particular `#Priority`.
+	/// @param priority Only events at this `#Priority` or above will be logged by this writer.
+	explicit LogWriter(Priority priority) noexcept;
 	LogWriter(const LogWriter&) = delete;  ///< @nocopyconstructor
 	LogWriter(LogWriter&&) = delete;       ///< @nomoveconstructor
 	virtual ~LogWriter() noexcept = default;
@@ -44,33 +44,33 @@ public:
 	LogWriter& operator=(LogWriter&&) = delete;       ///< @nomoveoperator
 
 public:
-	/// @brief Check if this writer logs at the specific level.
-	/// @param level The `#LogLevel` of the `LogLine`.
-	/// @return `true` if this writer logs events with the respective level.
+	/// @brief Check if this writer logs at the specific priority.
+	/// @param priority The `#Priority` of the `LogLine`.
+	/// @return `true` if this writer logs events with the respective priority.
 	/// @copyright Derived from `is_logged(LogLevel)` from NanoLog.
-	bool IsLogged(LogLevel level) const noexcept;
+	bool IsLogged(Priority priority) const noexcept;
 
-	/// @brief Dynamically change the `#LogLevel`
-	/// @param level The new `#LogLevel` for this writer.
+	/// @brief Dynamically change the `#Priority`
+	/// @param priority The new `#Priority` for this writer.
 	/// @copyright Derived from `set_log_level(LogLevel)` from NanoLog.
-	void SetLogLevel(LogLevel level) noexcept;
+	void SetPriority(Priority priority) noexcept;
 
 	/// @brief Produce output for a `LogLine`.
 	/// @param logLine The data.
 	virtual void Log(const LogLine& logLine) = 0;
 
-protected:
-	/// @brief Return a string for a `#LogLevel`.
-	/// @param logLevel A `#LogLevel`.
-	/// @return One of `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` - or `-` for unknown log levels.
+public:
+	/// @brief Return a string for a `#Priority`.
+	/// @param priority A `#Priority`.
+	/// @return One of `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` - or `-` for unknown priorities.
 	/// @copyright Derived from `to_string(LogLevel)` from NanoLog.
-	_Ret_z_ const char* FormatLogLevel(LogLevel logLevel) const noexcept;
+	static __declspec(noalias) _Ret_z_ const char* FormatPriority(Priority priority) noexcept;
 
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS`.
 	/// @details In case of an error, `0000-00-00 00:00:00.000` is returned.
 	/// @param timestamp The timestamp.
 	/// @return The timestamp as a string.
-	std::string FormatTimestamp(const FILETIME& timestamp) const noexcept;
+	static std::string FormatTimestamp(const FILETIME& timestamp) noexcept;
 
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS` to a target buffer.
 	/// @details The buffer MUST be of type `fmt::basic_memory_buffer`.
@@ -80,10 +80,10 @@ protected:
 	/// @param out The target buffer.
 	/// @param timestamp The timestamp.
 	template <typename Out>
-	void FormatTimestampTo(Out& out, const FILETIME& timestamp) const noexcept;
+	static void FormatTimestampTo(Out& out, const FILETIME& timestamp) noexcept;
 
 private:
-	std::atomic<LogLevel> m_logLevel;  ///< @brief Atomic store for the `#LogLevel`.
+	std::atomic<Priority> m_priority;  ///< @brief Atomic store for the `#Priority`.
 };
 
 
@@ -119,12 +119,12 @@ public:
 	/// @brief Create the writer.
 	/// @warning The logger deletes any log files older than the neweset @p maxFiles files. Please ensure that any
 	/// files are copied to a different location if their contents are required for a longer period.
-	/// @param level Only events at this `#LogLevel` or above will be logged by this writer.
+	/// @param priority Only events at this `#Priority` or above will be logged by this writer.
 	/// @param directory Directory where to store the log files.
 	/// @param fileName File name for the log files.
 	/// @param frequency The interval at which a new the writer starts a new file.
 	/// @param maxFiles The maximum number of old log files which should be kept in @p directory.
-	RollingFileWriter(LogLevel level, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = 60);
+	RollingFileWriter(Priority priority, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = 60);
 	RollingFileWriter(const RollingFileWriter&) = delete;  ///< @nocopyconstructor
 	RollingFileWriter(RollingFileWriter&&) = delete;       ///< @nomoveconstructor
 	~RollingFileWriter() noexcept override;

@@ -16,6 +16,8 @@ limitations under the License.
 
 #include "llamalog/LogLine.h"
 
+#include "llamalog/llamalog.h"
+
 #include <gtest/gtest.h>
 
 #include <cinttypes>
@@ -29,7 +31,7 @@ namespace llamalog::test {
 namespace {
 
 LogLine GetLogLine(const char* const szPattern = "{}") {
-	return LogLine(LogLevel::kDebug, "file.cpp", 99, "myfunction()", szPattern);
+	return LogLine(Priority::kDebug, "file.cpp", 99, "myfunction()", szPattern);
 }
 
 }  // namespace
@@ -529,7 +531,7 @@ TEST(LogLineTest, charptr_IsValue_PrintValue) {
 
 // Tests that string in buffer is still accessible after grow
 TEST(LogLineTest, charptr_IsLongValue_PrintValue) {
-	LogLine logLine = GetLogLine("{} {}");
+	LogLine logLine = GetLogLine("{} {:.3}");
 	{
 		const char* const arg0 = "Test";
 		const std::string arg1(1024, 'x');
@@ -537,7 +539,7 @@ TEST(LogLineTest, charptr_IsLongValue_PrintValue) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test " + std::string(1024, 'x'), str);
+	EXPECT_EQ("Test xxx", str);
 }
 
 TEST(LogLineTest, charptr_HasEscapedChar_PrintEscapeChar) {
@@ -622,26 +624,26 @@ TEST(LogLineTest, wcharptr_IsValue_PrintValue) {
 }
 
 TEST(LogLineTest, wcharptr_IsLongValue_PrintValue) {
-	LogLine logLine = GetLogLine();
+	LogLine logLine = GetLogLine("{:.3}");
 	{
 		const std::wstring arg(257, L'x');
 		logLine << arg.c_str();
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ(std::string(257, 'x'), str);
+	EXPECT_EQ("xxx", str);
 }
 
 TEST(LogLineTest, wcharptr_IsLongValueAfterConversion_PrintValue) {
-	LogLine logLine = GetLogLine();
+	LogLine logLine = GetLogLine("{:.11}");
 	{
-		std::wstring arg(255, L'x');
-		arg.push_back(L'\xE4');
+		std::wstring arg(256, L'x');
+		arg[0] = L'\xE4';
 		logLine << arg.c_str();
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ(std::string(255, 'x') + "\\xC3\\xA4", str);
+	EXPECT_EQ("\\xC3\\xA4xxx", str);
 }
 
 TEST(LogLineTest, wcharptr_HasEscapedChar_PrintEscapedValue) {
@@ -775,21 +777,35 @@ TEST(LogLineTest, wstring_IsReference_PrintValue) {
 
 
 //
-// two arguments
+// Multiple arguments
 //
 
 TEST(LogLineTest, Multiple_ThreeArguments_PrintValues) {
 	LogLine logLine = GetLogLine("{} {} {}");
 	{
 		const char* arg0 = "Test";
-		const wchar_t* arg1 = L"Test";
-		const int arg2 = 7;
+		const int arg1 = 7;
+		const wchar_t* arg2 = L"test";
 		logLine << arg0 << arg1 << arg2;
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test Test 7", str);
+	EXPECT_EQ("Test 7 test", str);
 }
+
+TEST(LogLineTest, Multiple_ThreeArgumentsWithLong_PrintValues) {
+	LogLine logLine = GetLogLine("{} {:.3} {:.3}");
+	{
+		const char* arg0 = "Test";
+		const std::string arg1 = std::string(256, 'x');
+		const std::wstring arg2 = std::wstring(256, L'y');
+		logLine << arg0 << arg1 << arg2;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("Test xxx yyy", str);
+}
+
 
 #if 0
 //

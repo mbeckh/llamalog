@@ -10,11 +10,15 @@
     <ClCompile>
       <AdditionalIncludeDirectories Condition="'$(ProjectGuid)'=='{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}'">$(llamalogDirectory)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+	  <AdditionalDependencies>fmt_$(PlatformShortName)$(DebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+	  <AdditionalDependencies Condition="'$(ProjectGuid)'!='{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}'">$(MSBuildThisFileName)_$(PlatformShortName)$(DebugSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup Condition="'$(ProjectGuid)'!='{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}'">
     <ProjectReference Include="$(MSBuildThisFileDirectory)llamalog\llamalog.vcxproj">
       <Project>{661E79C3-C7C3-4C6D-8F80-F4EBAB9C412A}</Project>
-      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
     </ProjectReference>
   </ItemGroup>
 </Project>

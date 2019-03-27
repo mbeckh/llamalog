@@ -39,8 +39,7 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	template <typename ParseContext>
-	constexpr auto parse(ParseContext& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	auto parse(fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
 		auto it = ctx.begin();
 		if (it != ctx.end() && *it == ':') {
 			++it;
@@ -62,9 +61,8 @@ public:
 	/// @param arg A `POINT`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	template <typename FormatContext>
-	auto format(const POINT& arg, FormatContext& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
-		return format_to(ctx.out(), m_format, arg.x, arg.y);
+	auto format(const POINT& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+		return fmt::format_to(ctx.out(), m_format, arg.x, arg.y);
 	}
 
 private:
@@ -83,8 +81,7 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	template <typename ParseContext>
-	constexpr auto parse(ParseContext& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	auto parse(fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
 		auto it = ctx.begin();
 		if (it != ctx.end() && *it == ':') {
 			++it;
@@ -110,9 +107,8 @@ public:
 	/// @param arg A `RECT`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	template <typename FormatContext>
-	auto format(const RECT& arg, FormatContext& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
-		return format_to(ctx.out(), m_format, arg.left, arg.top, arg.right, arg.bottom);
+	auto format(const RECT& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+		return fmt::format_to(ctx.out(), m_format, arg.left, arg.top, arg.right, arg.bottom);
 	}
 
 private:

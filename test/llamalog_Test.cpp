@@ -41,7 +41,7 @@ protected:
 
 class StringWriter : public LogWriter {
 public:
-	StringWriter(const LogLevel logLevel, std::ostringstream& out, int& lines)
+	StringWriter(const Priority logLevel, std::ostringstream& out, int& lines)
 		: LogWriter(logLevel)
 		, m_out(out)
 		, m_lines(lines) {
@@ -53,7 +53,7 @@ protected:
 		fmt::basic_memory_buffer<char, 256> buffer;
 		fmt::format_to(buffer, "{} {} [{}] {}:{} {} {}\n",
 					   FormatTimestamp(logLine.GetTimestamp()),
-					   FormatLogLevel(logLine.GetLevel()),
+					   FormatPriority(logLine.GetPriority()),
 					   logLine.GetThreadId(),
 					   logLine.GetFile(),
 					   logLine.GetLine(),
@@ -71,17 +71,37 @@ private:
 
 }  // namespace
 
-TEST_F(LlamalogTest, GetFilename) {
-	constexpr const char* szFilename = internal::GetFilename(__FILE__);
+
+//
+// GetFilename
+//
+
+TEST_F(LlamalogTest, GetFilename_HasPath_ReturnFilename) {
+	constexpr const char* szFilename = GetFilename(__FILE__);
 	EXPECT_STREQ("llamalog_test.cpp", szFilename);
 }
 
+TEST_F(LlamalogTest, GetFilename_HasNoPath_ReturnFilename) {
+	constexpr const char* szFilename = GetFilename("llamalog_test.cpp");
+	EXPECT_STREQ("llamalog_test.cpp", szFilename);
+}
+
+TEST_F(LlamalogTest, GetFilename_IsEmpty_ReturnEmpty) {
+	constexpr const char* szFilename = GetFilename("");
+	EXPECT_STREQ("", szFilename);
+}
+
+
+//
+// Log
+//
+
 TEST_F(LlamalogTest, Log_OneLine) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
-		llamalog::Log(LogLevel::kDebug, internal::GetFilename(__FILE__), 99, __func__, "{}", 7);
+		llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", 7);
 
 		llamalog::Shutdown();
 	}
@@ -92,11 +112,11 @@ TEST_F(LlamalogTest, Log_OneLine) {
 
 TEST_F(LlamalogTest, Log_1000Lines) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		for (int i = 0; i < 1000; ++i) {
-			llamalog::Log(LogLevel::kDebug, internal::GetFilename(__FILE__), 99, __func__, "{}", i);
+			llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", i);
 		}
 
 		llamalog::Shutdown();
@@ -105,9 +125,14 @@ TEST_F(LlamalogTest, Log_1000Lines) {
 	EXPECT_EQ(1000, m_lines);
 }
 
+
+//
+// Macros
+//
+
 TEST_F(LlamalogTest, LOGTRACE_WriterIsDebug_NoOutput) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_TRACE("Test");
@@ -121,7 +146,7 @@ TEST_F(LlamalogTest, LOGTRACE_WriterIsDebug_NoOutput) {
 
 TEST_F(LlamalogTest, LOGTRACE_WriterIsTrace_Output) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kTrace, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kTrace, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_TRACE("Test");
@@ -135,7 +160,7 @@ TEST_F(LlamalogTest, LOGTRACE_WriterIsTrace_Output) {
 
 TEST_F(LlamalogTest, LOGTRACE_WithArgs) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kTrace, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kTrace, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_TRACE("Test {}", 1);
@@ -149,7 +174,7 @@ TEST_F(LlamalogTest, LOGTRACE_WithArgs) {
 
 TEST_F(LlamalogTest, LOGDEBUG) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_DEBUG("Test");
@@ -163,7 +188,7 @@ TEST_F(LlamalogTest, LOGDEBUG) {
 
 TEST_F(LlamalogTest, LOGDEBUG_WitArgs) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_DEBUG("Test {}", std::string("Test"));
@@ -177,7 +202,7 @@ TEST_F(LlamalogTest, LOGDEBUG_WitArgs) {
 
 TEST_F(LlamalogTest, LOGINFO) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_INFO("Test");
@@ -191,7 +216,7 @@ TEST_F(LlamalogTest, LOGINFO) {
 
 TEST_F(LlamalogTest, LOGINFO_WithArgs) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		std::string arg("Test");
@@ -206,7 +231,7 @@ TEST_F(LlamalogTest, LOGINFO_WithArgs) {
 
 TEST_F(LlamalogTest, LOGWARN) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_WARN("Test");
@@ -220,7 +245,7 @@ TEST_F(LlamalogTest, LOGWARN) {
 
 TEST_F(LlamalogTest, LOGWARN_WithArgs) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_WARN("Test {}{}", 1, 's');
@@ -234,7 +259,7 @@ TEST_F(LlamalogTest, LOGWARN_WithArgs) {
 
 TEST_F(LlamalogTest, LOGERROR) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_ERROR("Test");
@@ -248,7 +273,7 @@ TEST_F(LlamalogTest, LOGERROR) {
 
 TEST_F(LlamalogTest, LOGERROR_WithArgs) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_ERROR("Test {}{}{}", 1, "Test", 2);
@@ -262,7 +287,7 @@ TEST_F(LlamalogTest, LOGERROR_WithArgs) {
 
 TEST_F(LlamalogTest, LOGFATAL) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_FATAL("Test");
@@ -276,7 +301,7 @@ TEST_F(LlamalogTest, LOGFATAL) {
 
 TEST_F(LlamalogTest, LOGFATAL_WithArgs) {
 	{
-		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(LogLevel::kDebug, m_out, m_lines);
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
 
 		LOG_FATAL("Test {}", 1.1);

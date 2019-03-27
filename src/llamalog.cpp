@@ -52,6 +52,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <exception>
 #include <memory>
 #include <new>
 #include <queue>
@@ -90,7 +91,8 @@ private:
 		LogLine logLine;  ///< @brief The log entry.
 	};
 
-	static_assert(sizeof(Item) == 256, "size of Item != 256");
+	static_assert(sizeof(Item) == sizeof(LogLine), "size of Buffer::Item is not equal to size of LogLine");
+	static_assert((sizeof(Item) & (sizeof(Item) - 1)) == 0, "size of Buffer::Item is not a power of 2");
 
 public:
 	/// @brief Initialize the internal structures.
@@ -147,10 +149,11 @@ public:
 	}
 
 public:
+	///< @brief The number of elements in the buffer.
 	/// @details The size of `m_buffer` is just under 8 MB (to account for the two atomic fields.
 	/// @copyright Same as `Buffer::size` from NanoLog.
-	static constexpr std::uint32_t kBufferSize = 32768 - 1;  ///< @brief The number of elements in the buffer.
-	static_assert(sizeof(std::atomic_uint32_t) + sizeof(std::atomic_bool) <= sizeof(Item));
+	static constexpr std::uint32_t kBufferSize =
+		(8388608 - sizeof(std::atomic_uint32_t) - sizeof(std::atomic_bool)) / sizeof(Item);
 
 private:
 	/// @copyright Same as `Buffer::m_buffer` from NanoLog, but on stack instead of heap.
@@ -396,9 +399,9 @@ private:
 				// release any resources of the log line as quickly as possible
 				CallDestruct guard(pLogLine);
 
-				const LogLevel level = pLogLine->GetLevel();
+				const Priority priority = pLogLine->GetPriority();
 				for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
-					if (logWriter->IsLogged(level)) {
+					if (logWriter->IsLogged(priority)) {
 						try {
 							logWriter->Log(*pLogLine);
 						} catch (const std::exception& e) {
@@ -419,9 +422,9 @@ private:
 			// release any resources of the log line as quickly as possible
 			CallDestruct guard(pLogLine);
 
-			const LogLevel level = pLogLine->GetLevel();
+			const Priority priority = pLogLine->GetPriority();
 			for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
-				if (logWriter->IsLogged(level)) {
+				if (logWriter->IsLogged(priority)) {
 					try {
 						logWriter->Log(*pLogLine);
 					} catch (const std::exception& e) {
@@ -492,6 +495,16 @@ void Log(LogLine&& logLine) {
 void Shutdown() noexcept {
 	g_pAtomicLogger.store(nullptr);
 	g_pLogger.reset();
+}
+
+_Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexcept {
+	try {
+		throw;
+	} catch (const BaseException& e) {
+		return &e;
+	} catch (...) {
+		return nullptr;
+	}
 }
 
 }  // namespace llamalog
