@@ -79,7 +79,7 @@ TEST(ExceptionsTest, stdcurrentexception_Save_HasValue) {
 	std::exception_ptr eptr;
 	try {
 		llamalog::Throw(std::invalid_argument("testarg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
-	} catch (const std::exception& e) {
+	} catch (const std::exception&) {
 		eptr = std::current_exception();
 	}
 	EXPECT_NE(nullptr, eptr);

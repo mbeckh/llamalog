@@ -83,6 +83,46 @@ void Destruct(_Inout_updates_bytes_(sizeof(T)) std::byte* __restrict const obj) 
 	reinterpret_cast<T*>(obj)->~T();
 }
 
+/// @brief A struct with all functions to manage objects in the buffer.
+/// @details This is the version used to access the data of `FunctionTableInstance` in the buffer.
+struct FunctionTable {
+	/// @brief Type of the function to construct an argument in the buffer by copying.
+	using Copy = void (*)(_In_ const std::byte* __restrict, _Out_ std::byte* __restrict);
+	/// @brief Type of the function to construct an argument in the buffer by moving.
+	using Move = void (*)(_Inout_ std::byte* __restrict, _Out_ std::byte* __restrict) noexcept;
+	/// @brief Type of the function to destruct an argument in the buffer.
+	using Destruct = void (*)(_Inout_ std::byte* __restrict) noexcept;
+	/// @brief Type of the function to create a formatter argument.
+	using CreateFormatArg = fmt::basic_format_arg<fmt::format_context> (*)(const std::byte* __restrict) noexcept;
+
+	/// @brief A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
+	Copy copy;
+	/// @brief A pointer to a function which creates the custom type either by copy or move, whichever is
+	/// more efficient. Both adresses can be assumed to be properly aligned.
+	Move move;
+	/// @brief A pointer to a function which calls the type's destructor.
+	Destruct destruct;
+	/// @brief A pointer to a function which has a single argument of type `std::byte*` and returns a
+	/// newly created `fmt::basic_format_arg` object.
+	CreateFormatArg createFormatArg;
+};
+
+/// @brief A struct with all functions to manage objects in the buffer.
+/// @details This is the actual function table with all pointers.
+template <typename T>
+struct FunctionTableInstance {
+	/// @brief A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
+	FunctionTable::Copy copy = &Copy<T>;
+	/// @brief A pointer to a function which creates the custom type either by copy or move, whichever is
+	/// more efficient. Both adresses can be assumed to be properly aligned.
+	FunctionTable::Move move = &Move<T>;
+	/// @brief A pointer to a function which calls the type's destructor.
+	FunctionTable::Destruct destruct = &Destruct<T>;
+	/// @brief A pointer to a function which has a single argument of type `std::byte*` and returns a
+	/// newly created `fmt::basic_format_arg` object.
+	FunctionTable::CreateFormatArg createFormatArg = &CreateFormatArg<T>;
+};
+
 }  // namespace internal
 
 template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
@@ -97,11 +137,18 @@ LogLine& LogLine::AddCustomArgument(const T& arg) {
 template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
+
 	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
 	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression): comparison with constant is intended
 	static_assert(std::is_copy_constructible_v<X>, "type MUST be copy constructible");
-	// mus use fully qualified name at least for Construct and Destruct to prevent a compiler error
-	std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), &internal::Copy<X>, &internal::Move<X>, &internal::Destruct<X>, reinterpret_cast<void (*)()>(&internal::CreateFormatArg<X>));
+	static_assert(sizeof(internal::FunctionTableInstance<X>) == sizeof(internal::FunctionTable));
+	static_assert(offsetof(internal::FunctionTableInstance<X>, copy) == offsetof(internal::FunctionTable, copy));
+	static_assert(offsetof(internal::FunctionTableInstance<X>, move) == offsetof(internal::FunctionTable, move));
+	static_assert(offsetof(internal::FunctionTableInstance<X>, destruct) == offsetof(internal::FunctionTable, destruct));
+	static_assert(offsetof(internal::FunctionTableInstance<X>, createFormatArg) == offsetof(internal::FunctionTable, createFormatArg));
+
+	static constexpr internal::FunctionTableInstance<X> functionTable;
+	std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), static_cast<const void*>(&functionTable));
 	new (ptr) X(arg);
 	return *this;
 }

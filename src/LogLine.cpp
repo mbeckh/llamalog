@@ -46,6 +46,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 #include "llamalog/LogLine.h"
 
+#include "llamalog/CustomTypes.h"
 #include "llamalog/LogWriter.h"
 #include "llamalog/llamalog.h"
 
@@ -78,32 +79,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 namespace llamalog {
 
 //
-// Helpers
+// Definitions
 //
 
-/// @brief Helper class to access internals of LogLine in the implementation file.
-class LogLine::Internal final {
-public:
-	// Do not allow creation of class.
-	Internal() = delete;
-	Internal(const Internal&) = delete;  ///< @nocopyconstructor
-	Internal(Internal&&) = delete;       ///< @nomoveconstructor
-	~Internal() = delete;
-
-public:
-	Internal& operator=(const Internal&) = delete;   ///< @noassignmentoperator
-	Internal& operator=(const Internal&&) = delete;  ///< @nomoveoperator
-
-public:
-	using Copy = LogLine::Copy;          ///< @brief Provide access to type outside of class.
-	using Move = LogLine::Move;          ///< @brief Provide access to type outside of class.
-	using Destruct = LogLine::Destruct;  ///< @brief Provide access to type outside of class.
-};
-
 namespace {
-
-/// @brief Type of the function to create a formatter argument.
-using CreateFormatArg = fmt::basic_format_arg<fmt::format_context> (*)(const std::byte* __restrict) noexcept;
 
 /// @brief The number of bytes to add to the argument buffer after it became too small.
 constexpr LogLine::Size kGrowBytes = 512u;
@@ -276,12 +255,13 @@ constexpr std::uint8_t kTypeSizes[] = {
 	sizeof(TypeId) /* + padding */ + sizeof(HeapBasedException) /* + HeapBasedException::m_cbLength */ + sizeof(HeapBasedSystemError) /* + HeapBasedSystemError::categoryLength */,
 	sizeof(TypeId) + sizeof(PlainException) /* + PlainException::length */,
 	sizeof(TypeId) + sizeof(PlainSystemError) /* + PlainSystemError::length + PlainSystemError::categoryLength */,
-	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(CreateFormatArg) + sizeof(LogLine::Size) /* + padding + sizeof(arg) */,
-	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(LogLine::Internal::Copy) + sizeof(LogLine::Internal::Move) + sizeof(LogLine::Internal::Destruct) + sizeof(CreateFormatArg) + sizeof(LogLine::Size) /* + padding + sizeof(arg) */
+	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable::CreateFormatArg) + sizeof(LogLine::Size) /* + padding + sizeof(arg) */,
+	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable*) + sizeof(LogLine::Size) /* + padding + sizeof(arg) */
 };
-static_assert(sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(LogLine::Internal::Copy) + sizeof(LogLine::Internal::Move) + sizeof(LogLine::Internal::Destruct) + sizeof(CreateFormatArg) + sizeof(LogLine::Size) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
 static_assert(sizeof(TypeId) + offsetof(StackBasedException, padding) + sizeof(StackBasedSystemError) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
 static_assert(sizeof(TypeId) + sizeof(HeapBasedException) + sizeof(HeapBasedSystemError) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
+static_assert(sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable::CreateFormatArg) + sizeof(LogLine::Size) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
+static_assert(sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable*) + sizeof(LogLine::Size) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
 static_assert(std::tuple_size_v<Types> == sizeof(kTypeSizes) / sizeof(kTypeSizes[0]), "length of kTypeSizes does not match Types");
 
 /// @brief A constant to get the (basic) buffer size of a type at compile time.
@@ -1410,7 +1390,7 @@ void DecodeArgument<TriviallyCopyable>(_Inout_ std::vector<fmt::basic_format_arg
 	LogLine::Align padding;
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	CreateFormatArg createFormatArg;
+	internal::FunctionTable::CreateFormatArg createFormatArg;
 	std::memcpy(&createFormatArg, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(createFormatArg));
 
 	LogLine::Size size;
@@ -1435,13 +1415,13 @@ void DecodeArgument<NonTriviallyCopyable>(_Inout_ std::vector<fmt::basic_format_
 	LogLine::Align padding;
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	CreateFormatArg createFormatArg;
-	std::memcpy(&createFormatArg, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(LogLine::Internal::Copy) + sizeof(LogLine::Internal::Move) + sizeof(LogLine::Internal::Destruct)], sizeof(createFormatArg));
+	internal::FunctionTable* pFunctionTable;
+	std::memcpy(&pFunctionTable, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));
 
 	LogLine::Size size;
-	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(LogLine::Internal::Copy) + sizeof(LogLine::Internal::Move) + sizeof(LogLine::Internal::Destruct) + sizeof(createFormatArg)], sizeof(size));
+	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));
 
-	args.push_back(createFormatArg(&buffer[position + kArgSize + padding]));
+	args.push_back(pFunctionTable->createFormatArg(&buffer[position + kArgSize + padding]));
 
 	position += kArgSize + padding + size;
 }
@@ -1521,7 +1501,7 @@ __declspec(noalias) void SkipTriviallyCopyable(_In_ const std::byte* __restrict 
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
 	LogLine::Size size;
-	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(CreateFormatArg)], sizeof(size));
+	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(internal::FunctionTable::CreateFormatArg)], sizeof(size));
 
 	position += kArgSize + padding + size;
 }
@@ -1641,18 +1621,18 @@ void CopyNonTriviallyCopyable(_In_ const std::byte* __restrict const src, _Out_ 
 	LogLine::Align padding;
 	std::memcpy(&padding, &src[position + sizeof(TypeId)], sizeof(padding));
 
-	LogLine::Internal::Copy copy;
-	std::memcpy(&copy, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(copy));
+	internal::FunctionTable* pFunctionTable;
+	std::memcpy(&pFunctionTable, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));
 
 	LogLine::Size size;
-	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(copy) + sizeof(LogLine::Internal::Move) + sizeof(LogLine::Internal::Destruct) + sizeof(CreateFormatArg)], sizeof(size));
+	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));
 
 	// copy management data
 	std::memcpy(&dst[position], &src[position], kArgSize);
 
 	// create the argument in the new position
 	const LogLine::Size offset = position + kArgSize + padding;
-	copy(&src[offset], &dst[offset]);
+	pFunctionTable->copy(&src[offset], &dst[offset]);
 
 	position = offset + size;
 }
@@ -1759,23 +1739,20 @@ void MoveNonTriviallyCopyable(_Inout_ std::byte* __restrict const src, _Out_ std
 	LogLine::Align padding;
 	std::memcpy(&padding, &src[position + sizeof(TypeId)], sizeof(padding));
 
-	LogLine::Internal::Move move;
-	std::memcpy(&move, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(LogLine::Internal::Copy)], sizeof(move));
-
-	LogLine::Internal::Destruct destruct;
-	std::memcpy(&destruct, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(LogLine::Internal::Copy) + sizeof(move)], sizeof(destruct));
+	internal::FunctionTable* pFunctionTable;
+	std::memcpy(&pFunctionTable, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));
 
 	LogLine::Size size;
-	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(LogLine::Internal::Copy) + sizeof(move) + sizeof(destruct) + sizeof(CreateFormatArg)], sizeof(size));
+	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));
 
 	// copy management data
 	std::memcpy(&dst[position], &src[position], kArgSize);
 
 	// create the argument in the new position
 	const LogLine::Size offset = position + kArgSize + padding;
-	move(&src[offset], &dst[offset]);
+	pFunctionTable->move(&src[offset], &dst[offset]);
 	// and destruct the copied-from version
-	destruct(&src[offset]);
+	pFunctionTable->destruct(&src[offset]);
 
 	position = offset + size;
 }
@@ -1859,14 +1836,14 @@ void DestructNonTriviallyCopyable(_In_ std::byte* __restrict const buffer, _Inou
 	LogLine::Align padding;
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	LogLine::Internal::Destruct destruct;
-	std::memcpy(&destruct, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(LogLine::Internal::Copy) + sizeof(LogLine::Internal::Move)], sizeof(destruct));
+	internal::FunctionTable* pFunctionTable;
+	std::memcpy(&pFunctionTable, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));
 
 	LogLine::Size size;
-	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(LogLine::Internal::Copy) + sizeof(LogLine::Internal::Move) + sizeof(destruct) + sizeof(CreateFormatArg)], sizeof(size));
+	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));
 
 	const LogLine::Size offset = position + kArgSize + padding;
-	destruct(&buffer[offset]);
+	pFunctionTable->destruct(&buffer[offset]);
 
 	position = offset + size;
 }
@@ -2741,7 +2718,7 @@ void LogLine::WriteException(_In_z_ const char* message, _In_opt_ const BaseExce
 }
 
 void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byte* __restrict const ptr, const LogLine::Size objectSize, const LogLine::Align align, _In_ void (*const createFormatArg)()) {
-	static_assert(sizeof(createFormatArg) == sizeof(CreateFormatArg));
+	static_assert(sizeof(createFormatArg) == sizeof(internal::FunctionTable::CreateFormatArg));
 
 	constexpr TypeId kArgTypeId = kTypeId<TriviallyCopyable>;
 	constexpr auto kArgSize = kTypeSize<TriviallyCopyable>;
@@ -2764,8 +2741,8 @@ void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byt
 	m_cbUsed += size + padding;
 }
 
-__declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const LogLine::Size objectSize, const LogLine::Align align, _In_ const Copy copy, _In_ const Move move, _In_ const Destruct destruct, _In_ void (*const createFormatArg)()) {
-	static_assert(sizeof(createFormatArg) == sizeof(CreateFormatArg));
+__declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const LogLine::Size objectSize, const LogLine::Align align, _In_ const void* const functionTable) {
+	static_assert(sizeof(functionTable) == sizeof(internal::FunctionTable*));
 
 	constexpr TypeId kArgTypeId = kTypeId<NonTriviallyCopyable>;
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
@@ -2781,11 +2758,8 @@ __declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const LogLine
 
 	std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
 	std::memcpy(&buffer[sizeof(kArgTypeId)], &padding, sizeof(padding));
-	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding)], &copy, sizeof(copy));
-	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding) + sizeof(copy)], &move, sizeof(move));
-	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding) + sizeof(copy) + sizeof(move)], &destruct, sizeof(destruct));
-	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding) + sizeof(copy) + sizeof(move) + sizeof(destruct)], &createFormatArg, sizeof(createFormatArg));
-	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding) + sizeof(copy) + sizeof(move) + sizeof(destruct) + sizeof(createFormatArg)], &objectSize, sizeof(objectSize));
+	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding)], &functionTable, sizeof(functionTable));
+	std::memcpy(&buffer[sizeof(kArgTypeId) + sizeof(padding) + sizeof(functionTable)], &objectSize, sizeof(objectSize));
 	std::byte* result = &buffer[kArgSize + padding];
 
 	m_hasNonTriviallyCopyable = true;

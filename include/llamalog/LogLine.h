@@ -325,18 +325,9 @@ public:
 	LogLine& AddCustomArgument(const T& arg);
 
 public:
-	class Internal;                // Allow access to internals in implementation through helper class.
 	using Size = std::uint32_t;    ///< @brief A data type for indexes in the buffer representing *bytes*.
 	using Length = std::uint16_t;  ///< @brief The length of a string in number of *characters*.
 	using Align = std::uint8_t;    ///<@ brief Alignment requirement of a data type in *bytes*.
-
-private:
-	/// @brief Type of the function to construct an argument in the buffer by copying.
-	using Copy = void (*)(_In_ const std::byte* __restrict, _Out_ std::byte* __restrict);
-	/// @brief Type of the function to construct an argument in the buffer by moving.
-	using Move = void (*)(_Inout_ std::byte* __restrict, _Out_ std::byte* __restrict) noexcept;
-	/// @brief Type of the function to destruct an argument in the buffer.
-	using Destruct = void (*)(_Inout_ std::byte* __restrict) noexcept;
 
 private:
 	/// @brief Get the argument buffer for writing.
@@ -406,22 +397,14 @@ private:
 
 	/// @brief Add a custom object to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, the pointer
-	/// to the function to move the argument, the pointer to the function to call the destructor of the custom type, a
-	/// pointer to the function to create the formatter argument, the size of the data, padding as required and finally
-	/// the bytes of the object.
+	/// to the function table, the size of the data, padding as required and finally the bytes of the object.
 	/// @note This function does NOT copy the object but only returns the target address.
-	/// @remark The function to create the formatter argument is supplied as a void (*)() pointer which removes the compile
-	/// time dependency to {fmt} from this header.
+	/// @remark @p functionTable is supplied as a void pointer to remove the compile time dependency to {fmt} from this header.
 	/// @param objectSize The size of the object.
 	/// @param align The alignment requirement of the type.
-	/// @param copy A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
-	/// @param move A pointer to a function which creates the custom type either by copy or move, whichever is
-	/// more efficient. Both adresses can be assumed to be properly aligned.
-	/// @param destruct A pointer to a function which calls the type's destructor.
-	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
-	/// newly created `fmt::basic_format_arg` object.
+	/// @param functionTable A pointer to the `internal::FunctionTable`.
 	/// @return An adress where to copy the current argument.
-	__declspec(restrict) std::byte* WriteNonTriviallyCopyable(Size objectSize, Align align, _In_ Copy copy, _In_ Move move, _In_ Destruct destruct, _In_ void (*createFormatArg)());
+	__declspec(restrict) std::byte* WriteNonTriviallyCopyable(Size objectSize, Align align, _In_ const void* functionTable);
 
 private:
 	///< @brief The stack buffer used for small payloads.
