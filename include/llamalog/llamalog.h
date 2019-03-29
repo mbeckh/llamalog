@@ -214,16 +214,16 @@ _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexce
 /// @brief Emit a log line. @details Without the explicit variable `szFile_` the compiler does not reliably evaluate
 /// `#llamalog::GetFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
 /// @param priority_ The `Priority`.
-/// @param szMessage_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
-#define LLAMALOG_LOG(priority_, szMessage_, ...)                                        \
-	do {                                                                                \
-		constexpr const char* szFile_ = llamalog::GetFilename(__FILE__);                \
-		llamalog::Log(priority_, szFile_, __LINE__, __func__, szMessage_, __VA_ARGS__); \
+/// @param message_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
+#define LLAMALOG_LOG(priority_, message_, ...)                                      \
+	do {                                                                            \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);              \
+		llamalog::Log(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
 	} while (0)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace`.
-/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
-#define LOG_TRACE(szMessage, ...) LLAMALOG_LOG(llamalog::Priority::kTrace, szMessage, __VA_ARGS__)
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+#define LOG_TRACE(message_, ...) LLAMALOG_LOG(llamalog::Priority::kTrace, message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace` for function return values.
 /// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
@@ -237,45 +237,45 @@ _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexce
 	}(result_, __func__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kDebug`.
-/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
-#define LOG_DEBUG(szMessage, ...) LLAMALOG_LOG(llamalog::Priority::kDebug, szMessage, __VA_ARGS__)
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+#define LOG_DEBUG(message_, ...) LLAMALOG_LOG(llamalog::Priority::kDebug, message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kInfo`.
-/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
-#define LOG_INFO(szMessage, ...) LLAMALOG_LOG(llamalog::Priority::kInfo, szMessage, __VA_ARGS__)
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+#define LOG_INFO(message_, ...) LLAMALOG_LOG(llamalog::Priority::kInfo, message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn`.
-/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
-#define LOG_WARN(szMessage, ...) LLAMALOG_LOG(llamalog::Priority::kWarn, szMessage, __VA_ARGS__)
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+#define LOG_WARN(message_, ...) LLAMALOG_LOG(llamalog::Priority::kWarn, message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kError`.
-/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
-#define LOG_ERROR(szMessage, ...) LLAMALOG_LOG(llamalog::Priority::kError, szMessage, __VA_ARGS__)
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+#define LOG_ERROR(message_, ...) LLAMALOG_LOG(llamalog::Priority::kError, message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kFatal`.
-/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
-#define LOG_FATAL(szMessage, ...) LLAMALOG_LOG(llamalog::Priority::kFatal, szMessage, __VA_ARGS__)
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+#define LOG_FATAL(message_, ...) LLAMALOG_LOG(llamalog::Priority::kFatal, message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn + 1`.
 /// @note This macro SHALL be used by the logger itself and any `LogWriter`s.
-/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
-#define LOG_WARN_INTERNAL(szMessage, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kWarn) + 1), szMessage, __VA_ARGS__)
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+#define LOG_WARN_INTERNAL(message_, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kWarn) + 1), message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn + 1`.
 /// @note This macro SHALL be used by the logger itself and any `LogWriter`s.
-/// @param szMessage The message pattern which MAY use the syntax of {fmt}.
-#define LOG_ERROR_INTERNAL(szMessage, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kError) + 1), szMessage, __VA_ARGS__)
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+#define LOG_ERROR_INTERNAL(message_, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kError) + 1), message_, __VA_ARGS__)
 
 /// @brief Throw a new exception with additional logging context.
+/// @detail The variable arguments MAY provide a literal message string and optional arguments.
 /// @param exception_ The exception to throw.
-/// @param szMessage_ An additional message for logging.
-#define LLAMALOG_THROW(exception_, szMessage_, ...)                                        \
-	do {                                                                                   \
-		constexpr const char* szFile_ = llamalog::GetFilename(__FILE__);                   \
-		llamalog::Throw(exception_, szFile_, __LINE__, __func__, szMessage_, __VA_ARGS__); \
+#define LLAMALOG_THROW(exception_, ...)                                      \
+	do {                                                                     \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);       \
+		llamalog::Throw(exception_, file_, __LINE__, __func__, __VA_ARGS__); \
 	} while (0)
 
 /// @brief Throw a new exception with additional logging context (alias for `LLAMALOG_THROW`).
+/// @detail The variable arguments MAY provide a literal message string and optional arguments.
 /// @param exception_ The exception to throw.
-/// @param szMessage_ An additional message for logging.
-#define THROW(exception_, szMessage_, ...) LLAMALOG_THROW(exception_, szMessage, __VA_ARGS__)
+#define THROW(exception_, ...) LLAMALOG_THROW(exception_, __VA_ARGS__)
