@@ -225,6 +225,17 @@ _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexce
 /// @param szMessage The message pattern which MAY use the syntax of {fmt}.
 #define LOG_TRACE(szMessage, ...) LLAMALOG_LOG(llamalog::Priority::kTrace, szMessage, __VA_ARGS__)
 
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace` for function return values.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#define LOG_TRACE_RESULT(result_, message_, ...)                                                             \
+	[&](decltype(result_) result, const char* const function) -> decltype(result_) {                         \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                       \
+		llamalog::Log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, result, __VA_ARGS__); \
+		return result;                                                                                       \
+	}(result_, __func__)
+
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kDebug`.
 /// @param szMessage The message pattern which MAY use the syntax of {fmt}.
 #define LOG_DEBUG(szMessage, ...) LLAMALOG_LOG(llamalog::Priority::kDebug, szMessage, __VA_ARGS__)
