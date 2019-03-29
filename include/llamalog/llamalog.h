@@ -194,7 +194,7 @@ public:
 /// @param szMessage An additional logging message which MAY use {fmt} pattern syntax.
 /// @param args Arguments for the logging message.
 template <typename E, typename... T>
-[[noreturn]] void Throw(E&& exception, _In_z_ const char* const szFile, std::uint32_t line, _In_z_ const char* const szFunction, const char* const szMessage, T&&... args) {
+[[noreturn]] void Throw(E&& exception, _In_z_ const char* const szFile, std::uint32_t line, _In_z_ const char* const szFunction, const char* const szMessage = "", T&&... args) {
 	throw internal::ExceptionDetail<E>(std::forward<E>(exception), szFile, line, szFunction, szMessage, std::forward<T>(args)...);
 }
 
