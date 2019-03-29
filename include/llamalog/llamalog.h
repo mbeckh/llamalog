@@ -117,7 +117,8 @@ void Log(LogLine&& logLine);
 /// @param args Any args for @p szMessage.
 template <typename... T>
 void Log(const Priority priority, _In_z_ const char* __restrict const szFile, const std::uint32_t line, _In_z_ const char* __restrict const szFunction, _In_z_ const char* __restrict const szMessage, T&&... args) {
-	Log((LogLine(priority, szFile, line, szFunction, szMessage) << ... << std::forward<T>(args)));
+	LogLine logLine(priority, szFile, line, szFunction, szMessage);
+	Log((logLine << ... << std::forward<T>(args)));
 }
 
 /// @brief End all logging. This MUST be the last function called.
