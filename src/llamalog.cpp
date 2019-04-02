@@ -52,10 +52,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <exception>
 #include <memory>
 #include <new>
-#include <queue>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -257,12 +257,51 @@ public:
 				m_currentReadBuffer = nullptr;
 
 				SpinLock spinLock(m_flag);
-				m_buffers.pop();
+				m_buffers.pop_front();
 			}
 			return true;
 		}
 
 		return false;
+	}
+
+	/// @brief Waits until all currently available entries have been written.
+	/// @param wait A lambda expression called when waiting is required.
+	template <typename W>
+	void Flush(W&& wait) noexcept {
+		const Buffer* writeBuffer;
+		std::uint_fast32_t writeIndex;
+		while (true) {
+			writeBuffer = m_currentWriteBuffer.load(std::memory_order_acquire);
+			writeIndex = m_writeIndex.load(std::memory_order_acquire);
+			// check if still the same
+			if (m_currentWriteBuffer.load(std::memory_order_acquire) == writeBuffer && writeIndex < Buffer::kBufferSize) {
+				break;
+			}
+		}
+		while (true) {
+			if (!m_currentReadBuffer) {
+				return;
+			}
+			if (m_currentReadBuffer == writeBuffer) {
+				if (writeIndex <= m_readIndex) {
+					return;
+				}
+				goto wait;
+			}
+			{
+				SpinLock spinLock(m_flag);
+				for (const std::unique_ptr<Buffer>& ptr : m_buffers) {
+					if (ptr.get() == writeBuffer) {
+						goto wait;
+					}
+				}
+				// write buffer is no longer queued
+				return;
+			}
+		wait:
+			wait();
+		}
 	}
 
 private:
@@ -273,7 +312,7 @@ private:
 		m_currentWriteBuffer.store(nextWriteBuffer.get(), std::memory_order_release);
 
 		SpinLock spinLock(m_flag);
-		m_buffers.push(std::move(nextWriteBuffer));
+		m_buffers.push_back(std::move(nextWriteBuffer));
 		m_writeIndex.store(0, std::memory_order_relaxed);
 	}
 
@@ -302,7 +341,7 @@ private:
 	std::atomic_flag m_flag = ATOMIC_FLAG_INIT;  ///< @brief Flag protecting the `m_buffers` structure. @hideinitializer
 
 	/// @copyright Same as `QueueBuffer::m_buffers` from NanoLog.
-	_Guarded_by_(m_flag) std::queue<std::unique_ptr<Buffer>> m_buffers;  ///< @brief The queue of buffers.
+	_Guarded_by_(m_flag) std::deque<std::unique_ptr<Buffer>> m_buffers;  ///< @brief The queue of buffers.
 };
 
 }  // namespace
@@ -325,7 +364,7 @@ public:
 		}
 
 		m_state.store(State::kReady, std::memory_order_release);
-		WakeConditionVariable(&m_wakeConsumer);
+		WakeAllConditionVariable(&m_wakeConsumer);
 	}
 
 	Logger(const Logger&) = delete;  ///< @nocopyconstructor
@@ -358,14 +397,28 @@ public:
 		WakeConditionVariable(&m_wakeConsumer);
 	}
 
+	/// @brief Waits until all currently available entries have been written.
+	void Flush() noexcept {
+		AcquireSRWLockShared(&m_lock);
+		while (m_state.load(std::memory_order_acquire) == State::kInit) {
+			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, CONDITION_VARIABLE_LOCKMODE_SHARED);
+		}
+		m_buffer.Flush([this]() noexcept {
+			ReleaseSRWLockShared(&m_lock);
+			// do not use SleepConditionVariableSRW so that regular AddLine does not have to do a WakeAllConditionVariable
+			Sleep(200);
+			AcquireSRWLockShared(&m_lock);
+		});
+		ReleaseSRWLockShared(&m_lock);
+	}
+
 private:
 	/// @brief Main method of the writing thread.
 	/// @copyright Same as `NanoLogger::pop` from NanoLog.
 	void Pop() noexcept {
-		SRWLOCK lock = SRWLOCK_INIT;
-		AcquireSRWLockExclusive(&lock);
+		AcquireSRWLockExclusive(&m_lock);
 		while (m_state.load(std::memory_order_acquire) == State::kInit) {
-			SleepConditionVariableSRW(&m_wakeConsumer, &lock, 5000, 0);
+			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, 0);
 		}
 
 		// the place where the logline is copied to
@@ -412,10 +465,9 @@ private:
 					}
 				}
 			} else {
-				SleepConditionVariableSRW(&m_wakeConsumer, &lock, 5000, 0);
+				SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, 0);
 			}
 		}
-		ReleaseSRWLockExclusive(&lock);
 
 		// Pop and log all remaining entries
 		while (m_buffer.TryPop(pLogLine)) {
@@ -435,6 +487,8 @@ private:
 				}
 			}
 		}
+
+		ReleaseSRWLockExclusive(&m_lock);
 	}
 
 private:
@@ -458,6 +512,8 @@ private:
 	/// @brief A condition to trigger the worker thread. @hideinitializer
 	/// @note This MUST be declared before `m_thread` because the latter waits on this condition.
 	CONDITION_VARIABLE m_wakeConsumer = CONDITION_VARIABLE_INIT;
+
+	SRWLOCK m_lock = SRWLOCK_INIT;  ///< @brief A lock held while events are being processed.
 
 	/// @copyright Same as `NanoLogger::m_thread` from NanoLog.
 	std::thread m_thread;  ///< @brief The thread writing the events.
@@ -490,6 +546,10 @@ void Log(LogLine& logLine) {
 // Derived from `Log::operator==` from NanoLog.
 void Log(LogLine&& logLine) {
 	g_pAtomicLogger.load(std::memory_order_acquire)->AddLine(std::move(logLine));
+}
+
+void Flush() noexcept {
+	g_pAtomicLogger.load(std::memory_order_acquire)->Flush();
 }
 
 void Shutdown() noexcept {

@@ -121,6 +121,11 @@ void Log(const Priority priority, _In_z_ const char* __restrict const szFile, co
 	Log((logLine << ... << std::forward<T>(args)));
 }
 
+/// @brief Waits until all currently available entries have been written.
+/// @details This function might block for a long time and its main purpose is to flush the log for testing.
+/// Use with care in your own code.
+void Flush() noexcept;
+
 /// @brief End all logging. This MUST be the last function called.
 void Shutdown() noexcept;
 
