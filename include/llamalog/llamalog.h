@@ -59,19 +59,28 @@ namespace llamalog {
 
 class LogWriter;
 
+namespace internal {
+
 /// @brief Initialize the logger.
-/// @note `Initialize` MUST be called before any logging takes place.
+/// @note `Start` MUST be called after `Initialize` before any logging takes place.
 /// @copyright Derived from `initialize` from NanoLog.
 void Initialize();
 
-/// @brief Initialize the logger.
+/// @brief Actually start logging.
+/// @note `Start` MUST be called after `Initialize` before any logging takes place.
+void Start();
+
+}  // namespace internal
+
+/// @brief Initialize the logger, add writers and start logging.
 /// @note `Initialize` MUST be called before any logging takes place.
 /// @tparam LogWriter MUST be of type `LogWriter`.
 /// @param writers One or more `LogWriter` objects.
 template <typename... LogWriter>
 void Initialize(std::unique_ptr<LogWriter>&&... writers) {
-	Initialize();
+	internal::Initialize();
 	(..., AddWriter(std::move(writers)));
+	internal::Start();
 }
 
 /// @brief Add a log writer.
@@ -124,7 +133,7 @@ void Log(const Priority priority, _In_z_ const char* __restrict const szFile, co
 /// @brief Waits until all currently available entries have been written.
 /// @details This function might block for a long time and its main purpose is to flush the log for testing.
 /// Use with care in your own code.
-void Flush() noexcept;
+void Flush();
 
 /// @brief End all logging. This MUST be the last function called.
 void Shutdown() noexcept;
@@ -149,7 +158,7 @@ protected:
 
 	BaseException(const BaseException&) = default;  ///< @defaultconstructor
 	BaseException(BaseException&&) = default;       ///< @defaultconstructor
-	virtual ~BaseException() noexcept = default;
+	~BaseException() noexcept = default;
 
 public:
 	BaseException& operator=(const BaseException&) = delete;  ///< @noassignmentoperator
@@ -197,10 +206,23 @@ public:
 /// @param szFile The source code file where the exception happened.
 /// @param line The source code line where the exception happened.
 /// @param szFunction The function where the exception happened.
+template <typename E, typename... T>
+[[noreturn]] void Throw(E&& exception, _In_z_ const char* const szFile, std::uint32_t line, _In_z_ const char* const szFunction) {
+	throw internal::ExceptionDetail<E>(std::forward<E>(exception), szFile, line, szFunction, "");
+}
+
+/// @brief Throws an exception adding logging context.
+/// @remarks The only purpose of this function is to allow template argument deduction of `internal::ExceptionDetail`.
+/// @tparam E The type of the exception.
+/// @tparam T The type of the arguments for the message.
+/// @param exception The actual exception thrown from the code.
+/// @param szFile The source code file where the exception happened.
+/// @param line The source code line where the exception happened.
+/// @param szFunction The function where the exception happened.
 /// @param szMessage An additional logging message which MAY use {fmt} pattern syntax.
 /// @param args Arguments for the logging message.
 template <typename E, typename... T>
-[[noreturn]] void Throw(E&& exception, _In_z_ const char* const szFile, std::uint32_t line, _In_z_ const char* const szFunction, const char* const szMessage = "", T&&... args) {
+[[noreturn]] void Throw(E&& exception, _In_z_ const char* const szFile, std::uint32_t line, _In_z_ const char* const szFunction, const char* const szMessage, T&&... args) {
 	throw internal::ExceptionDetail<E>(std::forward<E>(exception), szFile, line, szFunction, szMessage, std::forward<T>(args)...);
 }
 
@@ -264,12 +286,12 @@ _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexce
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn + 1`.
 /// @note This macro SHALL be used by the logger itself and any `LogWriter`s.
 /// @param message_ The message pattern which MAY use the syntax of {fmt}.
-#define LOG_WARN_INTERNAL(message_, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kWarn) + 1), message_, __VA_ARGS__)
+#define LOG_WARN_INTERNAL(message_, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kWarn) | 1u), message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn + 1`.
 /// @note This macro SHALL be used by the logger itself and any `LogWriter`s.
 /// @param message_ The message pattern which MAY use the syntax of {fmt}.
-#define LOG_ERROR_INTERNAL(message_, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kError) + 1), message_, __VA_ARGS__)
+#define LOG_ERROR_INTERNAL(message_, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kError) | 1u), message_, __VA_ARGS__)
 
 /// @brief Throw a new exception with additional logging context.
 /// @detail The variable arguments MAY provide a literal message string and optional arguments.

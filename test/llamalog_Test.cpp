@@ -22,15 +22,27 @@ limitations under the License.
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 
+#include <detours.h>
+#include <detours_gmock.h>
+#include <windows.h>
+
 #include <memory>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
+
 
 namespace llamalog::test {
 
 namespace {
+
+#pragma warning(suppress : 4100)
+MATCHER_P(MatchesRegex, pattern, "") {
+	return std::regex_match(arg, std::regex(pattern));
+}
 
 class LlamalogTest : public testing::Test {
 protected:
@@ -59,7 +71,6 @@ protected:
 					   logLine.GetLine(),
 					   logLine.GetFunction(),
 					   logLine.GetLogMessage());
-
 		m_out << std::string_view(buffer.data(), buffer.size());
 		++m_lines;
 	}
@@ -70,6 +81,31 @@ private:
 };
 
 }  // namespace
+
+#define WIN32_FUNCTIONS(fn_)                                                                                                                                         \
+	fn_(2, BOOL, WINAPI, SetThreadPriority,                                                                                                                          \
+		(HANDLE hThread, int nPriority),                                                                                                                             \
+		(hThread, nPriority),                                                                                                                                        \
+		nullptr);                                                                                                                                                    \
+	fn_(4, BOOL, WINAPI, SetThreadInformation,                                                                                                                       \
+		(HANDLE hThread, THREAD_INFORMATION_CLASS ThreadInformationClass, LPVOID ThreadInformation, DWORD ThreadInformationSize),                                    \
+		(hThread, ThreadInformationClass, ThreadInformation, ThreadInformationSize),                                                                                 \
+		nullptr);                                                                                                                                                    \
+	fn_(8, int, WINAPI, WideCharToMultiByte,                                                                                                                         \
+		(UINT codePage, DWORD dwFlags, LPCWCH lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar), \
+		(codePage, dwFlags, lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpDefaultChar, lpUsedDefaultChar),                                              \
+		nullptr);                                                                                                                                                    \
+	fn_(1, void, WINAPI, WakeConditionVariable,                                                                                                                      \
+		(PCONDITION_VARIABLE ConditionVariable),                                                                                                                     \
+		(ConditionVariable),                                                                                                                                         \
+		nullptr);                                                                                                                                                    \
+	fn_(1, void, WINAPI, OutputDebugStringA,                                                                                                                         \
+		(LPCSTR lpOutputString),                                                                                                                                     \
+		(lpOutputString),                                                                                                                                            \
+		nullptr)
+
+
+DTGM_DECLARE_API_MOCK(Win32, WIN32_FUNCTIONS);
 
 
 //
@@ -93,6 +129,50 @@ TEST_F(LlamalogTest, GetFilename_IsEmpty_ReturnEmpty) {
 
 
 //
+// Creation Errors
+//
+
+TEST_F(LlamalogTest, Initialize_SetThreadPriorityError_LogError) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	EXPECT_CALL(mock, SetThreadPriority(DTGM_ARG2))
+		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_HANDLE, FALSE));
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} WARN [^\\n]*Error configuring thread: 6\\n[^\\n]+Test\\n"));
+}
+
+TEST_F(LlamalogTest, Initialize_SetThreadInformationError_LogError) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	EXPECT_CALL(mock, SetThreadInformation(DTGM_ARG4))
+		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_HANDLE, FALSE));
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} WARN [^\\n]*Error configuring thread: 6\\n[^\\n]+Test\\n"));
+}
+
+//
 // Log
 //
 
@@ -106,8 +186,8 @@ TEST_F(LlamalogTest, Log_OneLine) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] llamalog_test.cpp:99 TestBody 7\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] llamalog_test.cpp:99 TestBody 7\n"));
 }
 
 TEST_F(LlamalogTest, Log_1000Lines) {
@@ -127,6 +207,234 @@ TEST_F(LlamalogTest, Log_1000Lines) {
 
 
 //
+// Encoding Error
+//
+
+TEST_F(LlamalogTest, Encoding_WideCharToMultiByteError_LogError) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+		.WillRepeatedly(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_FLAGS, 0));
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]*\\(ERROR\\)\\n[0-9:. -]{23} ERROR [^\\n]*WideCharToMultiByte for length 4: 1004\\n"));
+}
+
+TEST_F(LlamalogTest, Encoding_WideCharToMultiByteErrorWithoutFlush_LogError) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+		.WillRepeatedly(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_FLAGS, 0));
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Shutdown();  // Shutdown instead of Flush before detach
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	EXPECT_EQ(2, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]*\\(ERROR\\)\\n[0-9:. -]{23} ERROR [^\\n]*WideCharToMultiByte for length 4: 1004\\n"));
+}
+
+
+//
+// Exception during logging
+//
+
+TEST_F(LlamalogTest, Exception_ExceptionDuringLogging_LogError) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+		.Times(2)
+		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused) -> BOOL {
+			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test");
+		}))
+		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(mock, OutputDebugStringA(MatchesRegex("^PANIC: .+")))
+		.Times(0);
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: Testing exception; arg=Test @[^\\n]+\\n"));
+}
+
+TEST_F(LlamalogTest, Exception_ThrowObjectDuringLogging_LogError) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused) -> BOOL {
+			throw "test error";
+		}));
+	EXPECT_CALL(mock, OutputDebugStringA(MatchesRegex("^PANIC: .+")))
+		.Times(0);
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log\\n"));
+}
+
+TEST_F(LlamalogTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+		.Times(3)
+		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused) -> BOOL {
+			LLAMALOG_THROW(std::exception("Testing exception 1"), "arg={}", L"Test 1");
+		}))
+		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused) -> BOOL {
+			LLAMALOG_THROW(std::exception("Testing exception 2"), "arg={}", L"Test 2");
+		}))
+		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(mock, OutputDebugStringA(MatchesRegex("^PANIC: .+")))
+		.Times(0);
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: Testing exception 2; arg=Test 2 @[^\\n]+\\n"));
+}
+
+TEST_F(LlamalogTest, Exception_ExceptionDuringExceptionHandling_LogFinalError) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	bool fired = false;
+	const std::thread::id threadId = std::this_thread::get_id();
+
+	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused) -> BOOL {
+			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test");
+		}))
+		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(mock, WakeConditionVariable(DTGM_ARG1))
+		.WillOnce(testing::DoDefault())  // initial log call
+		.WillRepeatedly(testing::Invoke([threadId, &fired](PCONDITION_VARIABLE ConditionVariable) -> void {
+			if (std::this_thread::get_id() != threadId && !fired) {
+				// prevent being fired from Flush
+				fired = true;
+				throw std::exception("Logging exception");
+			}
+			// clang-format off
+			DTGM_REAL(Win32, WakeConditionVariable)(ConditionVariable);
+			// clang-format on
+		}));
+	EXPECT_CALL(mock, OutputDebugStringA(MatchesRegex("^PANIC: .+")))
+		.Times(0);
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, m_lines);
+	// exception happens AFTER the LogLine is added, so the message is logged despite the exception
+	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: Testing exception; arg=Test @[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log\\n"));
+}
+
+TEST_F(LlamalogTest, Exception_PermamentExceptionDuringExceptionHandling_LogPanic) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	const std::thread::id threadId = std::this_thread::get_id();
+
+	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused) -> BOOL {
+			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test");
+		}))
+		.WillRepeatedly(testing::DoDefault());
+	EXPECT_CALL(mock, WakeConditionVariable(DTGM_ARG1))
+		.WillOnce(testing::DoDefault())  // initial log call
+		.WillRepeatedly(testing::Invoke([threadId](PCONDITION_VARIABLE ConditionVariable) -> void {
+			if (std::this_thread::get_id() != threadId) {
+				// prevent being fired from Flush
+				throw std::exception("Logging exception");
+			}
+			// clang-format off
+		DTGM_REAL(Win32, WakeConditionVariable)(ConditionVariable);
+			// clang-format on
+		}));
+	EXPECT_CALL(mock, OutputDebugStringA(MatchesRegex("PANIC: .+\\n")));
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, m_lines);
+	// exception happens AFTER the LogLine is added, so the message is logged despite the exception
+	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: Testing exception; arg=Test @[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log\\n"));
+}
+
+TEST_F(LlamalogTest, Exception_PermamentExceptionDuringExceptionLogging_LogPanic) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+		.Times(3)
+		.WillRepeatedly(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused, testing::Unused) -> BOOL {
+			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test");
+		}));
+	EXPECT_CALL(mock, OutputDebugStringA(MatchesRegex("PANIC: .+\\n")));
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	llamalog::Initialize(std::move(writer));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Flush();
+
+	DTGM_DETACH_API_MOCK(Win32);
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(0, m_lines);
+	EXPECT_THAT(m_out.str(), testing::StrEq(""));
+}
+//
 // Macros
 //
 
@@ -140,8 +448,8 @@ TEST_F(LlamalogTest, LOGTRACE_WriterIsDebug_NoOutput) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_EQ("", m_out.str());
 	EXPECT_EQ(0, m_lines);
+	EXPECT_EQ("", m_out.str());
 }
 
 TEST_F(LlamalogTest, LOGTRACE_WriterIsTrace_Output) {
@@ -154,8 +462,8 @@ TEST_F(LlamalogTest, LOGTRACE_WriterIsTrace_Output) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LlamalogTest, LOGTRACE_WithArgs) {
@@ -168,8 +476,8 @@ TEST_F(LlamalogTest, LOGTRACE_WithArgs) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test 1\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test 1\n"));
 }
 
 TEST_F(LlamalogTest, LOGDEBUG) {
@@ -182,8 +490,8 @@ TEST_F(LlamalogTest, LOGDEBUG) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LlamalogTest, LOGDEBUG_WitArgs) {
@@ -196,8 +504,8 @@ TEST_F(LlamalogTest, LOGDEBUG_WitArgs) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test Test\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test Test\n"));
 }
 
 TEST_F(LlamalogTest, LOGINFO) {
@@ -210,8 +518,8 @@ TEST_F(LlamalogTest, LOGINFO) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LlamalogTest, LOGINFO_WithArgs) {
@@ -225,8 +533,8 @@ TEST_F(LlamalogTest, LOGINFO_WithArgs) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test Test\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test Test\n"));
 }
 
 TEST_F(LlamalogTest, LOGWARN) {
@@ -239,8 +547,8 @@ TEST_F(LlamalogTest, LOGWARN) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LlamalogTest, LOGWARN_WithArgs) {
@@ -253,8 +561,8 @@ TEST_F(LlamalogTest, LOGWARN_WithArgs) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test 1s\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test 1s\n"));
 }
 
 TEST_F(LlamalogTest, LOGERROR) {
@@ -267,8 +575,8 @@ TEST_F(LlamalogTest, LOGERROR) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LlamalogTest, LOGERROR_WithArgs) {
@@ -281,8 +589,8 @@ TEST_F(LlamalogTest, LOGERROR_WithArgs) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test 1Test2\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test 1Test2\n"));
 }
 
 TEST_F(LlamalogTest, LOGFATAL) {
@@ -295,8 +603,8 @@ TEST_F(LlamalogTest, LOGFATAL) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LlamalogTest, LOGFATAL_WithArgs) {
@@ -309,8 +617,8 @@ TEST_F(LlamalogTest, LOGFATAL_WithArgs) {
 		llamalog::Shutdown();
 	}
 
-	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test 1.1\n"));
 	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] llamalog_test.cpp:\\d+ TestBody Test 1.1\n"));
 }
 
 }  // namespace llamalog::test

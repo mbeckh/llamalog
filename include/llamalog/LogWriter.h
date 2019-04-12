@@ -23,10 +23,23 @@ limitations under the License.
 #include <cstdint>
 #include <string>
 
+/// @brief Output a message when logging fails.
+/// @details The output is sent to `OutputDebugStringA`.
+/// @param message_ The message.
+#define LLAMALOG_PANIC(message_) llamalog::Panic(__FILE__, __LINE__, __func__, message_)
+
 namespace llamalog {
 
 enum class Priority : std::uint8_t;
 class LogLine;
+
+/// @brief Log a message if logging fails.
+/// @details The output is sent to `OutputDebugStringA`.
+/// @param file The file where the message is created.
+/// @param line The line where the message is created.
+/// @param function The function where the message is created.
+/// @param message The message to log.
+void Panic(const char* file, std::uint32_t line, const char* function, const char* message) noexcept;
 
 /// @brief The base class for all log writers.
 /// @details Except for the constructor and destructor, all access to a `LogWriter` is from a single thread.
@@ -70,7 +83,7 @@ public:
 	/// @details In case of an error, `0000-00-00 00:00:00.000` is returned.
 	/// @param timestamp The timestamp.
 	/// @return The timestamp as a string.
-	static std::string FormatTimestamp(const FILETIME& timestamp) noexcept;
+	static std::string FormatTimestamp(const FILETIME& timestamp);
 
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS` to a target buffer.
 	/// @details The buffer MUST be of type `fmt::basic_memory_buffer`.
@@ -80,7 +93,7 @@ public:
 	/// @param out The target buffer.
 	/// @param timestamp The timestamp.
 	template <typename Out>
-	static void FormatTimestampTo(Out& out, const FILETIME& timestamp) noexcept;
+	static void FormatTimestampTo(Out& out, const FILETIME& timestamp);
 
 private:
 	std::atomic<Priority> m_priority;  ///< @brief Atomic store for the `#Priority`.
@@ -124,10 +137,10 @@ public:
 	/// @param fileName File name for the log files.
 	/// @param frequency The interval at which a new the writer starts a new file.
 	/// @param maxFiles The maximum number of old log files which should be kept in @p directory.
-	RollingFileWriter(Priority priority, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = 60);
+	RollingFileWriter(Priority priority, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = 60) noexcept;
 	RollingFileWriter(const RollingFileWriter&) = delete;  ///< @nocopyconstructor
 	RollingFileWriter(RollingFileWriter&&) = delete;       ///< @nomoveconstructor
-	~RollingFileWriter() noexcept override;
+	~RollingFileWriter() noexcept;
 
 public:
 	RollingFileWriter& operator=(const RollingFileWriter&) = delete;  ///< @noassignmentoperator

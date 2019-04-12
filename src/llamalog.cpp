@@ -48,6 +48,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include "llamalog/LogLine.h"
 #include "llamalog/LogWriter.h"
 
+#include <windows.h>
+
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -63,6 +65,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 namespace llamalog {
 
 namespace {
+
+/// @brief Checks if the `Priority` is a priority from an internal message.
+/// @details Used internally to prevent endless loops from logging errors that happen during logging of errors.
+/// @param priority The `Priority` to check.
+/// @return `true` if this is an internal `Priority`.
+constexpr bool IsInternal(const Priority priority) noexcept {
+	return static_cast<uint8_t>(priority) & 1u;
+}
+
+/// @brief Checks if the `Priority` is a priority from an internal exception message.
+/// @details Used internally to prevent endless loops from logging errors that happen during logging of errors.
+/// @param priority The `Priority` to check.
+/// @return `true` if this is an exception priority.
+constexpr bool IsException(const Priority priority) noexcept {
+	return static_cast<uint8_t>(priority) & 2u;
+}
+
+/// @brief Gets the priority for an internal error message.
+/// @details If the original `LogLine` which caused an error is a regular message, an internal priority is used.
+/// If the `Priority` is already internal, an elevated level is returned. If the log is already from an elevated level,
+/// `Priority::kNone` is returned to prevent endless loops from logging errors that happen during logging of errors.
+/// @param priority The `Priority` to check.
+/// @return The priority for logging an error message for logging at this priority.
+constexpr Priority GetErrorPriority(const Priority priority) noexcept {
+	if (IsInternal(priority)) {
+		return static_cast<llamalog::Priority>(static_cast<std::uint8_t>(Priority::kError) | 2u);
+	}
+	if (!IsException(priority)) {
+		return static_cast<llamalog::Priority>(static_cast<std::uint8_t>(Priority::kError) | 1u);
+	}
+	return Priority::kNone;
+}
 
 /// @brief A lock free buffer supporting parallel readers and writers.
 /// @copyright Derived from `class Buffer` from NanoLog.
@@ -152,13 +186,13 @@ public:
 	///< @brief The number of elements in the buffer.
 	/// @details The size of `m_buffer` is just under 8 MB (to account for the two atomic fields.
 	/// @copyright Same as `Buffer::size` from NanoLog.
-	static constexpr std::uint32_t kBufferSize =
-		(8388608 - sizeof(std::atomic_uint32_t) - sizeof(std::atomic_bool)) / sizeof(Item);
+	static constexpr std::uint_fast32_t kBufferSize =
+		(8388608 - sizeof(std::atomic_uint_fast32_t) - sizeof(std::atomic_bool)) / sizeof(Item);
 
 private:
 	/// @copyright Same as `Buffer::m_buffer` from NanoLog, but on stack instead of heap.
 	std::byte m_buffer[kBufferSize * sizeof(Item)];  ///< @brief The buffer holding the log events.
-	std::atomic_uint32_t m_remaining;                ///< The number of free entries in this buffer.
+	std::atomic_uint_fast32_t m_remaining;           ///< The number of free entries in this buffer.
 
 	/// @copyright Same as `Buffer::m_write_state` from NanoLog, but on stack instead of heap.
 	std::atomic_bool m_writeState[kBufferSize];  ///< @brief `true` if this entry has been written.
@@ -257,7 +291,7 @@ public:
 				m_currentReadBuffer = nullptr;
 
 				SpinLock spinLock(m_flag);
-				m_buffers.pop_front();
+				m_buffers.pop_front();  // may throw, will crash - nothing we could do anyways
 			}
 			return true;
 		}
@@ -268,7 +302,7 @@ public:
 	/// @brief Waits until all currently available entries have been written.
 	/// @param wait A lambda expression called when waiting is required.
 	template <typename W>
-	void Flush(W&& wait) noexcept {
+	void Flush(W&& wait) {
 		const Buffer* writeBuffer;
 		std::uint_fast32_t writeIndex;
 		while (true) {
@@ -321,7 +355,7 @@ private:
 	/// @copyright Same as `QueueBuffer::get_next_read_buffer` from NanoLog.
 	Buffer* GetNextReadBuffer() noexcept {
 		SpinLock spinLock(m_flag);
-		return m_buffers.empty() ? nullptr : m_buffers.front().get();
+		return m_buffers.empty() ? nullptr : m_buffers.front().get();  // might throw, will crash, nothing we could do anyways
 	}
 
 private:
@@ -346,6 +380,7 @@ private:
 
 }  // namespace
 
+
 /// @brief The main logger class.
 /// @copyright Derived from `NanoLogger` from NanoLog.
 class Logger final {
@@ -354,17 +389,7 @@ public:
 	/// @copyright Derived from `NanoLogger::NanoLogger` from NanoLog.
 	explicit Logger()
 		: m_thread(&Logger::Pop, this) {
-		if (!SetThreadPriority(m_thread.native_handle(), THREAD_PRIORITY_BELOW_NORMAL)) {
-			LOG_WARN_INTERNAL("Error configuring thread: {:#x}", GetLastError());
-		}
-		MEMORY_PRIORITY_INFORMATION mpi = {0};
-		mpi.MemoryPriority = MEMORY_PRIORITY_LOW;
-		if (!SetThreadInformation(m_thread.native_handle(), ThreadMemoryPriority, &mpi, sizeof(mpi))) {
-			LOG_WARN_INTERNAL("Error configuring thread: {:#x}", GetLastError());
-		}
-
-		m_state.store(State::kReady, std::memory_order_release);
-		WakeAllConditionVariable(&m_wakeConsumer);
+		// empty
 	}
 
 	Logger(const Logger&) = delete;  ///< @nocopyconstructor
@@ -375,7 +400,11 @@ public:
 	~Logger() noexcept {
 		m_state.store(State::kShutdown);
 		WakeConditionVariable(&m_wakeConsumer);
-		m_thread.join();
+		try {
+			m_thread.join();
+		} catch (...) {
+			LLAMALOG_PANIC("Error during shutdown");
+		}
 	}
 
 public:
@@ -383,6 +412,22 @@ public:
 	Logger& operator=(Logger&&) = delete;       ///< @nomoveoperator
 
 public:
+	/// @brief Start logging.
+	/// @details Moved from the constructor to a separate function to allow writers to be set before logging starts.
+	void Start() {
+		if (!SetThreadPriority(m_thread.native_handle(), THREAD_PRIORITY_BELOW_NORMAL)) {
+			LOG_WARN_INTERNAL("Error configuring thread: {}", GetLastError());
+		}
+		MEMORY_PRIORITY_INFORMATION mpi = {0};
+		mpi.MemoryPriority = MEMORY_PRIORITY_LOW;
+		if (!SetThreadInformation(m_thread.native_handle(), ThreadMemoryPriority, &mpi, sizeof(mpi))) {
+			LOG_WARN_INTERNAL("Error configuring thread: {}", GetLastError());
+		}
+
+		m_state.store(State::kReady, std::memory_order_release);
+		WakeAllConditionVariable(&m_wakeConsumer);
+	}
+
 	/// @brief Adds a new `LogWriter`.
 	/// @param logWriter The `LogWriter`.
 	void AddWriter(std::unique_ptr<LogWriter>&& logWriter) {
@@ -398,7 +443,7 @@ public:
 	}
 
 	/// @brief Waits until all currently available entries have been written.
-	void Flush() noexcept {
+	void Flush() {
 		AcquireSRWLockShared(&m_lock);
 		while (m_state.load(std::memory_order_acquire) == State::kInit) {
 			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, CONDITION_VARIABLE_LOCKMODE_SHARED);
@@ -446,21 +491,42 @@ private:
 			LogLine* const m_pLogLine;
 		};
 
-
 		while (m_state.load() == State::kReady) {
 			if (m_buffer.TryPop(pLogLine)) {
 				// release any resources of the log line as quickly as possible
 				CallDestruct guard(pLogLine);
 
 				const Priority priority = pLogLine->GetPriority();
-				for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
+				for (const std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 					if (logWriter->IsLogged(priority)) {
 						try {
 							logWriter->Log(*pLogLine);
 						} catch (const std::exception& e) {
-							LOG_ERROR_INTERNAL("Error writing log: {}", e.what());
+							const Priority errorPriority = GetErrorPriority(priority);
+							if (errorPriority != Priority::kNone) {
+								try {
+									LLAMALOG_LOG(errorPriority, "Error writing log: {}", e);
+								} catch (...) {
+									try {
+										LLAMALOG_LOG(errorPriority, "Error writing log");
+									} catch (...) {
+										LLAMALOG_PANIC("Error writing log");
+									}
+								}
+							} else {
+								LLAMALOG_PANIC(e.what());
+							}
 						} catch (...) {
-							LOG_ERROR_INTERNAL("Error writing log");
+							const Priority errorPriority = GetErrorPriority(priority);
+							if (errorPriority != Priority::kNone) {
+								try {
+									LLAMALOG_LOG(errorPriority, "Error writing log");
+								} catch (...) {
+									LLAMALOG_PANIC("Error writing log");
+								}
+							} else {
+								LLAMALOG_PANIC("Error writing log");
+							}
 						}
 					}
 				}
@@ -475,14 +541,36 @@ private:
 			CallDestruct guard(pLogLine);
 
 			const Priority priority = pLogLine->GetPriority();
-			for (std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
+			for (const std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 				if (logWriter->IsLogged(priority)) {
 					try {
 						logWriter->Log(*pLogLine);
 					} catch (const std::exception& e) {
-						LOG_ERROR_INTERNAL("Error writing log: {}", e.what());
+						const Priority errorPriority = GetErrorPriority(priority);
+						if (errorPriority != Priority::kNone) {
+							try {
+								LLAMALOG_LOG(errorPriority, "Error writing log: {}", e);
+							} catch (...) {
+								try {
+									LLAMALOG_LOG(errorPriority, "Error writing log");
+								} catch (...) {
+									LLAMALOG_PANIC(e.what());
+								}
+							}
+						} else {
+							LLAMALOG_PANIC(e.what());
+						}
 					} catch (...) {
-						LOG_ERROR_INTERNAL("Error writing log");
+						const Priority errorPriority = GetErrorPriority(priority);
+						if (errorPriority != Priority::kNone) {
+							try {
+								LLAMALOG_LOG(errorPriority, "Error writing log");
+							} catch (...) {
+								LLAMALOG_PANIC("Error writing log");
+							}
+						} else {
+							LLAMALOG_PANIC("Error writing log");
+						}
 					}
 				}
 			}
@@ -522,10 +610,13 @@ private:
 	std::vector<std::unique_ptr<LogWriter>> m_logWriters;  ///< @brief A list of all log writers.
 };
 
+
 /// @brief The default logger.
 static std::unique_ptr<Logger> g_pLogger;
 /// @brief An atomic reference to the default logger.
 static std::atomic<Logger*> g_pAtomicLogger;
+
+namespace internal {
 
 // Derived from `initialize` from NanoLog.
 void Initialize() {
@@ -533,9 +624,15 @@ void Initialize() {
 	g_pAtomicLogger.store(g_pLogger.get(), std::memory_order_release);
 }
 
+void Start() {
+	std::atomic_thread_fence(std::memory_order_release);
+	g_pAtomicLogger.load(std::memory_order_acquire)->Start();
+}
+
+}  // namespace internal
+
 void AddWriter(std::unique_ptr<LogWriter>&& writer) {
 	g_pAtomicLogger.load(std::memory_order_acquire)->AddWriter(std::move(writer));
-	std::atomic_thread_fence(std::memory_order_release);
 }
 
 // Derived from `Log::operator==` from NanoLog.
@@ -548,13 +645,14 @@ void Log(LogLine&& logLine) {
 	g_pAtomicLogger.load(std::memory_order_acquire)->AddLine(std::move(logLine));
 }
 
-void Flush() noexcept {
+void Flush() {
 	g_pAtomicLogger.load(std::memory_order_acquire)->Flush();
 }
 
 void Shutdown() noexcept {
-	g_pAtomicLogger.store(nullptr);
+	// first delete the logger, the the reference. This allows the logger to log messages during shutdown
 	g_pLogger.reset();
+	g_pAtomicLogger.store(nullptr);
 }
 
 _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexcept {

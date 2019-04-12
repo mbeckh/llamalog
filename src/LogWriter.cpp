@@ -55,7 +55,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <cinttypes>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <limits>
@@ -66,6 +68,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <vector>
 
 namespace llamalog {
+
+void Panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
+	// avoid anything that could cause an error
+	char msg[1024];
+	if (sprintf_s(msg, "PANIC: %s @ %s(%s:%" PRIu32 ")\n", message, function, file, line) < 0) {
+		OutputDebugStringA("PANIC: Error writing log\n");
+	} else {
+		OutputDebugStringA(msg);
+	}
+}
+
+namespace {
+
+/// @brief Checks if the `Priority` is a priority from an internal message.
+/// @details Used internally to prevent endless loops from logging errors that happen during logging of errors.
+/// @param priority The `Priority` to check.
+/// @return `true` if this is an internal `Priority`.
+constexpr bool IsInternal(const Priority priority) noexcept {
+	return static_cast<uint8_t>(priority) & 1u;
+}
+
+/// @brief Checks if the `Priority` is a priority from an internal exception message.
+/// @details Used internally to prevent endless loops from logging errors that happen during logging of errors.
+/// @param priority The `Priority` to check.
+/// @return `true` if this is an exception priority.
+constexpr bool IsException(const Priority priority) noexcept {
+	return static_cast<uint8_t>(priority) & 2u;
+}
+
+}  // namespace
 
 //
 // LogWriter
@@ -103,8 +135,12 @@ __declspec(noalias) _Ret_z_ char const* LogWriter::FormatPriority(const Priority
 		return "FATAL";
 	default:
 		// uneven priorities mark internal events
-		if (static_cast<std::uint8_t>(priority) & 1u) {
+		if (IsInternal(priority)) {
 			return FormatPriority(static_cast<Priority>(static_cast<std::uint8_t>(priority) & ~1u));
+		}
+		// bit 1 marks internal exceptions
+		if (IsException(priority)) {
+			return FormatPriority(static_cast<Priority>(static_cast<std::uint8_t>(priority) & ~2u));
 		}
 		assert(false);
 		return "-";
@@ -113,19 +149,19 @@ __declspec(noalias) _Ret_z_ char const* LogWriter::FormatPriority(const Priority
 }
 
 // Derived from `format_timestamp` from NanoLog.
-std::string LogWriter::FormatTimestamp(const FILETIME& timestamp) noexcept {
+std::string LogWriter::FormatTimestamp(const FILETIME& timestamp) {
 	fmt::basic_memory_buffer<char, 23> buffer;
 	FormatTimestampTo(buffer, timestamp);
 	return fmt::to_string(buffer);
 }
 
 template <typename Out>
-void LogWriter::FormatTimestampTo(Out& out, const FILETIME& timestamp) noexcept {
+void LogWriter::FormatTimestampTo(Out& out, const FILETIME& timestamp) {
 	SYSTEMTIME st;
 	if (!FileTimeToSystemTime(&timestamp, &st)) {
 		st = {0};
 	}
-	fmt::format_to(out, "{}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+	fmt::format_to(out, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 }
 
 namespace {
@@ -135,7 +171,7 @@ namespace {
 /// @param out The target buffer.
 /// @param sz The null-terminated string.
 template <typename Out>
-inline void Append(Out& out, _In_z_ const char* sz) noexcept {
+inline void Append(Out& out, _In_z_ const char* sz) {
 	out.append(sz, sz + std::strlen(sz));
 }
 
@@ -187,17 +223,17 @@ struct FrequencyInfo {
 /// @brief The data for the various `RollingFileWriter::Frequency` values.
 constexpr FrequencyInfo kFrequencyInfos[] = {
 	// *10[= microseconds] * 1000[= milliseconds] * 1000[= seconds] * 3600[= hours] * 24[= days] * 7[= weeks]
-	{10ui64 * 1000 * 1000 * 3600 * 24, "{}{:0>2}"},              // kMonthly - check every day to make logic easier, code will just re-open the same file every day
-	{10ui64 * 1000 * 1000 * 3600 * 24, "{}{:0>2}{:0>2}"},        // kDaily
-	{10ui64 * 1000 * 1000 * 3600, "{}{:0>2}{:0>2}_{:0>2}00"},    // kHourly
-	{10ui64 * 1000 * 1000 * 60, "{}{:0>2}{:02}_{:0>2}{:0>2}"},   // kEveryMinute
-	{10ui64 * 1000 * 1000, "{}{:0>2}{:0>2}_{:0>2}{:0>2}{:0>2}"}  // kEverySecond
+	{10ui64 * 1000 * 1000 * 3600 * 24, "{:0>4}{:0>2}"},              // kMonthly - check every day to make logic easier, code will just re-open the same file every day
+	{10ui64 * 1000 * 1000 * 3600 * 24, "{:0>4}{:0>2}{:0>2}"},        // kDaily
+	{10ui64 * 1000 * 1000 * 3600, "{:0>4}{:0>2}{:0>2}_{:0>2}"},      // kHourly
+	{10ui64 * 1000 * 1000 * 60, "{:0>4}{:0>2}{:0>2}_{:0>2}{:0>2}"},  // kEveryMinute
+	{10ui64 * 1000 * 1000, "{:0>4}{:0>2}{:0>2}_{:0>2}{:0>2}{:0>2}"}  // kEverySecond
 };
 static_assert(sizeof(kFrequencyInfos) / sizeof(kFrequencyInfos[0]) == static_cast<std::uint8_t>(RollingFileWriter::Frequency::kCount));
 
 }  // namespace
 
-RollingFileWriter::RollingFileWriter(const Priority priority, std::string directory, std::string fileName, const Frequency frequency, const std::uint32_t maxFiles)
+RollingFileWriter::RollingFileWriter(const Priority priority, std::string directory, std::string fileName, const Frequency frequency, const std::uint32_t maxFiles) noexcept
 	: LogWriter(priority)
 	, m_directory(std::move(directory))
 	, m_fileName(std::move(fileName))
@@ -209,8 +245,11 @@ RollingFileWriter::RollingFileWriter(const Priority priority, std::string direct
 RollingFileWriter::~RollingFileWriter() noexcept {
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (!CloseHandle(m_hFile)) {
-			LOG_WARN_INTERNAL("Error closing log: {:#x}", GetLastError());
-			assert(false);
+			try {
+				LOG_WARN_INTERNAL("Error closing log: {}", GetLastError());
+			} catch (...) {
+				LLAMALOG_PANIC("Error closing log");
+			}
 		}
 	}
 }
@@ -250,8 +289,12 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 		if (!WriteFile(m_hFile, data + cbPosition, count, &cbWritten, nullptr)) {
 			if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 				// no need to log if there is no file
-				LOG_ERROR_INTERNAL("Error writing {} bytes to log: {:#x}", count, GetLastError());
-				assert(false);
+				if (!IsInternal(logLine.GetPriority())) {
+					// logging this error could trigger an infinite loop if it is _this_ error message
+					LOG_ERROR_INTERNAL("Error writing {} bytes to log: {}", count, GetLastError());
+				} else {
+					LLAMALOG_PANIC("Error writing to log");
+				}
 			}
 			// try the next event
 			return;
@@ -279,9 +322,13 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 
 	SYSTEMTIME time;
 	if (!FileTimeToSystemTime(&timestamp, &time)) {
-		LOG_ERROR_INTERNAL("Error rolling log: {:#x}", GetLastError());
-		assert(false);
-		// if we can't get the time, we can't roll the file, try again for next message
+		if (!IsInternal(logLine.GetPriority())) {
+			// logging this error could trigger an infinite loop if it is _this_ error message
+			LOG_ERROR_INTERNAL("Error rolling log: {}", GetLastError());
+		} else {
+			LLAMALOG_PANIC("Error rolling log");
+		}
+		// if we can't get the time, we can't roll the file, try again at next log event
 		return;
 	}
 
@@ -304,34 +351,19 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (!CloseHandle(m_hFile)) {
-			LOG_WARN_INTERNAL("Error closing log: {:#x}", GetLastError());
-			assert(false);
+			LOG_WARN_INTERNAL("Error closing log: {}", GetLastError());
 			// if we can't close the file, leave it open
 		}
 	}
-	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
-	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
-	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		if (!(static_cast<uint8_t>(logLine.GetPriority()) & 1u)) {
-			// logging this error could trigger an infinite loop if it is _this_ error message
-			LOG_ERROR_INTERNAL("Error creating log: {:#x}", GetLastError());
-		}
-		assert(false);
-		// no file created, try again for next message
-		return;
-	}
-	// using CreateFile with FILE_APPEND_DATA does not requre a SetFilePointer to the end
 
-	// Now clean any old log files.
-	// This part comes after creating the new log file to be able to log any errors which might happen during cleanup.
+	// Clean any old log files.
 	std::vector<std::wstring> files;
 	WIN32_FIND_DATAW findData;
 	HANDLE hFindResult = FindFirstFileExW(pattern.c_str(), FindExInfoBasic, &findData, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 	if (hFindResult == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		const DWORD lastError = GetLastError();
 		if (lastError != ERROR_FILE_NOT_FOUND) {
-			LOG_WARN_INTERNAL("Error rolling log: {:#x}", lastError);
-			assert(false);
+			LOG_WARN_INTERNAL("Error deleting log: {}", lastError);
 		}
 	} else {
 		do {
@@ -339,27 +371,38 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 		} while (FindNextFileW(hFindResult, &findData));  // NOLINT(readability-implicit-bool-conversion): Compare BOOL in a condition.
 		const DWORD lastError = GetLastError();
 		if (lastError != ERROR_NO_MORE_FILES) {
-			LOG_WARN_INTERNAL("Error rolling log: {:#x}", lastError);
-			assert(false);
+			LOG_WARN_INTERNAL("Error deleting log: {}", lastError);
 			// do not try to delete anything on find errors
 		} else {
 			std::sort(files.begin(), files.end());
-			// end at offset len -1 to keep most recent file opened above. files is guaranteed to have at least one entry
-			for (std::uint32_t i = 0, len = static_cast<std::uint32_t>(files.size() - 1); i < len - std::min(len, m_maxFiles); ++i) {
+			const std::uint32_t len = static_cast<std::uint32_t>(files.size());
+			for (std::uint32_t i = 0; i < len - std::min(len, m_maxFiles); ++i) {
 				std::filesystem::path file = std::filesystem::path(m_directory) / files[i];
 				if (!DeleteFileW(file.c_str())) {
-					LOG_WARN_INTERNAL("Error deleting log '{}': {:#x}", files[i], GetLastError());
-					assert(false);
+					LOG_WARN_INTERNAL("Error deleting log '{}': {}", files[i], GetLastError());
 					// delete failed, but continue
 				}
 			}
 		}
 		if (!FindClose(hFindResult)) {
-			LOG_WARN_INTERNAL("Error deleting log: {:#x}", lastError);
-			assert(false);
+			LOG_WARN_INTERNAL("Error deleting log: {}", GetLastError());
 			// just leave the handle open
 		}
 	}
+
+	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
+	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
+		if (!IsInternal(logLine.GetPriority())) {
+			// logging this error could trigger an infinite loop if it is _this_ error message
+			LOG_ERROR_INTERNAL("Error creating log: {}", GetLastError());
+		} else {
+			LLAMALOG_PANIC("Error creating log");
+		}
+		// no file created, try again for next message
+	}
+
+	// using CreateFile with FILE_APPEND_DATA does not requre a SetFilePointer to the end
 }
 
 }  // namespace llamalog

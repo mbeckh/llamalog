@@ -112,15 +112,15 @@ struct FunctionTable {
 template <typename T>
 struct FunctionTableInstance {
 	/// @brief A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
-	FunctionTable::Copy copy = &Copy<T>;
+	FunctionTable::Copy copy = Copy<T>;
 	/// @brief A pointer to a function which creates the custom type either by copy or move, whichever is
 	/// more efficient. Both adresses can be assumed to be properly aligned.
-	FunctionTable::Move move = &Move<T>;
+	FunctionTable::Move move = Move<T>;
 	/// @brief A pointer to a function which calls the type's destructor.
-	FunctionTable::Destruct destruct = &Destruct<T>;
+	FunctionTable::Destruct destruct = Destruct<T>;
 	/// @brief A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::basic_format_arg` object.
-	FunctionTable::CreateFormatArg createFormatArg = &CreateFormatArg<T>;
+	FunctionTable::CreateFormatArg createFormatArg = CreateFormatArg<T>;
 };
 
 }  // namespace internal
@@ -130,7 +130,7 @@ LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
 	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression): comparison with constant is intended
-	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(&internal::CreateFormatArg<X>));
+	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::CreateFormatArg<X>));
 	return *this;
 }
 

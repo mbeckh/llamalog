@@ -195,7 +195,7 @@ try {
 ```
 This sample logs the exception message and - if extended logging data is available - a space character, the text "location=" followed by file and line number.
 
-Using this syntax, the default exception pattern is `%[%m: ]%[(%C %c) ]%e%[ @\{%T \[%t\] %f(%F:%L)\}]` which produces output like `An exception has happened: (system 22) Invalid argument @{2019-03-27 22:18:23.231 [9384] myfunction(myfile.cpp:87)}`.
+Using this syntax, the default exception pattern is `%e%[ (%C %c)]%[; %m]%[ @\{%T \[%t\] %F:%L %f\}]` which produces output like `Invalid argument (system 22); Additional info @{2019-03-27 22:18:23.231 [9384] myfile.cpp:87 myfunction}`.
 
 By the way: Was I carried away by the formatting syntax? Maybe. Is it useful? Indeed. Does it hurt, if anyone does not want to use it? Not really. So I keep the feature although the default formatting will probably be sufficient for most purposes. :sunglasses:
 

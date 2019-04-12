@@ -19,6 +19,7 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="$(SolutionDir)msvc-common\BuildConfiguration.props" />
     <Import Project="$(SolutionDir)msvc-common\googletest.props" />
+    <Import Project="$(SolutionDir)msvc-common\Detours.props" />
     <Import Project="$(SolutionDir)msvc-common\fmt.props" />
     <Import Project="..\llamalog.props" />
     <Import Project="$(SolutionDir)msvc\BuildConfiguration.props" Condition="exists('$(SolutionDir)msvc\BuildConfiguration.props')" />
@@ -33,6 +34,7 @@
     <ClCompile Include="..\..\test\Exceptions_Test.cpp" />
     <ClCompile Include="..\..\test\LogLine_Test.cpp" />
     <ClCompile Include="..\..\test\llamalog_Test.cpp" />
+    <ClCompile Include="..\..\test\LogWriter_Test.cpp" />
     <ClCompile Include="..\..\test\main.cpp" />
     <ClCompile Include="..\..\test\WindowsTypes_Test.cpp" />
   </ItemGroup>

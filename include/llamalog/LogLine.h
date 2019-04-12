@@ -67,16 +67,17 @@ namespace llamalog {
 class BaseException;
 
 /// @brief Enum for different log priorities.
-/// @note Uneven values one greater then the respective enum are reserved for log messages from the logger itself.
+/// @note Uneven values one greater than the respective enum are reserved for log messages from the logger itself.
+/// Uneven values two greater than the respective enum are reserved for exception messages from the logger itself.
 /// @copyright This enum is based on `enum class LogLevel` from NanoLog.
 enum class Priority : std::uint8_t {
 	kNone = 0,    ///< Value for "not set"
-	kTrace = 2,   ///< Output useful for inspecting program flow.
-	kDebug = 4,   ///< Output useful for debugging.
-	kInfo = 8,    ///< Informational message which should be logged.
-	kWarn = 16,   ///< A condition which should be inspected.
-	kError = 32,  ///< A recoverable error.
-	kFatal = 64   ///< A condition leading to program abort.
+	kTrace = 4,   ///< Output useful for inspecting program flow.
+	kDebug = 8,   ///< Output useful for debugging.
+	kInfo = 16,   ///< Informational message which should be logged.
+	kWarn = 32,   ///< A condition which should be inspected.
+	kError = 64,  ///< A recoverable error.
+	kFatal = 128  ///< A condition leading to program abort.
 };
 
 /// @brief The class contains all data for formatting and output which happens asynchronously.
