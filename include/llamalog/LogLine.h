@@ -296,7 +296,7 @@ public:
 	/// @brief Get the arguments for formatting the message.
 	/// @remarks Using a template removes the need to include the headers of {fmt} in all translation units.
 	/// MUST use argument for `std::vector` because guaranteed copy elision does not take place in debug builds.
-	/// @tparam T This MUST be `std::vector<fmt::basic_format_arg<fmt::format_context>>`.
+	/// @tparam T This MUST be `std::vector<fmt::format_context::format_arg>`.
 	/// @param args The `std::vector` to receive the message arguments.
 	template <typename T>
 	void CopyArgumentsTo(T& args) const;
@@ -393,7 +393,7 @@ private:
 	/// @param objectSize The size of the object.
 	/// @param align The alignment requirement of the type.
 	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
-	/// newly created `fmt::basic_format_arg` object.
+	/// newly created `fmt::format_context::format_arg` object.
 	void WriteTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byte* __restrict ptr, Size objectSize, Align align, _In_ void (*createFormatArg)());
 
 	/// @brief Add a custom object to the argument buffer.

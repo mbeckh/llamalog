@@ -36,9 +36,9 @@ namespace internal {
 /// @brief Helper function to create a type-safe formatter argument.
 /// @tparam T The type of the argument.
 /// @param objectData The serialized byte stream of an object of type @p T.
-/// @return A newly created `fmt::basic_format_arg`.
+/// @return A newly created `fmt::format_context::format_arg`.
 template <typename T>
-fmt::basic_format_arg<fmt::format_context> CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
+fmt::format_context::format_arg CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
 	return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const T*>(objectData));
 }
 
@@ -93,7 +93,7 @@ struct FunctionTable {
 	/// @brief Type of the function to destruct an argument in the buffer.
 	using Destruct = void (*)(_Inout_ std::byte* __restrict) noexcept;
 	/// @brief Type of the function to create a formatter argument.
-	using CreateFormatArg = fmt::basic_format_arg<fmt::format_context> (*)(const std::byte* __restrict) noexcept;
+	using CreateFormatArg = fmt::format_context::format_arg (*)(const std::byte* __restrict) noexcept;
 
 	/// @brief A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
 	Copy copy;
@@ -103,7 +103,7 @@ struct FunctionTable {
 	/// @brief A pointer to a function which calls the type's destructor.
 	Destruct destruct;
 	/// @brief A pointer to a function which has a single argument of type `std::byte*` and returns a
-	/// newly created `fmt::basic_format_arg` object.
+	/// newly created `fmt::format_context::format_arg` object.
 	CreateFormatArg createFormatArg;
 };
 
@@ -119,7 +119,7 @@ struct FunctionTableInstance {
 	/// @brief A pointer to a function which calls the type's destructor.
 	FunctionTable::Destruct destruct = Destruct<T>;
 	/// @brief A pointer to a function which has a single argument of type `std::byte*` and returns a
-	/// newly created `fmt::basic_format_arg` object.
+	/// newly created `fmt::format_context::format_arg` object.
 	FunctionTable::CreateFormatArg createFormatArg = CreateFormatArg<T>;
 };
 

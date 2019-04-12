@@ -195,10 +195,10 @@ void DebugWriter::Log(const LogLine& logLine) {
 	Append(buffer, logLine.GetFunction());
 	buffer.push_back(' ');
 
-	std::vector<fmt::basic_format_arg<fmt::format_context>> args;
+	std::vector<fmt::format_context::format_arg> args;
 	logLine.CopyArgumentsTo(args);
 	fmt::vformat_to(buffer, fmt::to_string_view(logLine.GetPattern()),
-					fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::basic_format_args<fmt::format_context>::size_type>(args.size())));
+					fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 	buffer.push_back('\n');
 	buffer.push_back('\0');
 
@@ -274,10 +274,10 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 	Append(buffer, logLine.GetFunction());
 	buffer.push_back(' ');
 
-	std::vector<fmt::basic_format_arg<fmt::format_context>> args;
+	std::vector<fmt::format_context::format_arg> args;
 	logLine.CopyArgumentsTo(args);
 	fmt::vformat_to(buffer, fmt::to_string_view(logLine.GetPattern()),
-					fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::basic_format_args<fmt::format_context>::size_type>(args.size())));
+					fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 	buffer.push_back('\n');
 
 	DWORD cbWritten;

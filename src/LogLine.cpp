@@ -559,7 +559,7 @@ private:
 namespace llamalog {
 namespace {
 
-void CopyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restrict buffer, LogLine::Size used, std::vector<fmt::basic_format_arg<fmt::format_context>>& args);
+void CopyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restrict buffer, LogLine::Size used, std::vector<fmt::format_context::format_arg>& args);
 
 /// @brief Base class for a `fmt::formatter` to print exception arguments.
 /// @tparam T The type of the exception argument.
@@ -1200,7 +1200,7 @@ namespace {
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <typename T>
-void DecodeArgument(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	// use std::memcpy to comply with strict aliasing
 	T arg;
 	std::memcpy(&arg, &buffer[position + sizeof(TypeId)], sizeof(arg));
@@ -1217,7 +1217,7 @@ void DecodeArgument(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_contex
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<const char*>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<const char*>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	LogLine::Length length;
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
@@ -1236,7 +1236,7 @@ void DecodeArgument<const char*>(_Inout_ std::vector<fmt::basic_format_arg<fmt::
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<const wchar_t*>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<const wchar_t*>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	LogLine::Length length;
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
@@ -1287,7 +1287,7 @@ _Ret_notnull_ const HeapBasedException* DecodeHeapBasedException(_In_ const std:
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<StackBasedException>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<StackBasedException>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const StackBasedException* const pException = DecodeStackBasedException(buffer, position);
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*pException));
 }
@@ -1300,7 +1300,7 @@ void DecodeArgument<StackBasedException>(_Inout_ std::vector<fmt::basic_format_a
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<StackBasedSystemError>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<StackBasedSystemError>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const StackBasedException* const pException = DecodeStackBasedException(buffer, position);
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const StackBasedSystemError*>(pException)));
 
@@ -1318,7 +1318,7 @@ void DecodeArgument<StackBasedSystemError>(_Inout_ std::vector<fmt::basic_format
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<HeapBasedException>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<HeapBasedException>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const HeapBasedException* const pException = DecodeHeapBasedException(buffer, position);
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*pException));
 }
@@ -1331,7 +1331,7 @@ void DecodeArgument<HeapBasedException>(_Inout_ std::vector<fmt::basic_format_ar
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<HeapBasedSystemError>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<HeapBasedSystemError>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const HeapBasedException* const pException = DecodeHeapBasedException(buffer, position);
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const HeapBasedSystemError*>(pException)));
 
@@ -1349,7 +1349,7 @@ void DecodeArgument<HeapBasedSystemError>(_Inout_ std::vector<fmt::basic_format_
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<PlainException>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<PlainException>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	LogLine::Length length;
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainException, length)], sizeof(length));
 
@@ -1365,7 +1365,7 @@ void DecodeArgument<PlainException>(_Inout_ std::vector<fmt::basic_format_arg<fm
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<PlainSystemError>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<PlainSystemError>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	LogLine::Length length;
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, length)], sizeof(length));
 
@@ -1384,7 +1384,7 @@ void DecodeArgument<PlainSystemError>(_Inout_ std::vector<fmt::basic_format_arg<
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<TriviallyCopyable>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<TriviallyCopyable>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	constexpr auto kArgSize = kTypeSize<TriviallyCopyable>;
 
 	LogLine::Align padding;
@@ -1409,7 +1409,7 @@ void DecodeArgument<TriviallyCopyable>(_Inout_ std::vector<fmt::basic_format_arg
 /// @param position The current read position.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
-void DecodeArgument<NonTriviallyCopyable>(_Inout_ std::vector<fmt::basic_format_arg<fmt::format_context>>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+void DecodeArgument<NonTriviallyCopyable>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
 	LogLine::Align padding;
@@ -1858,7 +1858,7 @@ void DestructNonTriviallyCopyable(_In_ std::byte* __restrict const buffer, _Inou
 /// @param used The number of valid bytes in @p buffer.
 /// @param args The `std::vector` to receive the message arguments.
 /// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
-void CopyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restrict const buffer, const LogLine::Size used, std::vector<fmt::basic_format_arg<fmt::format_context>>& args) {
+void CopyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restrict const buffer, const LogLine::Size used, std::vector<fmt::format_context::format_arg>& args) {
 	for (LogLine::Size position = 0; position < used;) {
 		TypeId typeId;
 		std::memcpy(&typeId, &buffer[position], sizeof(typeId));
@@ -2447,17 +2447,17 @@ LogLine& LogLine::operator<<(const std::exception& arg) {
 /// @brief The single specialization of `CopyArgumentsTo`.
 /// @param args The `std::vector` to receive the message arguments.
 template <>
-void LogLine::CopyArgumentsTo<std::vector<fmt::basic_format_arg<fmt::format_context>>>(std::vector<fmt::basic_format_arg<fmt::format_context>>& args) const {
+void LogLine::CopyArgumentsTo<std::vector<fmt::format_context::format_arg>>(std::vector<fmt::format_context::format_arg>& args) const {
 	CopyArgumentsFromBufferTo(GetBuffer(), m_cbUsed, args);
 }
 
 std::string LogLine::GetLogMessage() const {
-	std::vector<fmt::basic_format_arg<fmt::format_context>> args;
+	std::vector<fmt::format_context::format_arg> args;
 	CopyArgumentsFromBufferTo(GetBuffer(), m_cbUsed, args);
 
 	fmt::basic_memory_buffer<char, 256> buf;
 	fmt::vformat_to<EscapingFormatter>(buf, fmt::to_string_view(GetPattern()),
-									   fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::basic_format_args<fmt::format_context>::size_type>(args.size())));
+									   fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 	return fmt::to_string(buf);
 }
 
