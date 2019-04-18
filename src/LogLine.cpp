@@ -47,7 +47,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include "llamalog/LogLine.h"
 
 #include "llamalog/CustomTypes.h"
+#include "llamalog/Exceptions.h"
 #include "llamalog/LogWriter.h"
+#include "llamalog/WindowsTypes.h"
 #include "llamalog/llamalog.h"
 
 #include <fmt/format.h>
@@ -96,7 +98,7 @@ struct ExceptionInformation {
 	DWORD threadId;                     ///< @brief Same as `LogLine::m_threadId`.
 	std::uint32_t line;                 ///< @brief Same as `LogLine::m_line`.
 	LogLine::Size cbUsed;               ///< @brief Same as `LogLine::m_cbUsed`.
-	LogLine::Length cbLength;           ///< @brief Length of the exception message.
+	LogLine::Length cbLength;           ///< @brief Length of the exception message (if `szMesssage` is `nullptr`).
 	bool hasNonTriviallyCopyable;       ///< @brief Same as `LogLine::m_hasNonTriviallyCopyable`.
 	std::byte padding[1];               ///< @brief Padding, but used for `exceptionMessage` in `StackBasedException`.
 };
@@ -119,39 +121,38 @@ struct HeapBasedException final : ExceptionInformation {
 /// @details This version is used if the data fits into the stack-based buffer.
 struct StackBasedSystemError final {
 	/* StackBasedException base */
-	int code;                    ///< @brief The error code.
-	LogLine::Length length;      ///< @brief The length of the category in characters (NOT including the terminating null character).
-	/* char category[length] */  // dynamic length
+	int code;                              ///< @brief The error code.
+	const std::error_category* pCategory;  ///< @brief The error category.
 };
 
 /// @brief A struct defining the layout of a `std::system_error` as a log argument.
 /// @details This version is used if the data does not fit into the stack-based buffer.
 struct HeapBasedSystemError final {
 	/* HeapBasedException base */
-	int code;                    ///< @brief The error code.
-	LogLine::Length length;      ///< @brief The length of the category in characters (NOT including the terminating null character).
-	/* char category[length] */  // dynamic length
+	int code;                              ///< @brief The error code.
+	const std::error_category* pCategory;  ///< @brief The error category.
 };
 
 /// @brief A struct defining the layout of a `std::exception` as a log argument if it is throw using plain `throw`.
 struct PlainException final {
-	LogLine::Length length;  ///< @brief The length of the message in characters (NOT including the terminating null character).
+	LogLine::Length length;              ///< @brief The length of the message in characters (NOT including the terminating null character).
+	/* char exceptionMessage[length] */  // dynamic length
 };
 
 /// @brief A struct defining the layout of a `std::system_error` as a log argument if it is throw using plain `throw`.
 struct PlainSystemError final {
-	LogLine::Length length;              ///< @brief The length of the message in characters (NOT including the terminating null character).
-	int code;                            ///< @brief The error code.
-	LogLine::Length categoryLength;      ///< @brief The length of the category in characters (NOT including the terminating null character).
-	/* char exceptionMessage[length] */  // dynamic length
-	/* char category[categoryLength] */  // dynamic length
+	LogLine::Length length;                ///< @brief The length of the message in characters (NOT including the terminating null character).
+	int code;                              ///< @brief The error code.
+	const std::error_category* pCategory;  ///< @brief The error category.
+	/* char exceptionMessage[length] */    // dynamic length
 };
 #pragma pack(pop)
 
-static_assert(sizeof(StackBasedSystemError) == sizeof(StackBasedSystemError::code) + sizeof(StackBasedSystemError::length));
-static_assert(sizeof(HeapBasedSystemError) == sizeof(HeapBasedSystemError::code) + sizeof(HeapBasedSystemError::length));
+// assert packing
+static_assert(sizeof(StackBasedSystemError) == sizeof(StackBasedSystemError::code) + sizeof(StackBasedSystemError::pCategory));
+static_assert(sizeof(HeapBasedSystemError) == sizeof(HeapBasedSystemError::code) + sizeof(HeapBasedSystemError::pCategory));
 static_assert(sizeof(PlainException) == sizeof(PlainException::length));
-static_assert(sizeof(PlainSystemError) == sizeof(PlainSystemError::length) + sizeof(PlainSystemError::code) + sizeof(PlainSystemError::categoryLength));
+static_assert(sizeof(PlainSystemError) == sizeof(PlainSystemError::length) + sizeof(PlainSystemError::code) + sizeof(PlainSystemError::pCategory));
 
 /// @brief Marker type for type-based lookup.
 struct TriviallyCopyable final {
@@ -247,16 +248,16 @@ constexpr std::uint8_t kTypeSizes[] = {
 	sizeof(TypeId) + sizeof(double),
 	sizeof(TypeId) + sizeof(long double),
 	sizeof(TypeId) + sizeof(void*),
-	sizeof(TypeId) + sizeof(LogLine::Length) /* + padding + std::strlen(str) * sizeof(char) */,
-	sizeof(TypeId) + sizeof(LogLine::Length) /* + padding + std::wcslen(str) * sizeof(wchar_t) */,
-	sizeof(TypeId) /* + padding */ + offsetof(StackBasedException, padding) /* + StackBasedException::m_cbLength + padding + StackBasedException::m_cbUsed */,
-	sizeof(TypeId) /* + padding */ + offsetof(StackBasedException, padding) /* + StackBasedException::m_cbLength + padding + StackBasedException::m_cbUsed */ + sizeof(StackBasedSystemError) /* + StackBasedSystemError::categoryNameLength */,
-	sizeof(TypeId) /* + padding */ + sizeof(HeapBasedException) /* + HeapBasedException::m_cbLength */,
-	sizeof(TypeId) /* + padding */ + sizeof(HeapBasedException) /* + HeapBasedException::m_cbLength */ + sizeof(HeapBasedSystemError) /* + HeapBasedSystemError::categoryLength */,
-	sizeof(TypeId) + sizeof(PlainException) /* + PlainException::length */,
-	sizeof(TypeId) + sizeof(PlainSystemError) /* + PlainSystemError::length + PlainSystemError::categoryLength */,
-	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable::CreateFormatArg) + sizeof(LogLine::Size) /* + padding + sizeof(arg) */,
-	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable*) + sizeof(LogLine::Size) /* + padding + sizeof(arg) */
+	sizeof(TypeId) + sizeof(LogLine::Length) /* + std::byte[padding] + char[std::strlen(str)] */,
+	sizeof(TypeId) + sizeof(LogLine::Length) /* + std::byte[padding] + wchar_t[std::wcslen(str)] */,
+	sizeof(TypeId) /* + std::byte[padding] */ + offsetof(StackBasedException, padding) /* + char[StackBasedException::cbLength] + std::byte[padding] + std::byte[StackBasedException::m_cbUsed] */,
+	sizeof(TypeId) /* + std::byte[padding] */ + offsetof(StackBasedException, padding) /* + char[StackBasedException::cbLength] + std::byte[padding] + std::byte[StackBasedException::m_cbUsed] */ + sizeof(StackBasedSystemError),
+	sizeof(TypeId) /* + std::byte[padding] */ + sizeof(HeapBasedException) /* + char[HeapBasedException::cbLength] */,
+	sizeof(TypeId) /* + std::byte[padding] */ + sizeof(HeapBasedException) /* + char[HeapBasedException::cbLength] */ + sizeof(HeapBasedSystemError),
+	sizeof(TypeId) + sizeof(PlainException) /* + char[PlainException::length] */,
+	sizeof(TypeId) + sizeof(PlainSystemError) /* + char[PlainSystemError::length] */,
+	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable::CreateFormatArg) + sizeof(LogLine::Size) /* + std::byte[padding] + sizeof(arg) */,
+	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable*) + sizeof(LogLine::Size) /* + std::byte[padding] + sizeof(arg) */
 };
 static_assert(sizeof(TypeId) + offsetof(StackBasedException, padding) + sizeof(StackBasedSystemError) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
 static_assert(sizeof(TypeId) + sizeof(HeapBasedException) + sizeof(HeapBasedSystemError) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
@@ -313,17 +314,19 @@ DWORD GetCurrentThreadId() noexcept {
 }
 
 
-/// @brief Get the additional logging context of an exception if it exists and get optional information for `std::system_error`.
+/// @brief Get the additional logging context of an exception if it exists and get optional information for `std::error_code`.
 /// @note The function MUST be called from within a catch block to get the object, elso `nullptr` is returned for both values.
-/// @param pSystemError A pointer which is set if the exception is of type `std::system_error`, else the parameter is set to `nullptr`.
+/// @param pCode A pointer which is set if the exception is of type `std::system_error` or `SystemError`, else the parameter is set to `nullptr`.
 /// @return The logging context if it exists, else `nullptr`.
-_Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException(const std::system_error*& pSystemError) noexcept {
+_Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException(_Out_ const std::error_code*& pCode) noexcept {
 	try {
 		throw;
+	} catch (const SystemError& e) {
+		pCode = &e.code();
 	} catch (const std::system_error& e) {
-		pSystemError = &e;
+		pCode = &e.code();
 	} catch (...) {
-		pSystemError = nullptr;
+		pCode = nullptr;
 	}
 	try {
 		throw;
@@ -522,7 +525,7 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 		const llamalog::LogLine::Align padding = llamalog::GetPadding<wchar_t>(&buffer[sizeof(length)]);
 		const wchar_t* const wstr = reinterpret_cast<const wchar_t*>(&buffer[sizeof(length) + padding]);
 
-		DWORD errorCode;
+		DWORD lastError;
 		if (length <= 256) {
 			// try with a fixed size buffer
 			char sz[256];
@@ -530,8 +533,8 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 			if (sizeInBytes) {
 				return fmt::vformat_to<llamalog::EscapingFormatter>(ctx.out(), fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(sz, sizeInBytes / sizeof(char)))));
 			}
-			errorCode = GetLastError();
-			if (errorCode != ERROR_INSUFFICIENT_BUFFER) {
+			lastError = GetLastError();
+			if (lastError != ERROR_INSUFFICIENT_BUFFER) {
 				goto error;  // NOLINT(cppcoreguidelines-avoid-goto): yes, I DO want a goto here
 			}
 		}
@@ -543,12 +546,12 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 					return fmt::vformat_to<llamalog::EscapingFormatter>(ctx.out(), fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(str.get(), sizeInBytes / sizeof(char)))));
 				}
 			}
-			errorCode = GetLastError();
+			lastError = GetLastError();
 		}
 
 	error:
-		LOG_ERROR_INTERNAL("WideCharToMultiByte for length {}: {}", length, errorCode);
-		const std::string_view sv("(ERROR)");
+		LLAMALOG_INTERNAL_ERROR("WideCharToMultiByte for length {}: {}", length, llamalog::ErrorCode{lastError});
+		const std::string_view sv("<ERROR>");
 		return std::copy(sv.cbegin(), sv.cend(), ctx.out());
 	}
 
@@ -596,7 +599,7 @@ struct ExceptionFormatter {
 		}
 		if (start == end) {
 			// apply default format
-			m_format.assign(R"(%e%[ (%C %c)]%[; %m]%[ @\{%T \[%t\] %F:%L %f\}])");
+			m_format.assign(R"(%w%[ (%C %c)]%[ @\{%T \[%t\] %F:%L %f\}])");
 		} else {
 			m_format.assign(start, end);
 		}
@@ -783,12 +786,12 @@ struct ExceptionFormatter {
 					formatted |= FormatFunction(reinterpret_cast<const std::byte*>(&arg), out);
 					break;
 				// Log Message
-				case 'm':
+				case 'l':
 					formatted |= FormatLogMessage(reinterpret_cast<const std::byte*>(&arg), out, args);
 					break;
-				// Exception Message
-				case 'e':
-					formatted |= FormatExceptionMessage(reinterpret_cast<const std::byte*>(&arg), out);
+				// what()
+				case 'w':
+					formatted |= FormatWhat(reinterpret_cast<const std::byte*>(&arg), out, args);
 					break;
 				// Error Code
 				case 'c':
@@ -797,6 +800,10 @@ struct ExceptionFormatter {
 				// Category Name
 				case 'C':
 					formatted |= FormatCategoryName(reinterpret_cast<const std::byte*>(&arg), out);
+					break;
+				// System Error Message
+				case 'm':
+					formatted |= FormatErrorMessage(reinterpret_cast<const std::byte*>(&arg), out);
 					break;
 				// Default is to just print the character (but emit an error)
 				default:
@@ -827,8 +834,6 @@ private:
 
 	/// @brief SFINAE version for types which do not have a timestamp.
 	/// @tparam A local bound @p T for SFINAE expression.
-	/// @param ptr The address of the exception argument in the buffer.
-	/// @param out The output target.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
 	static bool FormatTimestamp(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
@@ -848,8 +853,6 @@ private:
 
 	/// @brief SFINAE version for types which do not have a thread id.
 	/// @tparam A local bound @p T for SFINAE expression.
-	/// @param ptr The address of the exception argument in the buffer.
-	/// @param out The output target.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
 	static bool FormatThread(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
@@ -870,8 +873,6 @@ private:
 
 	/// @brief SFINAE version for types which do not have a file name.
 	/// @tparam A local bound @p T for SFINAE expression.
-	/// @param ptr The address of the exception argument in the buffer.
-	/// @param out The output target.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
 	static bool FormatFile(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
@@ -891,8 +892,6 @@ private:
 
 	/// @brief SFINAE version for types which do not have a line number.
 	/// @tparam A local bound @p T for SFINAE expression.
-	/// @param ptr The address of the exception argument in the buffer.
-	/// @param out The output target.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
 	static bool FormatLine(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
@@ -913,8 +912,6 @@ private:
 
 	/// @brief SFINAE version for types which do not have a function name.
 	/// @tparam A local bound @p T for SFINAE expression.
-	/// @param ptr The address of the exception argument in the buffer.
-	/// @param out The output target.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
 	static bool FormatFunction(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
@@ -926,23 +923,24 @@ private:
 	/// @param ptr The address of the exception argument in the buffer.
 	/// @param out The output target.
 	/// @param args The formatter arguments. The vector is populated on the first call.
-	/// @return Always `true`.
+	/// @return `true` if the exception has a log message.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError, HeapBasedException, HeapBasedSystemError>, int> = 0>
 	static bool FormatLogMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
-		if (args.empty()) {
-			// only copy once
-			llamalog::CopyArgumentsFromBufferTo(GetBuffer(ptr), reinterpret_cast<const ExceptionInformation*>(ptr)->cbUsed, args);
+		if (!reinterpret_cast<const ExceptionInformation*>(ptr)->cbLength) {
+			// custom log message exists
+			if (args.empty()) {
+				// only copy once
+				llamalog::CopyArgumentsFromBufferTo(GetBuffer(ptr), reinterpret_cast<const ExceptionInformation*>(ptr)->cbUsed, args);
+			}
+			fmt::vformat_to<llamalog::EscapingFormatter>(out, fmt::to_string_view(reinterpret_cast<const ExceptionInformation*>(ptr)->szMessage),
+														 fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
+			return true;
 		}
-		fmt::vformat_to<llamalog::EscapingFormatter>(out, fmt::to_string_view(reinterpret_cast<const ExceptionInformation*>(ptr)->szMessage),
-													 fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
-		return true;
+		return false;
 	}
 
 	/// @brief SFINAE version for types which do not have a log message.
 	/// @tparam A local bound @p T for SFINAE expression.
-	/// @param ptr The address of the exception argument in the buffer.
-	/// @param out The output target.
-	/// @param args The formatter arguments. The vector is populated on the first call.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
 	static bool FormatLogMessage(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */, std::vector<fmt::format_context::format_arg>& /* args */) noexcept {
@@ -953,9 +951,43 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @param ptr The address of the exception argument in the buffer.
 	/// @param out The output target.
-	/// @return Always `true`.
-	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static bool FormatExceptionMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	/// @param args The formatter arguments. The vector is populated on the first call.
+	/// @return `true` if there is a message.
+	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, HeapBasedException>, int> = 0>
+	static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
+		if (!reinterpret_cast<const ExceptionInformation*>(ptr)->cbLength) {
+			// custom log message exists
+			return FormatLogMessage(ptr, out, args);
+		}
+
+		const std::string_view sv(GetExceptionMessage(ptr), reinterpret_cast<const ExceptionInformation*>(ptr)->cbLength);
+		const std::string escaped = EscapeC(sv);
+		if (escaped.empty()) {
+			std::copy(sv.cbegin(), sv.cend(), out);
+		} else {
+			std::copy(escaped.cbegin(), escaped.cend(), out);
+		}
+		return true;
+	}
+
+	/// @brief Format the exception message. @details This is the version for exception data having additional logging information.
+	/// @tparam A local bound @p T for SFINAE expression.
+	/// @param ptr The address of the exception argument in the buffer.
+	/// @param out The output target.
+	/// @param args The formatter arguments. The vector is populated on the first call.
+	/// @return `true` if there is a message.
+	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedSystemError, HeapBasedSystemError>, int> = 0>
+	static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
+		if (!reinterpret_cast<const ExceptionInformation*>(ptr)->cbLength) {
+			// custom log message exists
+			const bool hasMessage = FormatLogMessage(ptr, out, args);
+			if (hasMessage) {
+				*out = ':';
+				*out = ' ';
+			}
+			return FormatErrorMessage(ptr, out) || hasMessage;
+		}
+
 		const std::string_view sv(GetExceptionMessage(ptr), reinterpret_cast<const ExceptionInformation*>(ptr)->cbLength);
 		const std::string escaped = EscapeC(sv);
 		if (escaped.empty()) {
@@ -972,7 +1004,7 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static bool FormatExceptionMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& /* args */) {
 		LogLine::Length length;
 		std::memcpy(&length, &ptr[offsetof(T, length)], sizeof(length));
 
@@ -988,8 +1020,6 @@ private:
 
 	/// @brief SFINAE version for types which do not have an error code.
 	/// @tparam A local bound @p T for SFINAE expression.
-	/// @param ptr The address of the exception argument in the buffer.
-	/// @param out The output target.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, HeapBasedException, PlainException>, int> = 0>
 	static bool FormatErrorCode(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
@@ -1014,8 +1044,6 @@ private:
 
 	/// @brief SFINAE version for types which do not have a category name.
 	/// @tparam A local bound @p T for SFINAE expression.
-	/// @param ptr The address of the exception argument in the buffer.
-	/// @param out The output target.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, HeapBasedException, PlainException>, int> = 0>
 	static bool FormatCategoryName(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
@@ -1031,10 +1059,10 @@ private:
 	static bool FormatCategoryName(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::byte* const systemError = GetSystemError(ptr);
 
-		LogLine::Length length;
-		std::memcpy(&length, &systemError[offsetof(T, length)], sizeof(length));
+		const std::error_category* pCategory;
+		std::memcpy(&pCategory, &systemError[offsetof(T, pCategory)], sizeof(pCategory));
 
-		const std::string_view sv(reinterpret_cast<const char*>(&systemError[sizeof(T)]), length);
+		const std::string_view sv(pCategory->name());
 		const std::string escaped = EscapeC(sv);
 		if (escaped.empty()) {
 			std::copy(sv.cbegin(), sv.cend(), out);
@@ -1051,16 +1079,67 @@ private:
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainSystemError>, int> = 0>
 	static bool FormatCategoryName(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
-		LogLine::Length length;
-		std::memcpy(&length, &ptr[offsetof(T, length)], sizeof(length));
+		const std::error_category* pCategory;
+		std::memcpy(&pCategory, &ptr[offsetof(T, pCategory)], sizeof(pCategory));
 
-		LogLine::Length categoryLength;
-		std::memcpy(&categoryLength, &ptr[offsetof(T, categoryLength)], sizeof(categoryLength));
-
-		const std::string_view sv(reinterpret_cast<const char*>(&ptr[sizeof(T) + length]), categoryLength);
+		const std::string_view sv(pCategory->name());
 		const std::string escaped = EscapeC(sv);
 		if (escaped.empty()) {
 			std::copy(sv.cbegin(), sv.cend(), out);
+		} else {
+			std::copy(escaped.cbegin(), escaped.cend(), out);
+		}
+		return true;
+	}
+
+	/// @brief SFINAE version for types which do not have an error code.
+	/// @tparam A local bound @p T for SFINAE expression.
+	/// @return Always `false`.
+	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, HeapBasedException, PlainException>, int> = 0>
+	static bool FormatErrorMessage(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+		return false;
+	}
+
+	/// @brief Format the error message for `std::system_error`s and `SystemError`s having additional logging data.
+	/// @tparam A local bound @p T for SFINAE expression.
+	/// @param ptr The address of the exception argument in the buffer.
+	/// @param out The output target.
+	/// @return Always `true`.
+	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedSystemError, HeapBasedSystemError>, int> = 0>
+	static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+		const std::byte* const systemError = GetSystemError(ptr);
+
+		int code;
+		std::memcpy(&code, &systemError[offsetof(T, code)], sizeof(code));
+		const std::error_category* pCategory;
+		std::memcpy(&pCategory, &systemError[offsetof(T, pCategory)], sizeof(pCategory));
+
+		const std::string s = pCategory->message(code);
+		const std::string escaped = EscapeC(s);
+		if (escaped.empty()) {
+			std::copy(s.cbegin(), s.cend(), out);
+		} else {
+			std::copy(escaped.cbegin(), escaped.cend(), out);
+		}
+		return true;
+	}
+
+	/// @brief Format the error message for `std::system_error`s and `SystemError`s thrown using plain `throw`.
+	/// @tparam A local bound @p T for SFINAE expression.
+	/// @param ptr The address of the exception argument in the buffer.
+	/// @param out The output target.
+	/// @return Always `true`.
+	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainSystemError>, int> = 0>
+	static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+		int code;
+		std::memcpy(&code, &ptr[offsetof(T, code)], sizeof(code));
+		const std::error_category* pCategory;
+		std::memcpy(&pCategory, &ptr[offsetof(T, pCategory)], sizeof(pCategory));
+
+		const std::string s = pCategory->message(code);
+		const std::string escaped = EscapeC(s);
+		if (escaped.empty()) {
+			std::copy(s.cbegin(), s.cend(), out);
 		} else {
 			std::copy(escaped.cbegin(), escaped.cend(), out);
 		}
@@ -1304,10 +1383,7 @@ void DecodeArgument<StackBasedSystemError>(_Inout_ std::vector<fmt::format_conte
 	const StackBasedException* const pException = DecodeStackBasedException(buffer, position);
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const StackBasedSystemError*>(pException)));
 
-	LogLine::Length length;
-	std::memcpy(&length, &buffer[position + offsetof(StackBasedSystemError, length)], sizeof(length));
-
-	position += sizeof(StackBasedSystemError) + length * sizeof(char);
+	position += sizeof(StackBasedSystemError);
 }
 
 /// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
@@ -1335,10 +1411,7 @@ void DecodeArgument<HeapBasedSystemError>(_Inout_ std::vector<fmt::format_contex
 	const HeapBasedException* const pException = DecodeHeapBasedException(buffer, position);
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const HeapBasedSystemError*>(pException)));
 
-	LogLine::Length length;
-	std::memcpy(&length, &buffer[position + offsetof(HeapBasedSystemError, length)], sizeof(length));
-
-	position += sizeof(HeapBasedSystemError) + length * sizeof(char);
+	position += sizeof(HeapBasedSystemError);
 }
 
 /// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
@@ -1369,11 +1442,8 @@ void DecodeArgument<PlainSystemError>(_Inout_ std::vector<fmt::format_context::f
 	LogLine::Length length;
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, length)], sizeof(length));
 
-	LogLine::Length categoryLength;
-	std::memcpy(&categoryLength, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, categoryLength)], sizeof(categoryLength));
-
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PlainSystemError*>(&buffer[position + sizeof(TypeId)])));
-	position += kTypeSize<PlainSystemError> + length * sizeof(char) + categoryLength * sizeof(char);
+	position += kTypeSize<PlainSystemError> + length * sizeof(char);
 }
 
 /// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
@@ -1485,10 +1555,7 @@ __declspec(noalias) void SkipPlainSystemError(_In_ const std::byte* __restrict c
 	LogLine::Length length;
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, length)], sizeof(length));
 
-	LogLine::Length categoryLength;
-	std::memcpy(&categoryLength, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, categoryLength)], sizeof(categoryLength));
-
-	position += kTypeSize<PlainSystemError> + length * sizeof(char) + categoryLength * sizeof(char);
+	position += kTypeSize<PlainSystemError> + length * sizeof(char);
 }
 
 /// @brief Skip a log argument of custom type.
@@ -1555,10 +1622,7 @@ void CopyStackBasedException(_In_ const std::byte* __restrict const src, _Out_ s
 void CopyStackBasedSystemError(_In_ const std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ LogLine::Size& position) {
 	CopyStackBasedException(src, dst, position);
 
-	LogLine::Length length;
-	std::memcpy(&length, &src[position + offsetof(StackBasedSystemError, length)], sizeof(length));
-
-	const LogLine::Size size = sizeof(StackBasedSystemError) + length * sizeof(char);
+	constexpr LogLine::Size size = sizeof(StackBasedSystemError);
 	std::memcpy(&dst[position], &src[position], size);
 
 	position += size;
@@ -1602,10 +1666,7 @@ void CopyHeapBasedException(_In_ const std::byte* __restrict const src, _Out_ st
 void CopyHeapBasedSystemError(_In_ const std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ LogLine::Size& position) {
 	CopyHeapBasedException(src, dst, position);
 
-	LogLine::Length length;
-	std::memcpy(&length, &src[position + offsetof(HeapBasedSystemError, length)], sizeof(length));
-
-	const LogLine::Size size = sizeof(HeapBasedSystemError) + length * sizeof(char);
+	constexpr LogLine::Size size = sizeof(HeapBasedSystemError);
 	std::memcpy(&dst[position], &src[position], size);
 
 	position += size;
@@ -1686,10 +1747,7 @@ void MoveStackBasedException(_Inout_ std::byte* __restrict const src, _Out_ std:
 void MoveStackBasedSystemError(_Inout_ std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ LogLine::Size& position) noexcept {
 	MoveStackBasedException(src, dst, position);
 
-	LogLine::Length length;
-	std::memcpy(&length, &src[position + offsetof(StackBasedSystemError, length)], sizeof(length));
-
-	const LogLine::Size size = sizeof(StackBasedSystemError) + length * sizeof(char);
+	constexpr LogLine::Size size = sizeof(StackBasedSystemError);
 	std::memcpy(&dst[position], &src[position], size);
 
 	position += size;
@@ -1720,10 +1778,7 @@ __declspec(noalias) void MoveHeapBasedException(_In_ const std::byte* __restrict
 __declspec(noalias) void MoveHeapBasedSystemError(_In_ const std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ LogLine::Size& position) noexcept {
 	MoveHeapBasedException(src, dst, position);
 
-	LogLine::Length length;
-	std::memcpy(&length, &src[position + offsetof(HeapBasedSystemError, length)], sizeof(length));
-
-	const LogLine::Size size = sizeof(HeapBasedSystemError) + length * sizeof(char);
+	constexpr LogLine::Size size = sizeof(HeapBasedSystemError);
 	std::memcpy(&dst[position], &src[position], size);
 
 	position += size;
@@ -1791,10 +1846,7 @@ void DestructStackBasedException(_In_ std::byte* __restrict const buffer, _Inout
 void DestructStackBasedSystemError(_In_ std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
 	DestructStackBasedException(buffer, position);
 
-	LogLine::Length length;
-	std::memcpy(&length, &buffer[position + offsetof(StackBasedSystemError, length)], sizeof(length));
-
-	position += sizeof(StackBasedSystemError) + length * sizeof(char);
+	position += sizeof(StackBasedSystemError);
 }
 
 /// @brief Call the destructor of all `HeapBasedException`'s arguments and moves @p position to the next log argument.
@@ -1821,10 +1873,7 @@ void DestructHeapBasedException(_In_ const std::byte* __restrict const buffer, _
 void DestructHeapBasedSystemError(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
 	DestructHeapBasedException(buffer, position);
 
-	LogLine::Length length;
-	std::memcpy(&length, &buffer[position + offsetof(HeapBasedSystemError, length)], sizeof(length));
-
-	position += sizeof(HeapBasedSystemError) + length * sizeof(char);
+	position += sizeof(HeapBasedSystemError);
 }
 
 /// @brief Call the destructor of a custom type and moves @p position to the next log argument.
@@ -2169,7 +2218,7 @@ void CallDestructors(_Inout_updates_bytes_(used) std::byte* __restrict buffer, L
 
 
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): m_timestamp and m_stackBuffer need no initialization.
-LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict szFile, std::uint32_t line, _In_z_ const char* __restrict szFunction, _In_z_ const char* __restrict szMessage) noexcept
+LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict szFile, std::uint32_t line, _In_z_ const char* __restrict szFunction, _In_opt_z_ const char* __restrict szMessage) noexcept
 	: m_priority(priority)
 	, m_szFile(szFile)
 	, m_szFunction(szFunction)
@@ -2195,7 +2244,6 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict szFile, 
 	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_heapBuffer");
 
 	static_assert(sizeof(ExceptionInformation) == 48);
-	static_assert(offsetof(ExceptionInformation, cbLength) == 44, "offset of hasNonTriviallyCopyable");
 	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 46, "offset of hasNonTriviallyCopyable");
 	static_assert(sizeof(StackBasedException) == 48);
 	static_assert(sizeof(HeapBasedException) == 56);
@@ -2214,7 +2262,6 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict szFile, 
 	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 4, "offset of m_heapBuffer");
 
 	static_assert(sizeof(ExceptionInformation) == 36);
-	static_assert(offsetof(ExceptionInformation, cbLength) == 32, "offset of hasNonTriviallyCopyable");
 	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 34, "offset of hasNonTriviallyCopyable");
 	static_assert(sizeof(StackBasedException) == 36);
 	static_assert(sizeof(HeapBasedException) == 40);
@@ -2295,6 +2342,59 @@ LogLine::~LogLine() noexcept {
 	if (m_hasNonTriviallyCopyable) {
 		CallDestructors(GetBuffer(), m_cbUsed);
 	}
+}
+
+LogLine& LogLine::operator=(const LogLine& logLine) {
+	m_priority = logLine.m_priority;
+	m_hasNonTriviallyCopyable = logLine.m_hasNonTriviallyCopyable;
+	m_szFile = logLine.m_szFile;
+	m_szFunction = logLine.m_szFunction;
+	m_szMessage = logLine.m_szMessage;
+	m_timestamp = logLine.m_timestamp;
+	m_threadId = logLine.m_threadId;
+	m_line = logLine.m_line;
+	m_cbUsed = logLine.m_cbUsed;
+	m_cbSize = logLine.m_cbSize;
+	if (logLine.m_heapBuffer) {
+		m_heapBuffer = std::make_unique<std::byte[]>(m_cbUsed);
+		if (m_hasNonTriviallyCopyable) {
+			CopyObjects(logLine.m_heapBuffer.get(), m_heapBuffer.get(), m_cbUsed);
+		} else {
+			std::memcpy(m_heapBuffer.get(), logLine.m_heapBuffer.get(), m_cbUsed);
+		}
+	} else {
+		if (m_hasNonTriviallyCopyable) {
+			CopyObjects(logLine.m_stackBuffer, m_stackBuffer, m_cbUsed);
+		} else {
+			std::memcpy(m_stackBuffer, logLine.m_stackBuffer, m_cbUsed);
+		}
+	}
+	return *this;
+}
+
+LogLine& LogLine::operator=(LogLine&& logLine) noexcept {
+	m_priority = logLine.m_priority;
+	m_hasNonTriviallyCopyable = logLine.m_hasNonTriviallyCopyable;
+	m_szFile = logLine.m_szFile;
+	m_szFunction = logLine.m_szFunction;
+	m_szMessage = logLine.m_szMessage;
+	m_timestamp = logLine.m_timestamp;
+	m_threadId = logLine.m_threadId;
+	m_line = logLine.m_line;
+	m_cbUsed = logLine.m_cbUsed;
+	m_cbSize = logLine.m_cbSize;
+	m_heapBuffer = std::move(logLine.m_heapBuffer);
+	if (!m_heapBuffer) {
+		if (m_hasNonTriviallyCopyable) {
+			MoveObjects(logLine.m_stackBuffer, m_stackBuffer, m_cbUsed);
+		} else {
+			std::memcpy(m_stackBuffer, logLine.m_stackBuffer, m_cbUsed);
+		}
+	}
+	// leave source in a consistent state
+	logLine.m_cbUsed = 0;
+	logLine.m_cbSize = sizeof(m_stackBuffer);
+	return *this;
 }
 
 // Based on `NanoLogLine::operator<<(int32_t)` from NanoLog.
@@ -2432,15 +2532,11 @@ LogLine& LogLine::operator<<(const std::wstring_view& arg) {
 }
 
 LogLine& LogLine::operator<<(const std::exception& arg) {
-	const std::system_error* pSystemError;
-	const BaseException* const pBaseException = GetCurrentExceptionAsBaseException(pSystemError);
+	const std::error_code* pErrorCode;
+	const BaseException* const pBaseException = GetCurrentExceptionAsBaseException(pErrorCode);
 
-	if (pSystemError) {
-		const std::error_code& code = pSystemError->code();
-		WriteException(arg.what(), pBaseException, true, code.value(), code.category().name());
-	} else {
-		WriteException(arg.what(), pBaseException, false, 0, nullptr);
-	}
+	// do not evaluate arg.what() when a BaseException exists
+	WriteException(pBaseException && pBaseException->m_logLine.GetPattern() ? nullptr : arg.what(), pBaseException, pErrorCode);
 	return *this;
 }
 
@@ -2529,7 +2625,7 @@ void LogLine::WriteString(_In_reads_(len) const char* __restrict const arg, cons
 	constexpr auto kArgSize = kTypeSize<const char*>;
 	const LogLine::Length length = static_cast<LogLine::Length>(std::min<std::size_t>(len, std::numeric_limits<LogLine::Length>::max()));
 	if (length < len) {
-		LOG_WARN_INTERNAL("String of length {} trimmed to {}", len, length);
+		LLAMALOG_INTERNAL_WARN("String of length {} trimmed to {}", len, length);
 	}
 	const LogLine::Size size = kArgSize + length * sizeof(char);
 
@@ -2550,7 +2646,7 @@ void LogLine::WriteString(_In_reads_(len) const wchar_t* __restrict const arg, c
 	constexpr auto kArgSize = kTypeSize<const wchar_t*>;
 	const LogLine::Length length = static_cast<LogLine::Length>(std::min<std::size_t>(len, std::numeric_limits<LogLine::Length>::max()));
 	if (length < len) {
-		LOG_WARN_INTERNAL("String of length {} trimmed to {}", len, length);
+		LLAMALOG_INTERNAL_WARN("String of length {} trimmed to {}", len, length);
 	}
 	const LogLine::Size size = kArgSize + length * sizeof(wchar_t);
 
@@ -2569,68 +2665,48 @@ void LogLine::WriteString(_In_reads_(len) const wchar_t* __restrict const arg, c
 	m_cbUsed += size + padding;
 }
 
-void LogLine::WriteException(_In_z_ const char* message, _In_opt_ const BaseException* pBaseException, bool isSystemError, int code, _In_opt_z_ const char* category) {
-	const std::size_t messageLen = std::strlen(message);
+void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const BaseException* pBaseException, _In_opt_ const std::error_code* const pCode) {
+	const std::size_t messageLen = message ? std::strlen(message) : 0;
 	// silenty trim message to size
 	const LogLine::Length messageLength = static_cast<LogLine::Length>(std::min<std::size_t>(messageLen, std::numeric_limits<LogLine::Length>::max()));
 	if (messageLength < messageLen) {
-		LOG_WARN_INTERNAL("Exception message of length {} trimmed to {}", messageLen, messageLength);
+		LLAMALOG_INTERNAL_WARN("Exception message of length {} trimmed to {}", messageLen, messageLength);
 	}
-
-	LogLine::Length categoryLength;
-	if (isSystemError) {
-		const std::size_t categoryLen = std::strlen(category);
-		// silenty trim category to size
-		categoryLength = static_cast<LogLine::Length>(std::min<std::size_t>(categoryLen, std::numeric_limits<LogLine::Length>::max()));
-		if (categoryLength < categoryLen) {
-			LOG_WARN_INTERNAL("Exception message of length {} trimmed to {}", categoryLen, categoryLength);
-		}
-	} else {
-		categoryLength = 0;
-	}
-
 	static_assert(alignof(char) == 1, "alignment of char");  // no padding required for message
 
 	if (!pBaseException) {
-		if (!isSystemError) {
-			constexpr TypeId kArgTypeId = kTypeId<PlainException>;
-			constexpr auto kArgSize = kTypeSize<PlainException>;
+		const TypeId kArgTypeId = pCode ? kTypeId<PlainSystemError> : kTypeId<PlainException>;
+		const auto kArgSize = pCode ? kTypeSize<PlainSystemError> : kTypeSize<PlainException>;
 
-			const LogLine::Size size = kArgSize + messageLength * sizeof(char);
-			std::byte* __restrict const buffer = GetWritePosition(size);
+		const LogLine::Size size = kArgSize + messageLength * sizeof(char);
+		std::byte* __restrict const buffer = GetWritePosition(size);
 
-			std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
+		std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
 
-			std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainException, length)], &messageLength, sizeof(messageLength));
+		static_assert(offsetof(PlainException, length) == offsetof(PlainSystemError, length));
+		std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainException, length)], &messageLength, sizeof(messageLength));
+		if (message) {
 			std::memcpy(&buffer[kArgSize], message, messageLength);
-
-			m_cbUsed += kArgSize + messageLength;
-		} else {
-			constexpr TypeId kArgTypeId = kTypeId<PlainSystemError>;
-			constexpr auto kArgSize = kTypeSize<PlainSystemError>;
-
-			const LogLine::Size size = kArgSize + messageLength * sizeof(char) + categoryLength * sizeof(char);
-			std::byte* __restrict const buffer = GetWritePosition(size);
-
-			std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
-			std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainSystemError, code)], &code, sizeof(code));
-
-			std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainSystemError, length)], &messageLength, sizeof(messageLength));
-			std::memcpy(&buffer[kArgSize], message, messageLength);
-
-			std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainSystemError, categoryLength)], &categoryLength, sizeof(categoryLength));
-			std::memcpy(&buffer[kArgSize + messageLength], category, categoryLength);
-
-			m_cbUsed += kArgSize + messageLength + categoryLength;
 		}
+
+		if (pCode) {
+			const int code = pCode->value();
+			std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainSystemError, code)], &code, sizeof(code));
+			const std::error_category* const pCategory = &pCode->category();
+			std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainSystemError, pCategory)], &pCategory, sizeof(pCategory));
+		}
+
+		m_cbUsed += kArgSize + messageLength;
 		return;
 	}
 
 	const LogLine& logLine = pBaseException->m_logLine;
+	assert(!logLine.m_szMessage ^ !message);  // either pattern or message must be present but not both
 	if (!logLine.m_heapBuffer) {
-		const TypeId kArgTypeId = isSystemError ? kTypeId<StackBasedSystemError> : kTypeId<StackBasedException>;
-		const auto kArgSize = isSystemError ? kTypeSize<StackBasedSystemError> : kTypeSize<StackBasedException>;
-		const LogLine::Size size = kArgSize + messageLength * sizeof(char) + logLine.m_cbUsed + categoryLength * sizeof(char);
+		const TypeId kArgTypeId = pCode ? kTypeId<StackBasedSystemError> : kTypeId<StackBasedException>;
+		const auto kArgSize = pCode ? kTypeSize<StackBasedSystemError> : kTypeSize<StackBasedException>;
+		const LogLine::Size size = kArgSize + messageLength * sizeof(char) + logLine.m_cbUsed;
+
 		std::byte* __restrict buffer = GetWritePosition(size);
 		const LogLine::Size pos = sizeof(kArgTypeId);
 		const LogLine::Align padding = GetPadding<StackBasedException>(&buffer[pos]);
@@ -2651,10 +2727,12 @@ void LogLine::WriteException(_In_z_ const char* message, _In_opt_ const BaseExce
 		const LogLine::Size bufferOffset = bufferPos + bufferPadding;
 
 		std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
-		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(StackBasedException, cbLength));
+		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(StackBasedException, cbLength));  // copy up to cbUsed
 		std::memcpy(&buffer[offset + offsetof(StackBasedException, cbLength)], &messageLength, sizeof(messageLength));
 		std::memcpy(&buffer[offset + offsetof(StackBasedException, hasNonTriviallyCopyable)], &logLine.m_hasNonTriviallyCopyable, sizeof(bool));
-		std::memcpy(&buffer[messageOffset], message, messageLength);
+		if (message) {
+			std::memcpy(&buffer[messageOffset], message, messageLength);
+		}
 
 		if (logLine.m_hasNonTriviallyCopyable) {
 			CopyObjects(logLine.GetBuffer(), &buffer[bufferOffset], logLine.m_cbUsed);
@@ -2663,19 +2741,20 @@ void LogLine::WriteException(_In_z_ const char* message, _In_opt_ const BaseExce
 		}
 
 		const LogLine::Size nextOffset = bufferOffset + logLine.m_cbUsed;
-		assert(nextOffset + (isSystemError ? static_cast<LogLine::Size>(sizeof(StackBasedSystemError)) : 0) + categoryLength * static_cast<LogLine::Size>(sizeof(char)) == size + padding + bufferPadding);
-		if (isSystemError) {
+		assert(nextOffset + (pCode ? static_cast<LogLine::Size>(sizeof(StackBasedSystemError)) : 0) == size + padding + bufferPadding);
+		if (pCode) {
+			const int code = pCode->value();
 			std::memcpy(&buffer[nextOffset + offsetof(StackBasedSystemError, code)], &code, sizeof(code));
-			std::memcpy(&buffer[nextOffset + offsetof(StackBasedSystemError, length)], &categoryLength, sizeof(categoryLength));
-			std::memcpy(&buffer[nextOffset + sizeof(StackBasedSystemError)], category, categoryLength);
-			m_cbUsed += nextOffset + sizeof(StackBasedSystemError) + categoryLength * sizeof(char);
+			const std::error_category* const pCategory = &pCode->category();
+			std::memcpy(&buffer[nextOffset + offsetof(StackBasedSystemError, pCategory)], &pCategory, sizeof(pCategory));
+			m_cbUsed += nextOffset + sizeof(StackBasedSystemError);
 		} else {
 			m_cbUsed += nextOffset;
 		}
 	} else {
-		const TypeId kArgTypeId = isSystemError ? kTypeId<HeapBasedSystemError> : kTypeId<HeapBasedException>;
-		const auto kArgSize = isSystemError ? kTypeSize<HeapBasedSystemError> : kTypeSize<HeapBasedException>;
-		const LogLine::Size size = kArgSize + messageLength * sizeof(char) + categoryLength * sizeof(char);
+		const TypeId kArgTypeId = pCode ? kTypeId<HeapBasedSystemError> : kTypeId<HeapBasedException>;
+		const auto kArgSize = pCode ? kTypeSize<HeapBasedSystemError> : kTypeSize<HeapBasedException>;
+		const LogLine::Size size = kArgSize + messageLength * sizeof(char);
 
 		std::byte* __restrict buffer = GetWritePosition(size);
 		const LogLine::Size pos = sizeof(kArgTypeId);
@@ -2689,10 +2768,12 @@ void LogLine::WriteException(_In_z_ const char* message, _In_opt_ const BaseExce
 		const LogLine::Size messageOffset = offset + sizeof(HeapBasedException);
 
 		std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
-		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(HeapBasedException, cbLength));
+		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(HeapBasedException, cbLength));  // copy up to cbUsed
 		std::memcpy(&buffer[offset + offsetof(HeapBasedException, cbLength)], &messageLength, sizeof(messageLength));
 		std::memcpy(&buffer[offset + offsetof(HeapBasedException, hasNonTriviallyCopyable)], &logLine.m_hasNonTriviallyCopyable, sizeof(bool));
-		std::memcpy(&buffer[messageOffset], message, messageLength);
+		if (message) {
+			std::memcpy(&buffer[messageOffset], message, messageLength);
+		}
 
 		std::unique_ptr<std::byte[]> heapBuffer = std::make_unique<std::byte[]>(logLine.m_cbUsed);
 		std::byte* const pBuffer = heapBuffer.get();
@@ -2705,12 +2786,13 @@ void LogLine::WriteException(_In_z_ const char* message, _In_opt_ const BaseExce
 		heapBuffer.release();
 
 		const LogLine::Size nextOffset = messageOffset + messageLength * sizeof(char);
-		assert(nextOffset + (isSystemError ? static_cast<LogLine::Size>(sizeof(HeapBasedSystemError)) : 0) + categoryLength * static_cast<LogLine::Size>(sizeof(char)) == size + padding);
-		if (isSystemError) {
+		assert(nextOffset + (pCode ? static_cast<LogLine::Size>(sizeof(HeapBasedSystemError)) : 0) == size + padding);
+		if (pCode) {
+			const int code = pCode->value();
 			std::memcpy(&buffer[nextOffset + offsetof(HeapBasedSystemError, code)], &code, sizeof(code));
-			std::memcpy(&buffer[nextOffset + offsetof(HeapBasedSystemError, length)], &categoryLength, sizeof(categoryLength));
-			std::memcpy(&buffer[nextOffset + sizeof(HeapBasedSystemError)], category, categoryLength);
-			m_cbUsed += nextOffset + sizeof(HeapBasedSystemError) + categoryLength * sizeof(char);
+			const std::error_category* const pCategory = &pCode->category();
+			std::memcpy(&buffer[nextOffset + offsetof(HeapBasedSystemError, pCategory)], &pCategory, sizeof(pCategory));
+			m_cbUsed += nextOffset + sizeof(HeapBasedSystemError);
 		} else {
 			m_cbUsed += nextOffset;
 		}

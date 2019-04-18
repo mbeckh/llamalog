@@ -40,10 +40,47 @@ LogLine GetLogLine(const char* const szPattern = "{}") {
 
 
 //
+// ErrorCode
+//
+
+TEST(WindowsTypesTest, ErrorCode_Format_PrintMessage) {
+	std::string str;
+	{
+		const ErrorCode arg = {ERROR_ACCESS_DENIED};
+		str = fmt::format("{}", arg);
+	}
+
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+}
+
+TEST(WindowsTypesTest, ErrorCode_Log_PrintMessage) {
+	LogLine logLine = GetLogLine();
+	{
+		const ErrorCode arg = {ERROR_ACCESS_DENIED};
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+}
+
+TEST(WindowsTypesTest, ErrorCode_LastError_PrintMessage) {
+	LogLine logLine = GetLogLine();
+	{
+		SetLastError(ERROR_ACCESS_DENIED);
+		logLine << LastError();
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+}
+
+
+//
 // LARGE_INTEGER
 //
 
-TEST(WindowsTypesTest, LARGEINTEGER_IsValue_PrintValue) {
+TEST(WindowsTypesTest, LARGEINTEGER_Log_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const LARGE_INTEGER arg = {{0xFFu, -1L}};
@@ -59,7 +96,7 @@ TEST(WindowsTypesTest, LARGEINTEGER_IsValue_PrintValue) {
 // ULARGE_INTEGER
 //
 
-TEST(WindowsTypesTest, ULARGEINTEGER_IsValue_PrintValue) {
+TEST(WindowsTypesTest, ULARGEINTEGER_Log_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const ULARGE_INTEGER arg = {{0xFFu, 0xFFu}};
@@ -75,7 +112,7 @@ TEST(WindowsTypesTest, ULARGEINTEGER_IsValue_PrintValue) {
 // HINSTANCE
 //
 
-TEST(WindowsTypesTest, HINSTANCE_IsValue_PrintValue) {
+TEST(WindowsTypesTest, HINSTANCE_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	char sz[1024];
 	{
@@ -88,7 +125,7 @@ TEST(WindowsTypesTest, HINSTANCE_IsValue_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(WindowsTypesTest, HINSTANCE_IsNullptr_PrintZero) {
+TEST(WindowsTypesTest, HINSTANCE_LogNullptr_PrintZero) {
 	LogLine logLine = GetLogLine();
 	{
 		const HINSTANCE arg = nullptr;  // NOLINT(misc-misplaced-const): We DO want a const variable.
@@ -104,7 +141,26 @@ TEST(WindowsTypesTest, HINSTANCE_IsNullptr_PrintZero) {
 // POINT
 //
 
-TEST(WindowsTypesTest, POINT_IsValue_PrintValue) {
+TEST(WindowsTypesTest, POINT_FormatValue_PrintValue) {
+	std::string str;
+	{
+		const POINT arg = {-10, 20};
+		str = fmt::format("{}", arg);
+	}
+
+	EXPECT_EQ("(-10, 20)", str);
+}
+
+TEST(WindowsTypesTest, POINT_FormatInline_PrintValue) {
+	std::string str;
+	{
+		str = fmt::format("{}", POINT{-10, 20});
+	}
+
+	EXPECT_EQ("(-10, 20)", str);
+}
+
+TEST(WindowsTypesTest, POINT_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const POINT arg = {-10, 20};
@@ -115,7 +171,7 @@ TEST(WindowsTypesTest, POINT_IsValue_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(WindowsTypesTest, POINT_IsInline_PrintValue) {
+TEST(WindowsTypesTest, POINT_LogInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		logLine << POINT{-10, 20};
@@ -125,7 +181,7 @@ TEST(WindowsTypesTest, POINT_IsInline_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(WindowsTypesTest, POINT_IsValuePrintPadded_PrintPadded) {
+TEST(WindowsTypesTest, POINT_LogValuePrintPadded_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const POINT arg = {-10, 20};
@@ -141,7 +197,17 @@ TEST(WindowsTypesTest, POINT_IsValuePrintPadded_PrintPadded) {
 // RECT
 //
 
-TEST(WindowsTypesTest, RECT_IsValue_PrintValue) {
+TEST(WindowsTypesTest, POINT_Format_PrintValue) {
+	std::string str;
+	{
+		const RECT arg = {-10, 20, 30, 40};
+		str = fmt::format("{}", arg);
+	}
+
+	EXPECT_EQ("((-10, 20), (30, 40))", str);
+}
+
+TEST(WindowsTypesTest, RECT_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const RECT arg = {-10, 20, 30, 40};
@@ -152,7 +218,7 @@ TEST(WindowsTypesTest, RECT_IsValue_PrintValue) {
 	EXPECT_EQ("((-10, 20), (30, 40))", str);
 }
 
-TEST(WindowsTypesTest, RECT_IsValuePrintPadded_PrintPadded) {
+TEST(WindowsTypesTest, RECT_LogValuePrintPadded_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const RECT arg = {-10, 20, 30, 40};

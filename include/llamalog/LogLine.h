@@ -67,8 +67,7 @@ namespace llamalog {
 class BaseException;
 
 /// @brief Enum for different log priorities.
-/// @note Uneven values one greater than the respective enum are reserved for log messages from the logger itself.
-/// Uneven values two greater than the respective enum are reserved for exception messages from the logger itself.
+/// @note Priorities MUST be divisible by 4 because the values `| 1`, `| 2` and `| 3` are reserved for internal use.
 /// @copyright This enum is based on `enum class LogLevel` from NanoLog.
 enum class Priority : std::uint8_t {
 	kNone = 0,    ///< Value for "not set"
@@ -92,7 +91,7 @@ public:
 	/// @param line The logged line number.
 	/// @param szFunction The logged function. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 	/// @param szMessage The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-	LogLine(Priority priority, _In_z_ const char* __restrict szFile, std::uint32_t line, _In_z_ const char* __restrict szFunction, _In_z_ const char* __restrict szMessage) noexcept;
+	LogLine(Priority priority, _In_z_ const char* __restrict szFile, std::uint32_t line, _In_z_ const char* __restrict szFunction, _In_opt_z_ const char* __restrict szMessage) noexcept;
 
 	/// @brief Copy the buffers. @details The copy constructor is required for `std::curent_exception`.
 	/// @param logLine The source logline.
@@ -106,8 +105,15 @@ public:
 	~LogLine() noexcept;
 
 public:
-	LogLine& operator=(const LogLine&) = delete;  ///< @noassignmentoperator
-	LogLine& operator=(LogLine&&) = delete;       ///< @nomoveoperator
+	/// @brief Copy the buffers. @details The assignment operator is required for `std::exception`.
+	/// @param logLine The source logline.
+	/// @return This object.
+	LogLine& operator=(const LogLine& logLine);
+
+	/// @brief Move the buffers.
+	/// @param logLine The source logline.
+	/// @return This object.
+	LogLine& operator=(LogLine&& logLine) noexcept;
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
@@ -378,10 +384,8 @@ private:
 	/// @brief Add an exception object to the argument buffer.
 	/// @param message The exception message.
 	/// @param pBaseException The (optional) `BaseException` object carrying additional logging information.
-	/// @param isSystemError `true` if the exception is or is derived from `std::system_error`.
-	/// @param code The error code for `std::system_error`s.
-	/// @param category The category name for `std::system_error`s.
-	void WriteException(_In_z_ const char* message, _In_opt_ const BaseException* pBaseException, bool isSystemError, int code, _In_opt_z_ const char* category);
+	/// @param pCode The error code for `std::system_error`s.
+	void WriteException(_In_opt_z_ const char* message, _In_opt_ const BaseException* pBaseException, _In_opt_ const std::error_code* pCode);
 
 	/// @brief Add a custom object to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, a pointer

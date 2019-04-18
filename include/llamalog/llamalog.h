@@ -44,6 +44,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 */
 
+#include <llamalog/Exceptions.h>
 #include <llamalog/LogLine.h>
 
 #include <cstdint>
@@ -69,6 +70,20 @@ void Initialize();
 /// @brief Actually start logging.
 /// @note `Start` MUST be called after `Initialize` before any logging takes place.
 void Start();
+
+/// @brief Calculate the `Priority` for internal logging messages.
+/// @remarks The function prevents endless loops by encoding an error counter in the priority.
+/// @param priority The desired logging priority.
+/// @return The `Priority` to use for an internal logging message.
+Priority GetInternalPriority(Priority priority) noexcept;
+
+/// @brief Log a message if logging fails.
+/// @details The output is sent to `OutputDebugStringA`.
+/// @param file The file where the message is created.
+/// @param line The line where the message is created.
+/// @param function The function where the message is created.
+/// @param message The message to log.
+void Panic(const char* file, std::uint32_t line, const char* function, const char* message) noexcept;
 
 }  // namespace internal
 
@@ -130,6 +145,26 @@ void Log(const Priority priority, _In_z_ const char* __restrict const szFile, co
 	Log((logLine << ... << std::forward<T>(args)));
 }
 
+/// @brief Logs a new `LogLine` for an internal message from the logger itself.
+/// @details The function includes code to prevent endless loops caused by logging errors that happen while logging errors.
+/// @tparam T The types of the message arguments.
+/// @param priority The `#Priority`.
+/// @param file The logged file name. This MUST be a literal string, typically from `__FILE__`, i.e. the value is not copied but always referenced by the pointer.
+/// @param line The logged line number, typically from `__LINE__`.
+/// @param function The logged function, typically from `__func__`. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
+/// @param message The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
+/// @param args Any args for @p szMessage.
+template <typename... T>
+void LogInternal(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
+	const Priority internalPriority = internal::GetInternalPriority(priority);
+	if ((static_cast<std::uint8_t>(internalPriority) & 3u) == 3u) {
+		internal::Panic(file, line, function, "Error logging error");
+		return;
+	}
+	LogLine logLine(internalPriority, file, line, function, message);
+	Log((logLine << ... << std::forward<T>(args)));
+}
+
 /// @brief Waits until all currently available entries have been written.
 /// @details This function might block for a long time and its main purpose is to flush the log for testing.
 /// Use with care in your own code.
@@ -138,107 +173,13 @@ void Flush();
 /// @brief End all logging. This MUST be the last function called.
 void Shutdown() noexcept;
 
-
-//
-// Exception Handling
-//
-
-/// @brief A helper class to carry additional logging context for exceptions.
-class __declspec(novtable) BaseException {
-protected:
-	/// @brief Creates a new instance.
-	/// @param szFile The source code file where the exception happened.
-	/// @param line The source code line where the exception happened.
-	/// @param szFunction The function where the exception happened.
-	/// @param szMessage An additional logging message which MAY use {fmt} pattern syntax.
-	BaseException(_In_z_ const char* __restrict const szFile, const std::uint32_t line, _In_z_ const char* __restrict const szFunction, _In_z_ const char* __restrict const szMessage) noexcept
-		: m_logLine(Priority::kNone /* unused */, szFile, line, szFunction, szMessage) {
-		m_logLine.GenerateTimestamp();
-	}
-
-	BaseException(const BaseException&) = default;  ///< @defaultconstructor
-	BaseException(BaseException&&) = default;       ///< @defaultconstructor
-	~BaseException() noexcept = default;
-
-public:
-	BaseException& operator=(const BaseException&) = delete;  ///< @noassignmentoperator
-	BaseException& operator=(BaseException&&) = delete;       ///< @nomoveoperator
-
-protected:
-	LogLine m_logLine;  ///< @brief Additional information for logging.
-
-	friend class LogLine;  ///< @brief Allow more straight forward code for copying the data.
-};
-
-/// @brief A namespace for functions which must exist in the headers but which users of the library SHALL NOT call directly.
-namespace internal {
-
-/// @brief The actual exception class thrown by `#Throw`.
-/// @tparam The type of the exception.
-template <typename E>
-class ExceptionDetail final : public E
-	, public virtual BaseException {
-public:
-	/// @brief Creates a new exception that carries additional logging context.
-	/// @tparam T The type of the arguments for the message.
-	/// @param exception The actual exception thrown from the code.
-	/// @param szFile The source code file where the exception happened.
-	/// @param line The source code line where the exception happened.
-	/// @param szFunction The function where the exception happened.
-	/// @param szMessage An additional logging message.
-	/// @param args Arguments for the logging message.
-	template <typename... T>
-	ExceptionDetail(E&& exception, _In_z_ const char* __restrict const szFile, const std::uint32_t line, _In_z_ const char* __restrict const szFunction, _In_z_ const char* __restrict const szMessage, T&&... args)
-		: E(std::forward<E>(exception))
-		, BaseException(szFile, line, szFunction, szMessage) {
-		(m_logLine << ... << std::forward<T>(args));
-	}
-};
-
-}  // namespace internal
-
-
-/// @brief Throws an exception adding logging context.
-/// @remarks The only purpose of this function is to allow template argument deduction of `internal::ExceptionDetail`.
-/// @tparam E The type of the exception.
-/// @tparam T The type of the arguments for the message.
-/// @param exception The actual exception thrown from the code.
-/// @param szFile The source code file where the exception happened.
-/// @param line The source code line where the exception happened.
-/// @param szFunction The function where the exception happened.
-template <typename E, typename... T>
-[[noreturn]] void Throw(E&& exception, _In_z_ const char* const szFile, std::uint32_t line, _In_z_ const char* const szFunction) {
-	throw internal::ExceptionDetail<E>(std::forward<E>(exception), szFile, line, szFunction, "");
-}
-
-/// @brief Throws an exception adding logging context.
-/// @remarks The only purpose of this function is to allow template argument deduction of `internal::ExceptionDetail`.
-/// @tparam E The type of the exception.
-/// @tparam T The type of the arguments for the message.
-/// @param exception The actual exception thrown from the code.
-/// @param szFile The source code file where the exception happened.
-/// @param line The source code line where the exception happened.
-/// @param szFunction The function where the exception happened.
-/// @param szMessage An additional logging message which MAY use {fmt} pattern syntax.
-/// @param args Arguments for the logging message.
-template <typename E, typename... T>
-[[noreturn]] void Throw(E&& exception, _In_z_ const char* const szFile, std::uint32_t line, _In_z_ const char* const szFunction, const char* const szMessage, T&&... args) {
-	throw internal::ExceptionDetail<E>(std::forward<E>(exception), szFile, line, szFunction, szMessage, std::forward<T>(args)...);
-}
-
-/// @brief Get the additional logging context of an exception if it exists.
-/// @note The function MUST be called from within a catch block to get the object, elso `nullptr` is returned.
-/// @return The logging context if it exists, else `nullptr`.
-_Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexcept;
-
 }  // namespace llamalog
-
 
 //
 // Macros
 //
 
-/// @brief Emit a log line. @details Without the explicit variable `szFile_` the compiler does not reliably evaluate
+/// @brief Emit a log line. @details Without the explicit variable `file_` the compiler does not reliably evaluate
 /// `#llamalog::GetFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
 /// @param priority_ The `Priority`.
 /// @param message_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
@@ -248,12 +189,24 @@ _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexce
 		llamalog::Log(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
 	} while (0)
 
+/// @brief Emit a log line for an internal message from the logger itself.
+/// @details Without the explicit variable `file_` the compiler does not reliably evaluate
+/// `#llamalog::GetFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
+/// @param priority_ The `Priority`.
+/// @param message_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
+#define LLAMALOG_INTERNAL_LOG(priority_, message_, ...)                                     \
+	do {                                                                                    \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                      \
+		llamalog::LogInternal(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
+	} while (0)
+
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace`.
 /// @param message_ The message pattern which MAY use the syntax of {fmt}.
 #define LOG_TRACE(message_, ...) LLAMALOG_LOG(llamalog::Priority::kTrace, message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace` for function return values.
 /// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
 /// @param message_ The message pattern which MAY use the syntax of {fmt}.
 /// @return The value of @p result_.
 #define LOG_TRACE_RESULT(result_, message_, ...)                                                             \
@@ -286,23 +239,14 @@ _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexce
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn + 1`.
 /// @note This macro SHALL be used by the logger itself and any `LogWriter`s.
 /// @param message_ The message pattern which MAY use the syntax of {fmt}.
-#define LOG_WARN_INTERNAL(message_, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kWarn) | 1u), message_, __VA_ARGS__)
+#define LLAMALOG_INTERNAL_WARN(message_, ...) LLAMALOG_INTERNAL_LOG(llamalog::Priority::kWarn, message_, __VA_ARGS__)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn + 1`.
 /// @note This macro SHALL be used by the logger itself and any `LogWriter`s.
 /// @param message_ The message pattern which MAY use the syntax of {fmt}.
-#define LOG_ERROR_INTERNAL(message_, ...) LLAMALOG_LOG(static_cast<llamalog::Priority>(static_cast<std::uint8_t>(llamalog::Priority::kError) | 1u), message_, __VA_ARGS__)
+#define LLAMALOG_INTERNAL_ERROR(message_, ...) LLAMALOG_INTERNAL_LOG(llamalog::Priority::kError, message_, __VA_ARGS__)
 
-/// @brief Throw a new exception with additional logging context.
-/// @detail The variable arguments MAY provide a literal message string and optional arguments.
-/// @param exception_ The exception to throw.
-#define LLAMALOG_THROW(exception_, ...)                                      \
-	do {                                                                     \
-		constexpr const char* file_ = llamalog::GetFilename(__FILE__);       \
-		llamalog::Throw(exception_, file_, __LINE__, __func__, __VA_ARGS__); \
-	} while (0)
-
-/// @brief Throw a new exception with additional logging context (alias for `LLAMALOG_THROW`).
-/// @detail The variable arguments MAY provide a literal message string and optional arguments.
-/// @param exception_ The exception to throw.
-#define THROW(exception_, ...) LLAMALOG_THROW(exception_, __VA_ARGS__)
+/// @brief Output a message when logging fails.
+/// @details The output is sent to `OutputDebugStringA`.
+/// @param message_ The message.
+#define LLAMALOG_PANIC(message_) llamalog::internal::Panic(__FILE__, __LINE__, __func__, message_)

@@ -144,10 +144,12 @@ The patterns use the standard {fmt} syntax with the following enhancements:
 Any character and string arguments are escaped. To prevent escaping, add the type specifier in the format string, i.e. `{0}` prints escaped, while `{0:s}` prints the raw string.
 
 ### Exception Formatting
-Exceptions can be formatted as first-class arguments, though adding the exception as a logger argument MUST happen inside the catch clause. The following code shows a valid usage pattern:
+Exceptions can be formatted as first-class arguments, though adding the exception as a logger argument MUST happen inside the catch clause. If an exception is thrown using llamalog::Throw (and the macro LLAMALOG_THROW respectively) the result of `what()` is ignored and replaced by the logging message.
+
+The following code shows a valid usage pattern:
 ```cpp
 try {
-    THROW(std::invalid_argument("somearg"), "Value {} is invalid", val);
+    THROW(std::invalid_argument("ignored"), "Value {} is invalid", val);
 } catch (const std::exception& e) {
     LOG_INFO("An exception has occurred: {}", e);
 }
@@ -164,38 +166,39 @@ try {
 Exceptions are formatted using a default pattern, however a custom pattern MAY be used as in the following example where only the exception message (i.e. `e.what()`) is logged.
 ```cpp
 try {
-    throw std::invalid_argument("somearg");
+    THROW(std::invalid_argument("somearg"));
 } catch (const std::exception& e) {
-    LOG_INFO("An exception has occurred: {:%e}", e);
+    LOG_INFO("An exception has occurred: {:%w}", e);
 }
 ```
 More than one argument specifier MAY be used, e.g. `{:%F:%L}` will print the file name and line number where the exception happened. The following specifiers are supported. If an exception does not have the information an empty string is used in the output.
 
 |Specifier|Output|
 |:---|:---|
-|`%m`|The log message.|
-|`%C`|The name of the error category for `std::system_error` and derived classes.|
-|`%c`|The error code for `std::system_error` and derived classes.|
-|`%e`|The exception message, i.e. the result of `std::exception` `what()`.|
+|`%l`|The log message. If the log message is `nullptr`, `%w` is logged.|
+|`%C`|The name of the error category for `std::system_error`, `llamalog::SystemError` and derived classes.|
+|`%c`|The error code for `std::system_error`, `llamalog::SystemError` and derived classes.|
+|`%m`|The error message for `std::system_error`, `llamalog::SystemError` and derived classes.|
+|`%w`|The exception message, i.e. the result of `std::exception` `what()`. If the exception was thrown using `llamalog::Throw` (and `LLAMALOG_THROW` respectively) the log message is returned and - in case of `std::system_error` and `llamalog::SystemError` - includes the error message `%m` (i.e. the output matches `std::system_error` except for the exception argument replaced by the log message). |
 |`%T`|The timestamp as `yyyy-MM-dd HH:mm:ss.SSS`.|
 |`%t`|The thread id of the thread which has thrown the exception.|
 |`%F`|The file name where the exception was thrown.|
 |`%L`|The line number where the exception was thrown.|
 |`%f`|The function name where the exception was thrown.|
 
-Exceptions are often caught using a base class. Therefore it is not known which data is actually available for logging. Using the pattern syntax above could either lead to ugly output (like in `An error with code {0:%c} has happened: {0:%e}` when the exception is not a `std::system_error` or overly complex catch clauses just to log the right data.
+Exceptions are often caught using a base class. Therefore it is not known which data is actually available for logging. Using the pattern syntax above could either lead to ugly output (like in `An error with code {0:%c} has happened: {0:%m}` when the exception is not a `std::system_error` or overly complex catch clauses just to log the right data.
 
-llamalog therefore supports conditional patterns which are only printed if any one of the contained specifiers produced a non-empty output. The pattern from the previous paragraph would produce <code>An error with code &nbsp;has happened: somemessage</code> for a `std::exception` (please also note the double space between "code" and "has"). The following pattern solves the problem: `An error {0:%[with code %c ]}has happened: {0:%e}` and will output `An error has happened: somemessage` if the exception is not a `std::system_error`. You may even nest `%[...]` blocks and you can also use formatter arguments inside these blocks, like in the following example:
+llamalog therefore supports conditional patterns which are only printed if any one of the contained specifiers produced a non-empty output. The pattern from the previous paragraph would produce <code>An error with code &nbsp;has happened: somemessage</code> for a `std::exception` (please also note the double space between "code" and "has"). The following pattern solves the problem: `An error {0:%[with code %c ]}has happened: {0:%w}` and will output `An error has happened: somemessage` if the exception is not a `std::system_error`. You may even nest `%[...]` blocks and you can also use formatter arguments inside these blocks, like in the following example:
 ```cpp
 try {
     // code could throw exceptions with extended logging context and without
 } catch (const std::exception& e) {
-    LOG_INFO("An exception has occurred: {:%e%[ {0}%F:%L]}", e, "location=");
+    LOG_INFO("An exception has occurred: {:%w%[ {0}%F:%L]}", e, "location=");
 }
 ```
 This sample logs the exception message and - if extended logging data is available - a space character, the text "location=" followed by file and line number.
 
-Using this syntax, the default exception pattern is `%e%[ (%C %c)]%[; %m]%[ @\{%T \[%t\] %F:%L %f\}]` which produces output like `Invalid argument (system 22); Additional info @{2019-03-27 22:18:23.231 [9384] myfile.cpp:87 myfunction}`.
+Using this syntax, the default exception pattern is `%w%[ (%C %c)]%[ @\{%T \[%t\] %F:%L %f\}]` which produces output like `Log Message: Invalid argument (system 22) @{2019-03-27 22:18:23.231 [9384] myfile.cpp:87 myfunction}`.
 
 By the way: Was I carried away by the formatting syntax? Maybe. Is it useful? Indeed. Does it hurt, if anyone does not want to use it? Not really. So I keep the feature although the default formatting will probably be sufficient for most purposes. :sunglasses:
 

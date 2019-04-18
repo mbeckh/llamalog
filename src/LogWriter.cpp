@@ -46,6 +46,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include "llamalog/LogWriter.h"
 
 #include "llamalog/LogLine.h"
+#include "llamalog/WindowsTypes.h"
 #include "llamalog/llamalog.h"
 
 #include <fmt/format.h>
@@ -55,7 +56,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <algorithm>
 #include <atomic>
 #include <cassert>
-#include <cinttypes>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -68,36 +68,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <vector>
 
 namespace llamalog {
-
-void Panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
-	// avoid anything that could cause an error
-	char msg[1024];
-	if (sprintf_s(msg, "PANIC: %s @ %s(%s:%" PRIu32 ")\n", message, function, file, line) < 0) {
-		OutputDebugStringA("PANIC: Error writing log\n");
-	} else {
-		OutputDebugStringA(msg);
-	}
-}
-
-namespace {
-
-/// @brief Checks if the `Priority` is a priority from an internal message.
-/// @details Used internally to prevent endless loops from logging errors that happen during logging of errors.
-/// @param priority The `Priority` to check.
-/// @return `true` if this is an internal `Priority`.
-constexpr bool IsInternal(const Priority priority) noexcept {
-	return static_cast<uint8_t>(priority) & 1u;
-}
-
-/// @brief Checks if the `Priority` is a priority from an internal exception message.
-/// @details Used internally to prevent endless loops from logging errors that happen during logging of errors.
-/// @param priority The `Priority` to check.
-/// @return `true` if this is an exception priority.
-constexpr bool IsException(const Priority priority) noexcept {
-	return static_cast<uint8_t>(priority) & 2u;
-}
-
-}  // namespace
 
 //
 // LogWriter
@@ -134,13 +104,8 @@ __declspec(noalias) _Ret_z_ char const* LogWriter::FormatPriority(const Priority
 	case Priority::kFatal:
 		return "FATAL";
 	default:
-		// uneven priorities mark internal events
-		if (IsInternal(priority)) {
-			return FormatPriority(static_cast<Priority>(static_cast<std::uint8_t>(priority) & ~1u));
-		}
-		// bit 1 marks internal exceptions
-		if (IsException(priority)) {
-			return FormatPriority(static_cast<Priority>(static_cast<std::uint8_t>(priority) & ~2u));
+		if (static_cast<std::uint8_t>(priority) & 3u) {
+			return FormatPriority(static_cast<Priority>(static_cast<std::uint8_t>(priority) & ~3u));
 		}
 		assert(false);
 		return "-";
@@ -246,7 +211,7 @@ RollingFileWriter::~RollingFileWriter() noexcept {
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (!CloseHandle(m_hFile)) {
 			try {
-				LOG_WARN_INTERNAL("Error closing log: {}", GetLastError());
+				LLAMALOG_INTERNAL_WARN("Error closing log: {}", LastError());
 			} catch (...) {
 				LLAMALOG_PANIC("Error closing log");
 			}
@@ -289,12 +254,7 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 		if (!WriteFile(m_hFile, data + cbPosition, count, &cbWritten, nullptr)) {
 			if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 				// no need to log if there is no file
-				if (!IsInternal(logLine.GetPriority())) {
-					// logging this error could trigger an infinite loop if it is _this_ error message
-					LOG_ERROR_INTERNAL("Error writing {} bytes to log: {}", count, GetLastError());
-				} else {
-					LLAMALOG_PANIC("Error writing to log");
-				}
+				LLAMALOG_INTERNAL_ERROR("Error writing {} bytes to log: {}", count, LastError());
 			}
 			// try the next event
 			return;
@@ -322,12 +282,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 
 	SYSTEMTIME time;
 	if (!FileTimeToSystemTime(&timestamp, &time)) {
-		if (!IsInternal(logLine.GetPriority())) {
-			// logging this error could trigger an infinite loop if it is _this_ error message
-			LOG_ERROR_INTERNAL("Error rolling log: {}", GetLastError());
-		} else {
-			LLAMALOG_PANIC("Error rolling log");
-		}
+		LLAMALOG_INTERNAL_ERROR("Error rolling log: {}", LastError());
 		// if we can't get the time, we can't roll the file, try again at next log event
 		return;
 	}
@@ -351,7 +306,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (!CloseHandle(m_hFile)) {
-			LOG_WARN_INTERNAL("Error closing log: {}", GetLastError());
+			LLAMALOG_INTERNAL_WARN("Error closing log: {}", LastError());
 			// if we can't close the file, leave it open
 		}
 	}
@@ -363,7 +318,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 	if (hFindResult == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		const DWORD lastError = GetLastError();
 		if (lastError != ERROR_FILE_NOT_FOUND) {
-			LOG_WARN_INTERNAL("Error deleting log: {}", lastError);
+			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", ErrorCode{lastError});
 		}
 	} else {
 		do {
@@ -371,7 +326,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 		} while (FindNextFileW(hFindResult, &findData));  // NOLINT(readability-implicit-bool-conversion): Compare BOOL in a condition.
 		const DWORD lastError = GetLastError();
 		if (lastError != ERROR_NO_MORE_FILES) {
-			LOG_WARN_INTERNAL("Error deleting log: {}", lastError);
+			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", ErrorCode{lastError});
 			// do not try to delete anything on find errors
 		} else {
 			std::sort(files.begin(), files.end());
@@ -379,13 +334,13 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 			for (std::uint32_t i = 0; i < len - std::min(len, m_maxFiles); ++i) {
 				std::filesystem::path file = std::filesystem::path(m_directory) / files[i];
 				if (!DeleteFileW(file.c_str())) {
-					LOG_WARN_INTERNAL("Error deleting log '{}': {}", files[i], GetLastError());
+					LLAMALOG_INTERNAL_WARN("Error deleting log '{}': {}", files[i], LastError());
 					// delete failed, but continue
 				}
 			}
 		}
 		if (!FindClose(hFindResult)) {
-			LOG_WARN_INTERNAL("Error deleting log: {}", GetLastError());
+			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", LastError());
 			// just leave the handle open
 		}
 	}
@@ -393,12 +348,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
 	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		if (!IsInternal(logLine.GetPriority())) {
-			// logging this error could trigger an infinite loop if it is _this_ error message
-			LOG_ERROR_INTERNAL("Error creating log: {}", GetLastError());
-		} else {
-			LLAMALOG_PANIC("Error creating log");
-		}
+		LLAMALOG_INTERNAL_ERROR("Error creating log: {}", LastError());
 		// no file created, try again for next message
 	}
 

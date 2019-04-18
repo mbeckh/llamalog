@@ -23,23 +23,10 @@ limitations under the License.
 #include <cstdint>
 #include <string>
 
-/// @brief Output a message when logging fails.
-/// @details The output is sent to `OutputDebugStringA`.
-/// @param message_ The message.
-#define LLAMALOG_PANIC(message_) llamalog::Panic(__FILE__, __LINE__, __func__, message_)
-
 namespace llamalog {
 
 enum class Priority : std::uint8_t;
 class LogLine;
-
-/// @brief Log a message if logging fails.
-/// @details The output is sent to `OutputDebugStringA`.
-/// @param file The file where the message is created.
-/// @param line The line where the message is created.
-/// @param function The function where the message is created.
-/// @param message The message to log.
-void Panic(const char* file, std::uint32_t line, const char* function, const char* message) noexcept;
 
 /// @brief The base class for all log writers.
 /// @details Except for the constructor and destructor, all access to a `LogWriter` is from a single thread.

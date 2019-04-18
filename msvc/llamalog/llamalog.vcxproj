@@ -28,12 +28,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\llamalog\CustomTypes.h" />
+    <ClInclude Include="..\..\include\llamalog\Exceptions.h" />
     <ClInclude Include="..\..\include\llamalog\LogLine.h" />
     <ClInclude Include="..\..\include\llamalog\llamalog.h" />
     <ClInclude Include="..\..\include\llamalog\LogWriter.h" />
     <ClInclude Include="..\..\include\llamalog\WindowsTypes.h" />
+    <ClInclude Include="..\..\src\finally.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\Exceptions.cpp" />
     <ClCompile Include="..\..\src\LogLine.cpp" />
     <ClCompile Include="..\..\src\llamalog.cpp" />
     <ClCompile Include="..\..\src\LogWriter.cpp" />

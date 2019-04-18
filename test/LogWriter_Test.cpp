@@ -310,8 +310,8 @@ TEST_F(LogWriterTest, FileTimeToSystemTime_Error_LogErrorAndDoNotCreateFile) {
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
 	llamalog::Shutdown();
 
-	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]*RollFile Error rolling log: 50\\n"));
+	EXPECT_EQ(3, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]*RollFile Error rolling log: [^\\n]+ \\(50\\)\\n){2}"));
 }
 
 TEST_F(LogWriterTest, CreateFile_TemporaryErrorDuringRollFile_LogError) {
@@ -335,7 +335,7 @@ TEST_F(LogWriterTest, CreateFile_TemporaryErrorDuringRollFile_LogError) {
 	llamalog::Shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* RollFile Error creating log: 80\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* RollFile Error creating log: [^\\n]+ \\(80\\)\\n"));
 }
 
 TEST_F(LogWriterTest, CreateFile_PermanentErrorDuringRollFile_LogError) {
@@ -343,7 +343,7 @@ TEST_F(LogWriterTest, CreateFile_PermanentErrorDuringRollFile_LogError) {
 		.WillRepeatedly(detours_gmock::SetLastErrorAndReturn(ERROR_FILE_EXISTS, INVALID_HANDLE_VALUE));
 
 	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
-		.Times(2);
+		.Times(3);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
@@ -354,8 +354,8 @@ TEST_F(LogWriterTest, CreateFile_PermanentErrorDuringRollFile_LogError) {
 
 	llamalog::Shutdown();
 
-	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* RollFile Error creating log: 80\\n"));
+	EXPECT_EQ(3, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]* RollFile Error creating log: [^\\n]+ \\(80\\)\\n){2}"));
 }
 
 TEST_F(LogWriterTest, WriteFile_WritePartially_WriteChunked) {
@@ -414,14 +414,14 @@ TEST_F(LogWriterTest, WriteFile_TemporaryError_LogError) {
 	llamalog::Shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* Log Error writing [0-9]+ bytes to log: 1392\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* Log Error writing [0-9]+ bytes to log: [^\\n]+ \\(1392\\)\\n"));
 }
 
 TEST_F(LogWriterTest, WriteFile_PermanentError_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
 		.WillOnce(testing::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
-		.Times(2)
+		.Times(3)
 		.WillRepeatedly(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, LPDWORD lpNumberOfBytesWritten, testing::Unused) {
 			*lpNumberOfBytesWritten = 0;
 			SetLastError(ERROR_FILE_CORRUPT);
@@ -441,8 +441,8 @@ TEST_F(LogWriterTest, WriteFile_PermanentError_LogError) {
 
 	llamalog::Shutdown();
 
-	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* Log Error writing [0-9]+ bytes to log: 1392\\n"));
+	EXPECT_EQ(3, m_lines);
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]* Log Error writing [0-9]+ bytes to log: [^\\n]+ \\(1392\\)\\n){2}"));
 }
 
 TEST_F(LogWriterTest, CloseHandle_ErrorDuringDestruct_KeepSilent) {
@@ -494,7 +494,7 @@ TEST_F(LogWriterTest, CloseHandle_ErrorDuringRollFile_LogError) {
 	llamalog::Shutdown();
 
 	EXPECT_EQ(3, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error closing log: 50\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error closing log: [^\\n]+ \\(50\\)\\n"));
 }
 
 TEST_F(LogWriterTest, FindFirstFileEx_ErrorDuringRollFile_LogError) {
@@ -522,7 +522,7 @@ TEST_F(LogWriterTest, FindFirstFileEx_ErrorDuringRollFile_LogError) {
 	llamalog::Shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: 87\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: [^\\n]+ \\(87\\)\\n"));
 }
 
 TEST_F(LogWriterTest, FindNextFileW_ErrorDuringRollFile_LogError) {
@@ -552,7 +552,7 @@ TEST_F(LogWriterTest, FindNextFileW_ErrorDuringRollFile_LogError) {
 	llamalog::Shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: 87\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: [^\\n]+ \\(87\\)\\n"));
 }
 
 TEST_F(LogWriterTest, FindClose_ErrorDuringRollFile_LogError) {
@@ -582,7 +582,7 @@ TEST_F(LogWriterTest, FindClose_ErrorDuringRollFile_LogError) {
 	llamalog::Shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: 6\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: [^\\n]+ \\(6\\)\\n"));
 }
 
 TEST_F(LogWriterTest, DeleteFileW_ErrorDuringRollFile_LogError) {
@@ -617,7 +617,7 @@ TEST_F(LogWriterTest, DeleteFileW_ErrorDuringRollFile_LogError) {
 	llamalog::Shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log 'll_test.2019-01-05.log': 2\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log 'll_test.2019-01-05.log': [^\\n]+ \\(2\\)\\n"));
 }
 
 }  // namespace llamalog::test
