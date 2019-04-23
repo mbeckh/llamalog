@@ -63,19 +63,19 @@ class LogWriter;
 namespace internal {
 
 /// @brief Initialize the logger.
-/// @note `Start` MUST be called after `Initialize` before any logging takes place.
+/// @note `start` MUST be called after `initialize` before any logging takes place.
 /// @copyright Derived from `initialize` from NanoLog.
-void Initialize();
+void initialize();
 
 /// @brief Actually start logging.
-/// @note `Start` MUST be called after `Initialize` before any logging takes place.
-void Start();
+/// @note `start` MUST be called after `initialize` before any logging takes place.
+void start();
 
 /// @brief Calculate the `Priority` for internal logging messages.
 /// @remarks The function prevents endless loops by encoding an error counter in the priority.
 /// @param priority The desired logging priority.
 /// @return The `Priority` to use for an internal logging message.
-Priority GetInternalPriority(Priority priority) noexcept;
+Priority getInternalPriority(Priority priority) noexcept;
 
 /// @brief Log a message if logging fails.
 /// @details The output is sent to `OutputDebugStringA`.
@@ -83,66 +83,66 @@ Priority GetInternalPriority(Priority priority) noexcept;
 /// @param line The line where the message is created.
 /// @param function The function where the message is created.
 /// @param message The message to log.
-void Panic(const char* file, std::uint32_t line, const char* function, const char* message) noexcept;
+void panic(const char* file, std::uint32_t line, const char* function, const char* message) noexcept;
 
 }  // namespace internal
 
 /// @brief Initialize the logger, add writers and start logging.
-/// @note `Initialize` MUST be called before any logging takes place.
+/// @note `initialize` MUST be called before any logging takes place.
 /// @tparam LogWriter MUST be of type `LogWriter`.
 /// @param writers One or more `LogWriter` objects.
 template <typename... LogWriter>
-void Initialize(std::unique_ptr<LogWriter>&&... writers) {
-	internal::Initialize();
-	(..., AddWriter(std::move(writers)));
-	internal::Start();
+void initialize(std::unique_ptr<LogWriter>&&... writers) {
+	internal::initialize();
+	(..., addWriter(std::move(writers)));
+	internal::start();
 }
 
 /// @brief Add a log writer.
 /// @param writer The `LogWriter` to add.
-void AddWriter(std::unique_ptr<LogWriter>&& writer);
+void addWriter(std::unique_ptr<LogWriter>&& writer);
 
 /// @brief Get the filename after the last slash or backslash character.
-/// @param szPath A start of the path to shorten.
-/// @param szCheck The next character to check.
+/// @param path A start of the path to shorten.
+/// @param check The next character to check.
 /// @return Filename and extension after the last path separator.
-constexpr __declspec(noalias) _Ret_z_ const char* GetFilename(_In_z_ const char* const szPath, _In_opt_z_ const char* const szCheck = nullptr) noexcept {
-	if (!szCheck) {
+constexpr __declspec(noalias) _Ret_z_ const char* getFilename(_In_z_ const char* const path, _In_opt_z_ const char* const check = nullptr) noexcept {
+	if (!check) {
 		// first call
-		return GetFilename(szPath, szPath);
+		return getFilename(path, path);
 	}
-	if (*szCheck) {
-		if (*szCheck == '/' || *szCheck == '\\') {
-			return GetFilename(szCheck + 1, szCheck + 1);
+	if (*check) {
+		if (*check == '/' || *check == '\\') {
+			return getFilename(check + 1, check + 1);
 		}
-		return GetFilename(szPath, szCheck + 1);
+		return getFilename(path, check + 1);
 	}
-	return szPath;
+	return path;
 }
 
 
 /// @brief Log a `LogLine`.
 /// @param logLine The `LogLine` to send to the logger.
 /// @copyright Derived from `Log::operator==` from NanoLog.
-void Log(LogLine& logLine);
+void log(LogLine& logLine);
 
 /// @brief Log a `LogLine`.
 /// @param logLine The `LogLine` to send to the logger.
 /// @copyright Derived from `Log::operator==` from NanoLog.
-void Log(LogLine&& logLine);
+void log(LogLine&& logLine);
 
 /// @brief Logs a new `LogLine`.
 /// @tparam T The types of the message arguments.
 /// @param priority The `#Priority`.
-/// @param szFile The logged file name. This MUST be a literal string, typically from `__FILE__`, i.e. the value is not copied but always referenced by the pointer.
+/// @param file The logged file name. This MUST be a literal string, typically from `__FILE__`, i.e. the value is not copied but always referenced by the pointer.
 /// @param line The logged line number, typically from `__LINE__`.
-/// @param szFunction The logged function, typically from `__func__`. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-/// @param szMessage The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-/// @param args Any args for @p szMessage.
+/// @param function The logged function, typically from `__func__`. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
+/// @param message The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
+/// @param args Any args for @p message.
 template <typename... T>
-void Log(const Priority priority, _In_z_ const char* __restrict const szFile, const std::uint32_t line, _In_z_ const char* __restrict const szFunction, _In_z_ const char* __restrict const szMessage, T&&... args) {
-	LogLine logLine(priority, szFile, line, szFunction, szMessage);
-	Log((logLine << ... << std::forward<T>(args)));
+void log(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
+	LogLine logLine(priority, file, line, function, message);
+	log((logLine << ... << std::forward<T>(args)));
 }
 
 /// @brief Logs a new `LogLine` for an internal message from the logger itself.
@@ -153,25 +153,25 @@ void Log(const Priority priority, _In_z_ const char* __restrict const szFile, co
 /// @param line The logged line number, typically from `__LINE__`.
 /// @param function The logged function, typically from `__func__`. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 /// @param message The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-/// @param args Any args for @p szMessage.
+/// @param args Any args for @p message.
 template <typename... T>
-void LogInternal(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
-	const Priority internalPriority = internal::GetInternalPriority(priority);
+void logInternal(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
+	const Priority internalPriority = internal::getInternalPriority(priority);
 	if ((static_cast<std::uint8_t>(internalPriority) & 3u) == 3u) {
-		internal::Panic(file, line, function, "Error logging error");
+		internal::panic(file, line, function, "Error logging error");
 		return;
 	}
 	LogLine logLine(internalPriority, file, line, function, message);
-	Log((logLine << ... << std::forward<T>(args)));
+	log((logLine << ... << std::forward<T>(args)));
 }
 
 /// @brief Waits until all currently available entries have been written.
 /// @details This function might block for a long time and its main purpose is to flush the log for testing.
 /// Use with care in your own code.
-void Flush();
+void flush();
 
 /// @brief End all logging. This MUST be the last function called.
-void Shutdown() noexcept;
+void shutdown() noexcept;
 
 }  // namespace llamalog
 
@@ -180,24 +180,24 @@ void Shutdown() noexcept;
 //
 
 /// @brief Emit a log line. @details Without the explicit variable `file_` the compiler does not reliably evaluate
-/// `#llamalog::GetFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
+/// `#llamalog::getFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
 /// @param priority_ The `Priority`.
 /// @param message_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
 #define LLAMALOG_LOG(priority_, message_, ...)                                      \
 	do {                                                                            \
-		constexpr const char* file_ = llamalog::GetFilename(__FILE__);              \
-		llamalog::Log(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
+		constexpr const char* file_ = llamalog::getFilename(__FILE__);              \
+		llamalog::log(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
 	} while (0)
 
 /// @brief Emit a log line for an internal message from the logger itself.
 /// @details Without the explicit variable `file_` the compiler does not reliably evaluate
-/// `#llamalog::GetFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
+/// `#llamalog::getFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
 /// @param priority_ The `Priority`.
 /// @param message_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
 #define LLAMALOG_INTERNAL_LOG(priority_, message_, ...)                                     \
 	do {                                                                                    \
-		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                      \
-		llamalog::LogInternal(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
+		constexpr const char* file_ = llamalog::getFilename(__FILE__);                      \
+		llamalog::logInternal(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
 	} while (0)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace`.
@@ -211,8 +211,8 @@ void Shutdown() noexcept;
 /// @return The value of @p result_.
 #define LOG_TRACE_RESULT(result_, message_, ...)                                                             \
 	[&](decltype(result_) result, const char* const function) -> decltype(result_) {                         \
-		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                       \
-		llamalog::Log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, result, __VA_ARGS__); \
+		constexpr const char* file_ = llamalog::getFilename(__FILE__);                                       \
+		llamalog::log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, result, __VA_ARGS__); \
 		return result;                                                                                       \
 	}(result_, __func__)
 
@@ -249,4 +249,4 @@ void Shutdown() noexcept;
 /// @brief Output a message when logging fails.
 /// @details The output is sent to `OutputDebugStringA`.
 /// @param message_ The message.
-#define LLAMALOG_PANIC(message_) llamalog::internal::Panic(__FILE__, __LINE__, __func__, message_)
+#define LLAMALOG_PANIC(message_) llamalog::internal::panic(__FILE__, __LINE__, __func__, message_)

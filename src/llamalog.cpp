@@ -133,9 +133,9 @@ public:
 	/// @param logLine The `LogLine` to add.
 	/// @return Returns `true` if we need to switch to next buffer after this operation.
 	/// @copyright Same as `Buffer::push` from NanoLog.
-	bool Push(const std::uint_fast32_t writeIndex, LogLine&& logLine) noexcept {
+	bool push(const std::uint_fast32_t writeIndex, LogLine&& logLine) noexcept {
 		Item* item = new (&reinterpret_cast<Item*>(m_buffer)[writeIndex]) Item(std::move(logLine));
-		item->logLine.GenerateTimestamp();
+		item->logLine.generateTimestamp();
 		m_writeState[writeIndex].store(true, std::memory_order_release);
 		return m_remaining.fetch_sub(1, std::memory_order_acquire) == 1;
 	}
@@ -147,7 +147,7 @@ public:
 	/// @param pLogLine A pointer to the adress where the `LogLine` receiving the next event shall be created.
 	/// @return Returns `true` if a value is available and has been created in @p pLogLine.
 	/// @copyright Same as `Buffer::try_pop` from NanoLog.
-	bool TryPop(const std::uint_fast32_t readIndex, LogLine* const pLogLine) noexcept {
+	bool tryPop(const std::uint_fast32_t readIndex, LogLine* const pLogLine) noexcept {
 		if (m_writeState[readIndex].load(std::memory_order_acquire)) {
 			Item& item = reinterpret_cast<Item*>(m_buffer)[readIndex];
 			new (pLogLine) LogLine(std::move(item.logLine));
@@ -213,7 +213,7 @@ public:
 	/// @copyright Same as `QueueBuffer::QueueBuffer` from NanoLog.
 	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): m_currentWriteBuffer is initialized by function call.
 	QueueBuffer() {
-		SetupNextWriteBuffer();
+		setupNextWriteBuffer();
 	}
 	QueueBuffer(const QueueBuffer&) = delete;  ///< @nocopyconstructor
 	QueueBuffer(QueueBuffer&&) = delete;       ///< @nomoveconstructor
@@ -228,18 +228,18 @@ public:
 	/// @brief Add a new entry to the queue.
 	/// @param logLine The new entry.
 	/// @copyright Same as `QueueBuffer::push` from NanoLog.
-	void Push(LogLine&& logLine) {
+	void push(LogLine&& logLine) {
 		const std::uint_fast32_t writeIndex = m_writeIndex.fetch_add(1, std::memory_order_relaxed);
 		if (writeIndex < Buffer::kBufferSize) {
-			if (m_currentWriteBuffer.load(std::memory_order_acquire)->Push(writeIndex, std::move(logLine))) {
-				SetupNextWriteBuffer();
+			if (m_currentWriteBuffer.load(std::memory_order_acquire)->push(writeIndex, std::move(logLine))) {
+				setupNextWriteBuffer();
 			}
 		} else {
 			// someone else is preparing a new buffer
 			while (m_writeIndex.load(std::memory_order_acquire) >= Buffer::kBufferSize) {
 				// empty
 			}
-			Push(std::move(logLine));
+			push(std::move(logLine));
 		}
 	}
 
@@ -247,9 +247,9 @@ public:
 	/// @param pLogLine A pointer to the adress where the `LogLine` receiving the next event shall be created.
 	/// @return `true` if data is available and a new `LogLine` has been created.
 	/// @copyright Same as `QueueBuffer::try_pop` from NanoLog.
-	bool TryPop(LogLine* const pLogLine) noexcept {
+	bool tryPop(LogLine* const pLogLine) noexcept {
 		if (!m_currentReadBuffer) {
-			m_currentReadBuffer = GetNextReadBuffer();
+			m_currentReadBuffer = getNextReadBuffer();
 		}
 
 		Buffer* const readBuffer = m_currentReadBuffer;
@@ -258,7 +258,7 @@ public:
 			return false;
 		}
 
-		if (readBuffer->TryPop(m_readIndex, pLogLine)) {
+		if (readBuffer->tryPop(m_readIndex, pLogLine)) {
 			++m_readIndex;
 			if (m_readIndex == Buffer::kBufferSize) {
 				m_readIndex = 0;
@@ -276,7 +276,7 @@ public:
 	/// @brief Waits until all currently available entries have been written.
 	/// @param wait A lambda expression called when waiting is required.
 	template <typename W>
-	void Flush(W&& wait) {
+	void flush(W&& wait) {
 		const Buffer* writeBuffer;
 		std::uint_fast32_t writeIndex;
 		while (true) {
@@ -315,7 +315,7 @@ public:
 private:
 	/// @brief Create a new `Buffer` for writing.
 	/// @copyright Same as `QueueBuffer::setup_next_write_buffer` from NanoLog.
-	void SetupNextWriteBuffer() {
+	void setupNextWriteBuffer() {
 		std::unique_ptr<Buffer> nextWriteBuffer = std::make_unique<Buffer>();
 		m_currentWriteBuffer.store(nextWriteBuffer.get(), std::memory_order_release);
 
@@ -327,7 +327,7 @@ private:
 	/// @brief Get next `Buffer` for reading.
 	/// @return The next `Buffer` or `nullptr` if none is currently available.
 	/// @copyright Same as `QueueBuffer::get_next_read_buffer` from NanoLog.
-	Buffer* GetNextReadBuffer() noexcept {
+	Buffer* getNextReadBuffer() noexcept {
 		SpinLock spinLock(m_flag);
 		return m_buffers.empty() ? nullptr : m_buffers.front().get();  // might throw, will crash, nothing we could do anyway
 	}
@@ -360,7 +360,7 @@ public:
 	/// @brief Create a new logger connected to a writer.
 	/// @copyright Derived from `NanoLogger::NanoLogger` from NanoLog.
 	explicit Logger()
-		: m_thread(&Logger::Pop, this) {
+		: m_thread(&Logger::pop, this) {
 		// empty
 	}
 
@@ -388,14 +388,14 @@ public:
 public:
 	/// @brief Start logging.
 	/// @details Moved from the constructor to a separate function to allow writers to be set before logging starts.
-	void Start() {
+	void start() {
 		if (!SetThreadPriority(m_thread.native_handle(), THREAD_PRIORITY_BELOW_NORMAL)) {
-			LLAMALOG_INTERNAL_WARN("Error configuring thread: {}", LastError());
+			LLAMALOG_INTERNAL_WARN("Error configuring thread: {}", lastError());
 		}
 		MEMORY_PRIORITY_INFORMATION mpi = {0};
 		mpi.MemoryPriority = MEMORY_PRIORITY_LOW;
 		if (!SetThreadInformation(m_thread.native_handle(), ThreadMemoryPriority, &mpi, sizeof(mpi))) {
-			LLAMALOG_INTERNAL_WARN("Error configuring thread: {}", LastError());
+			LLAMALOG_INTERNAL_WARN("Error configuring thread: {}", lastError());
 		}
 
 		m_state.store(State::kReady, std::memory_order_release);
@@ -404,27 +404,27 @@ public:
 
 	/// @brief Adds a new `LogWriter`.
 	/// @param logWriter The `LogWriter`.
-	void AddWriter(std::unique_ptr<LogWriter>&& logWriter) {
+	void addWriter(std::unique_ptr<LogWriter>&& logWriter) {
 		m_logWriters.push_back(std::move(logWriter));
 	}
 
 	/// @brief Adds a new `LogLine`.
 	/// @param logLine The `LogLine`.
 	/// @copyright Same as `NanoLogger::add` from NanoLog.
-	void AddLine(LogLine&& logLine) {
-		m_buffer.Push(std::move(logLine));
+	void addLine(LogLine&& logLine) {
+		m_buffer.push(std::move(logLine));
 		WakeConditionVariable(&m_wakeConsumer);
 	}
 
 	/// @brief Waits until all currently available entries have been written.
-	void Flush() {
+	void flush() {
 		AcquireSRWLockShared(&m_lock);
 		while (m_state.load(std::memory_order_acquire) == State::kInit) {
 			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, CONDITION_VARIABLE_LOCKMODE_SHARED);
 		}
-		m_buffer.Flush([this]() noexcept {
+		m_buffer.flush([this]() noexcept {
 			ReleaseSRWLockShared(&m_lock);
-			// do not use SleepConditionVariableSRW so that regular AddLine does not have to do a WakeAllConditionVariable
+			// do not use SleepConditionVariableSRW so that regular addLine does not have to do a WakeAllConditionVariable
 			Sleep(200);
 			AcquireSRWLockShared(&m_lock);
 		});
@@ -434,7 +434,7 @@ public:
 private:
 	/// @brief Main method of the writing thread.
 	/// @copyright Same as `NanoLogger::pop` from NanoLog.
-	void Pop() noexcept {
+	void pop() noexcept {
 		AcquireSRWLockExclusive(&m_lock);
 		while (m_state.load(std::memory_order_acquire) == State::kInit) {
 			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, 0);
@@ -445,18 +445,18 @@ private:
 		LogLine* const pLogLine = reinterpret_cast<LogLine*>(buffer);
 
 		while (m_state.load() == State::kReady) {
-			if (m_buffer.TryPop(pLogLine)) {
+			if (m_buffer.tryPop(pLogLine)) {
 				// release any resources of the log line as quickly as possible
 				auto finally = internal::finally([pLogLine]() noexcept {
 					pLogLine->~LogLine();
 				});
 
-				const Priority priority = pLogLine->GetPriority();
+				const Priority priority = pLogLine->priority();
 				g_currentPriority.store(static_cast<std::uint8_t>(priority), std::memory_order_release);
 				for (const std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
-					if (logWriter->IsLogged(priority)) {
+					if (logWriter->isLogged(priority)) {
 						try {
-							logWriter->Log(*pLogLine);
+							logWriter->log(*pLogLine);
 						} catch (const std::exception& e) {
 							try {
 								LLAMALOG_INTERNAL_ERROR("Error writing log: {}", e);
@@ -477,19 +477,19 @@ private:
 			}
 		}
 
-		// Pop and log all remaining entries
-		while (m_buffer.TryPop(pLogLine)) {
+		// pop and log all remaining entries
+		while (m_buffer.tryPop(pLogLine)) {
 			// release any resources of the log line as quickly as possible
 			auto finally = internal::finally([pLogLine]() noexcept {
 				pLogLine->~LogLine();
 			});
 
-			const Priority priority = pLogLine->GetPriority();
+			const Priority priority = pLogLine->priority();
 			g_currentPriority.store(static_cast<std::uint8_t>(priority), std::memory_order_release);
 			for (const std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
-				if (logWriter->IsLogged(priority)) {
+				if (logWriter->isLogged(priority)) {
 					try {
-						logWriter->Log(*pLogLine);
+						logWriter->log(*pLogLine);
 					} catch (const std::exception& e) {
 						try {
 							LLAMALOG_INTERNAL_ERROR("Error writing log: {}", e);
@@ -551,21 +551,21 @@ std::atomic<Logger*> g_pAtomicLogger;
 namespace internal {
 
 // Derived from `initialize` from NanoLog.
-void Initialize() {
+void initialize() {
 	g_pLogger = std::make_unique<Logger>();
 	g_pAtomicLogger.store(g_pLogger.get(), std::memory_order_release);
 }
 
-void Start() {
+void start() {
 	std::atomic_thread_fence(std::memory_order_release);
-	g_pAtomicLogger.load(std::memory_order_acquire)->Start();
+	g_pAtomicLogger.load(std::memory_order_acquire)->start();
 }
 
-Priority GetInternalPriority(const Priority priority) noexcept {
+Priority getInternalPriority(const Priority priority) noexcept {
 	return static_cast<Priority>(static_cast<std::uint8_t>(priority) | ((g_currentPriority.load(std::memory_order_acquire) & 3u) + 1));
 }
 
-void Panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
+void panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
 	// avoid anything that could cause an error
 	char msg[1024];
 	if (sprintf_s(msg, "PANIC: %s @ %s(%s:%" PRIu32 ")\n", message, function, file, line) < 0) {  // NOLINT(cppcoreguidelines-pro-type-vararg): sprintf_s as a last resort
@@ -577,25 +577,25 @@ void Panic(const char* const file, const std::uint32_t line, const char* const f
 
 }  // namespace internal
 
-void AddWriter(std::unique_ptr<LogWriter>&& writer) {
-	g_pAtomicLogger.load(std::memory_order_acquire)->AddWriter(std::move(writer));
+void addWriter(std::unique_ptr<LogWriter>&& writer) {
+	g_pAtomicLogger.load(std::memory_order_acquire)->addWriter(std::move(writer));
 }
 
 // Derived from `Log::operator==` from NanoLog.
-void Log(LogLine& logLine) {
-	g_pAtomicLogger.load(std::memory_order_acquire)->AddLine(std::move(logLine));
+void log(LogLine& logLine) {
+	g_pAtomicLogger.load(std::memory_order_acquire)->addLine(std::move(logLine));
 }
 
 // Derived from `Log::operator==` from NanoLog.
-void Log(LogLine&& logLine) {
-	g_pAtomicLogger.load(std::memory_order_acquire)->AddLine(std::move(logLine));
+void log(LogLine&& logLine) {
+	g_pAtomicLogger.load(std::memory_order_acquire)->addLine(std::move(logLine));
 }
 
-void Flush() {
-	g_pAtomicLogger.load(std::memory_order_acquire)->Flush();
+void flush() {
+	g_pAtomicLogger.load(std::memory_order_acquire)->flush();
 }
 
-void Shutdown() noexcept {
+void shutdown() noexcept {
 	// first delete the logger, the the reference. This allows the logger to log messages during shutdown
 	g_pLogger.reset();
 	g_pAtomicLogger.store(nullptr);

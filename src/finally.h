@@ -57,7 +57,7 @@ private:
 /// @param f The lambda expression. The expression MUST NOT throw any exceptions.
 /// @return The guard object.
 template <class F>
-inline FinalAction<F> finally(F&& f) noexcept {  // NOLINT(readability-identifier-naming): cf. GSL
+inline FinalAction<F> finally(F&& f) noexcept {
 	return FinalAction<F>(std::forward<F>(f));
 }
 

@@ -79,17 +79,17 @@ LogWriter::LogWriter(const Priority priority) noexcept
 }
 
 // Derived from `is_logged(LogLevel)` from NanoLog.
-bool LogWriter::IsLogged(const Priority priority) const noexcept {
+bool LogWriter::isLogged(const Priority priority) const noexcept {
 	return priority >= m_priority.load(std::memory_order_relaxed);
 }
 
 // Derived from `set_log_level(LogLevel)` from NanoLog.
-void LogWriter::SetPriority(const Priority priority) noexcept {
+void LogWriter::setPriority(const Priority priority) noexcept {
 	m_priority.store(priority, std::memory_order_release);
 }
 
 // Derived from `to_string(LogLevel)` from NanoLog.
-__declspec(noalias) _Ret_z_ char const* LogWriter::FormatPriority(const Priority priority) noexcept {
+__declspec(noalias) _Ret_z_ char const* LogWriter::formatPriority(const Priority priority) noexcept {
 	switch (priority) {
 	case Priority::kTrace:
 		return "TRACE";
@@ -105,7 +105,7 @@ __declspec(noalias) _Ret_z_ char const* LogWriter::FormatPriority(const Priority
 		return "FATAL";
 	default:
 		if (static_cast<std::uint8_t>(priority) & 3u) {
-			return FormatPriority(static_cast<Priority>(static_cast<std::uint8_t>(priority) & ~3u));
+			return formatPriority(static_cast<Priority>(static_cast<std::uint8_t>(priority) & ~3u));
 		}
 		assert(false);
 		return "-";
@@ -114,14 +114,14 @@ __declspec(noalias) _Ret_z_ char const* LogWriter::FormatPriority(const Priority
 }
 
 // Derived from `format_timestamp` from NanoLog.
-std::string LogWriter::FormatTimestamp(const FILETIME& timestamp) {
+std::string LogWriter::formatTimestamp(const FILETIME& timestamp) {
 	fmt::basic_memory_buffer<char, 23> buffer;
-	FormatTimestampTo(buffer, timestamp);
+	formatTimestampTo(buffer, timestamp);
 	return fmt::to_string(buffer);
 }
 
 template <typename Out>
-void LogWriter::FormatTimestampTo(Out& out, const FILETIME& timestamp) {
+void LogWriter::formatTimestampTo(Out& out, const FILETIME& timestamp) {
 	SYSTEMTIME st;
 	if (!FileTimeToSystemTime(&timestamp, &st)) {
 		st = {0};
@@ -147,22 +147,22 @@ inline void Append(Out& out, _In_z_ const char* sz) {
 //
 
 // Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
-void DebugWriter::Log(const LogLine& logLine) {
+void DebugWriter::log(const LogLine& logLine) {
 	fmt::basic_memory_buffer<char, 256> buffer;
 
-	FormatTimestampTo(buffer, logLine.GetTimestamp());
+	formatTimestampTo(buffer, logLine.timestamp());
 	buffer.push_back(' ');
-	Append(buffer, FormatPriority(logLine.GetPriority()));
-	fmt::format_to(buffer, " [{}] ", logLine.GetThreadId());
+	Append(buffer, formatPriority(logLine.priority()));
+	fmt::format_to(buffer, " [{}] ", logLine.threadId());
 
-	Append(buffer, logLine.GetFile());
-	fmt::format_to(buffer, ":{} ", logLine.GetLine());
-	Append(buffer, logLine.GetFunction());
+	Append(buffer, logLine.file());
+	fmt::format_to(buffer, ":{} ", logLine.line());
+	Append(buffer, logLine.function());
 	buffer.push_back(' ');
 
 	std::vector<fmt::format_context::format_arg> args;
-	logLine.CopyArgumentsTo(args);
-	fmt::vformat_to(buffer, fmt::to_string_view(logLine.GetPattern()),
+	logLine.copyArgumentsTo(args);
+	fmt::vformat_to(buffer, fmt::to_string_view(logLine.pattern()),
 					fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 	buffer.push_back('\n');
 	buffer.push_back('\0');
@@ -182,7 +182,7 @@ struct FrequencyInfo {
 	// NOLINTNEXTLINE(readability-identifier-naming): Public member does not have prefix even if constant.
 	const std::uint64_t breakpoint;  ///< @brief Modulus for calculation the next roll over.
 	// NOLINTNEXTLINE(readability-identifier-naming): Public member does not have prefix even if constant.
-	const char* const szPattern;  ///< @brief Pattern for variable part of filename.
+	const char* const pattern;  ///< @brief Pattern for variable part of filename.
 };
 
 /// @brief The data for the various `RollingFileWriter::Frequency` values.
@@ -211,7 +211,7 @@ RollingFileWriter::~RollingFileWriter() noexcept {
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (!CloseHandle(m_hFile)) {
 			try {
-				LLAMALOG_INTERNAL_WARN("Error closing log: {}", LastError());
+				LLAMALOG_INTERNAL_WARN("Error closing log: {}", lastError());
 			} catch (...) {
 				LLAMALOG_PANIC("Error closing log");
 			}
@@ -220,54 +220,54 @@ RollingFileWriter::~RollingFileWriter() noexcept {
 }
 
 // @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
-void RollingFileWriter::Log(const LogLine& logLine) {
-	const FILETIME timestamp = logLine.GetTimestamp();
+void RollingFileWriter::log(const LogLine& logLine) {
+	const FILETIME timestamp = logLine.timestamp();
 
 	// also try to roll when the file is invalid
 	if (CompareFileTime(&m_nextRollAt, &timestamp) != 1 || m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		RollFile(logLine);
+		rollFile(logLine);
 	}
 
 	fmt::basic_memory_buffer<char, 256> buffer;
-	FormatTimestampTo(buffer, timestamp);
+	formatTimestampTo(buffer, timestamp);
 	buffer.push_back(' ');
-	Append(buffer, FormatPriority(logLine.GetPriority()));
-	fmt::format_to(buffer, " [{}] ", logLine.GetThreadId());
+	Append(buffer, formatPriority(logLine.priority()));
+	fmt::format_to(buffer, " [{}] ", logLine.threadId());
 
-	Append(buffer, logLine.GetFile());
-	fmt::format_to(buffer, ":{} ", logLine.GetLine());
-	Append(buffer, logLine.GetFunction());
+	Append(buffer, logLine.file());
+	fmt::format_to(buffer, ":{} ", logLine.line());
+	Append(buffer, logLine.function());
 	buffer.push_back(' ');
 
 	std::vector<fmt::format_context::format_arg> args;
-	logLine.CopyArgumentsTo(args);
-	fmt::vformat_to(buffer, fmt::to_string_view(logLine.GetPattern()),
+	logLine.copyArgumentsTo(args);
+	fmt::vformat_to(buffer, fmt::to_string_view(logLine.pattern()),
 					fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 	buffer.push_back('\n');
 
-	DWORD cbWritten;
+	DWORD written;
 	const char* const __restrict data = buffer.data();
-	const std::size_t cbLength = buffer.size();
-	for (std::size_t cbPosition = 0; cbPosition < cbLength; cbPosition += cbWritten) {
+	const std::size_t length = buffer.size();
+	for (std::size_t position = 0; position < length; position += written) {
 		// it will work, however please contact me if you REALLY do log messages whose size does not fit in a DWORD... ;-)
-		const DWORD count = static_cast<DWORD>(std::min<std::size_t>(std::numeric_limits<DWORD>::max(), cbLength - cbPosition));
-		if (!WriteFile(m_hFile, data + cbPosition, count, &cbWritten, nullptr)) {
+		const DWORD count = static_cast<DWORD>(std::min<std::size_t>(std::numeric_limits<DWORD>::max(), length - position));
+		if (!WriteFile(m_hFile, data + position, count, &written, nullptr)) {
 			if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 				// no need to log if there is no file
-				LLAMALOG_INTERNAL_ERROR("Error writing {} bytes to log: {}", count, LastError());
+				LLAMALOG_INTERNAL_ERROR("Error writing {} bytes to log: {}", count, lastError());
 			}
 			// try the next event
 			return;
 		}
-		if (cbWritten == cbLength) {
+		if (written == length) {
 			// spare an addition for the most common case
 			break;
 		}
 	}
 }
 
-void RollingFileWriter::RollFile(const LogLine& logLine) {
-	const FILETIME timestamp = logLine.GetTimestamp();
+void RollingFileWriter::rollFile(const LogLine& logLine) {
+	const FILETIME timestamp = logLine.timestamp();
 
 	ULARGE_INTEGER nextRollAt;
 	nextRollAt.LowPart = timestamp.dwLowDateTime;
@@ -282,7 +282,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 
 	SYSTEMTIME time;
 	if (!FileTimeToSystemTime(&timestamp, &time)) {
-		LLAMALOG_INTERNAL_ERROR("Error rolling log: {}", LastError());
+		LLAMALOG_INTERNAL_ERROR("Error rolling log: {}", lastError());
 		// if we can't get the time, we can't roll the file, try again at next log event
 		return;
 	}
@@ -295,18 +295,18 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 	std::filesystem::path pattern(path);
 
 	fmt::basic_memory_buffer<char, 16> buffer;
-	fmt::format_to(buffer, frequencyInfo.szPattern, time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
+	fmt::format_to(buffer, frequencyInfo.pattern, time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
 	path += std::string_view(buffer.data(), buffer.size());
 	path += fileName.extension();
 
 	buffer.clear();
-	fmt::format_to(buffer, frequencyInfo.szPattern, "????", "??", "??", "??", "??", "??", "??");
+	fmt::format_to(buffer, frequencyInfo.pattern, "????", "??", "??", "??", "??", "??", "??");
 	pattern += std::string_view(buffer.data(), buffer.size());
 	pattern += fileName.extension();
 
 	if (m_hFile != INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (!CloseHandle(m_hFile)) {
-			LLAMALOG_INTERNAL_WARN("Error closing log: {}", LastError());
+			LLAMALOG_INTERNAL_WARN("Error closing log: {}", lastError());
 			// if we can't close the file, leave it open
 		}
 	}
@@ -324,9 +324,9 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 		do {
 			files.emplace_back(findData.cFileName);
 		} while (FindNextFileW(hFindResult, &findData));  // NOLINT(readability-implicit-bool-conversion): Compare BOOL in a condition.
-		const DWORD lastError = GetLastError();
-		if (lastError != ERROR_NO_MORE_FILES) {
-			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", ErrorCode{lastError});
+		const DWORD error = GetLastError();
+		if (error != ERROR_NO_MORE_FILES) {
+			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", ErrorCode{error});
 			// do not try to delete anything on find errors
 		} else {
 			std::sort(files.begin(), files.end());
@@ -334,13 +334,13 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 			for (std::uint32_t i = 0; i < len - std::min(len, m_maxFiles); ++i) {
 				std::filesystem::path file = std::filesystem::path(m_directory) / files[i];
 				if (!DeleteFileW(file.c_str())) {
-					LLAMALOG_INTERNAL_WARN("Error deleting log '{}': {}", files[i], LastError());
+					LLAMALOG_INTERNAL_WARN("Error deleting log '{}': {}", files[i], lastError());
 					// delete failed, but continue
 				}
 			}
 		}
 		if (!FindClose(hFindResult)) {
-			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", LastError());
+			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", lastError());
 			// just leave the handle open
 		}
 	}
@@ -348,7 +348,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
 	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
-		LLAMALOG_INTERNAL_ERROR("Error creating log: {}", LastError());
+		LLAMALOG_INTERNAL_ERROR("Error creating log: {}", lastError());
 		// no file created, try again for next message
 	}
 

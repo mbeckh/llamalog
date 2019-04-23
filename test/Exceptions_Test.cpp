@@ -46,7 +46,7 @@ public:
 }  // namespace llamalog::test
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::TracingArg& arg) {
-	return logLine.AddCustomArgument(arg);
+	return logLine.addCustomArgument(arg);
 }
 
 template <>
@@ -55,7 +55,7 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) {
 		return ctx.begin();
 	}
 
@@ -63,7 +63,7 @@ public:
 	/// @param arg A `llamalog::ErrorCode`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const llamalog::test::TracingArg& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	fmt::format_context::iterator format(const llamalog::test::TracingArg& arg, fmt::format_context& ctx) {
 		std::string_view sv("TracingArg");
 		*arg.pCalled = true;
 		return std::copy(sv.cbegin(), sv.cend(), ctx.out());
@@ -173,12 +173,12 @@ TEST(ExceptionsTest, ExceptionDetail_Formatting_FirstCalledWhenLogging) {
 	LogLine logLine = GetLogLine();
 	bool called = false;
 	try {
-		llamalog::Throw(std::range_error("testmsg"), "myfile.cpp", 15, "exfunc", "MyMessage {}", TracingArg(&called));
+		llamalog::throwException(std::range_error("testmsg"), "myfile.cpp", 15, "exfunc", "MyMessage {}", TracingArg(&called));
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
 	EXPECT_EQ(false, called);
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 	EXPECT_EQ(true, called);
 
 	EXPECT_EQ("Error caused by MyMessage TracingArg\n@ myfile.cpp:15", str);
@@ -192,7 +192,7 @@ TEST(ExceptionsTest, ExceptionDetail_Formatting_FirstCalledWhenLogging) {
 TEST(ExceptionsTest, stdcurrentexception_IsStdException_HasValue) {
 	std::exception_ptr eptr;
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception&) {
 		eptr = std::current_exception();
 	}
@@ -202,7 +202,7 @@ TEST(ExceptionsTest, stdcurrentexception_IsStdException_HasValue) {
 TEST(ExceptionsTest, stdcurrentexception_IsSystemError_HasValue) {
 	std::exception_ptr eptr;
 	try {
-		llamalog::Throw(SystemError(5, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(5, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception&) {
 		eptr = std::current_exception();
 	}
@@ -217,11 +217,11 @@ TEST(ExceptionsTest, stdcurrentexception_IsSystemError_HasValue) {
 TEST(ExceptionsTest, Throwexception_IsInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error caused by Exception 1.8 - test\n@ myfile.cpp:15", str);
 }
@@ -229,11 +229,11 @@ TEST(ExceptionsTest, Throwexception_IsInline_PrintValue) {
 TEST(ExceptionsTest, Throwexception_IsInlineAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error caused by Exception 1.8 - test\n@ myfile.cpp:15 yyy", str);
 }
@@ -241,11 +241,11 @@ TEST(ExceptionsTest, Throwexception_IsInlineAndExtendBuffer_PrintValue) {
 TEST(ExceptionsTest, Throwexception_IsHeap_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error caused by Exception 1.8 - xx\n@ myfile.cpp:15", str);
 }
@@ -253,11 +253,11 @@ TEST(ExceptionsTest, Throwexception_IsHeap_PrintValue) {
 TEST(ExceptionsTest, Throwexception_IsHeapAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error caused by Exception 1.8 - xx\n@ myfile.cpp:15 yyy", str);
 }
@@ -270,11 +270,11 @@ TEST(ExceptionsTest, Throwexception_IsHeapAndExtendBuffer_PrintValue) {
 TEST(ExceptionsTest, Throwsystemerror_IsInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - test: This is an error message\n@ myfile.cpp:15", str);
 }
@@ -282,11 +282,11 @@ TEST(ExceptionsTest, Throwsystemerror_IsInline_PrintValue) {
 TEST(ExceptionsTest, Throwsystemerror_IsInlineAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - test: This is an error message\n@ myfile.cpp:15 yyy", str);
 }
@@ -294,11 +294,11 @@ TEST(ExceptionsTest, Throwsystemerror_IsInlineAndExtendBuffer_PrintValue) {
 TEST(ExceptionsTest, Throwsystemerror_IsHeap_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - xx: This is an error message\n@ myfile.cpp:15", str);
 }
@@ -306,11 +306,11 @@ TEST(ExceptionsTest, Throwsystemerror_IsHeap_PrintValue) {
 TEST(ExceptionsTest, Throwsystemerror_IsHeapAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - xx: This is an error message\n@ myfile.cpp:15 yyy", str);
 }
@@ -323,11 +323,11 @@ TEST(ExceptionsTest, Throwsystemerror_IsHeapAndExtendBuffer_PrintValue) {
 TEST(ExceptionsTest, ThrowSystemError_IsInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - test: This is an error message\n@ myfile.cpp:15", str);
 }
@@ -335,11 +335,11 @@ TEST(ExceptionsTest, ThrowSystemError_IsInline_PrintValue) {
 TEST(ExceptionsTest, ThrowSystemError_IsInlineAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - test: This is an error message\n@ myfile.cpp:15 yyy", str);
 }
@@ -347,11 +347,11 @@ TEST(ExceptionsTest, ThrowSystemError_IsInlineAndExtendBuffer_PrintValue) {
 TEST(ExceptionsTest, ThrowSystemError_IsHeap_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - xx: This is an error message\n@ myfile.cpp:15", str);
 }
@@ -359,11 +359,11 @@ TEST(ExceptionsTest, ThrowSystemError_IsHeap_PrintValue) {
 TEST(ExceptionsTest, ThrowSystemError_IsHeapAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - xx: This is an error message\n@ myfile.cpp:15 yyy", str);
 }
@@ -380,7 +380,7 @@ TEST(ExceptionsTest, throwexception_IsPlain_PrintValue) {
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error caused by testmsg", str);
 }
@@ -393,7 +393,7 @@ TEST(ExceptionsTest, throwexception_IsPlainAndExtendBuffer_PrintValue) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
 
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error caused by testmsg yyy", str);
 }
@@ -410,7 +410,7 @@ TEST(ExceptionsTest, throwsystemerror_IsPlain_PrintValue) {
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by testmsg: This is an error message", str);
 }
@@ -423,7 +423,7 @@ TEST(ExceptionsTest, throwsystemerror_IsPlainAndExtendBuffer_PrintValue) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
 
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by testmsg: This is an error message yyy", str);
 }
@@ -440,7 +440,7 @@ TEST(ExceptionsTest, throwSystemError_IsPlain_PrintValue) {
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by testmsg: This is an error message", str);
 }
@@ -453,7 +453,7 @@ TEST(ExceptionsTest, throwSystemError_IsPlainAndExtendBuffer_PrintValue) {
 		logLine << "Error" << e << " " + std::string(1024, 'y');
 	}
 
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error TestError (7=Error) caused by testmsg: This is an error message yyy", str);
 }
@@ -468,11 +468,11 @@ TEST(ExceptionsTest, throwSystemError_IsPlainAndExtendBuffer_PrintValue) {
 TEST(ExceptionsTest, Pattern_IsTWithexceptionStack_PrintTimestamp) {
 	LogLine logLine = GetLogLine("{:%T}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d"));
 }
@@ -480,11 +480,11 @@ TEST(ExceptionsTest, Pattern_IsTWithexceptionStack_PrintTimestamp) {
 TEST(ExceptionsTest, Pattern_IsTWithexceptionHeap_PrintTimestamp) {
 	LogLine logLine = GetLogLine("{:%T}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d"));
 }
@@ -496,7 +496,7 @@ TEST(ExceptionsTest, Pattern_IsTWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -507,11 +507,11 @@ TEST(ExceptionsTest, Pattern_IsTWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IstWithexceptionStack_PrintThread) {
 	LogLine logLine = GetLogLine("{:%t}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("\\d+"));
 }
@@ -519,11 +519,11 @@ TEST(ExceptionsTest, Pattern_IstWithexceptionStack_PrintThread) {
 TEST(ExceptionsTest, Pattern_IstWithexceptionHeap_PrintThread) {
 	LogLine logLine = GetLogLine("{:%t}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("\\d+"));
 }
@@ -535,7 +535,7 @@ TEST(ExceptionsTest, Pattern_IstWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -546,11 +546,11 @@ TEST(ExceptionsTest, Pattern_IstWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IsFWithexceptionStack_PrintFile) {
 	LogLine logLine = GetLogLine("{:%F}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "myfile.cpp");
 }
@@ -558,11 +558,11 @@ TEST(ExceptionsTest, Pattern_IsFWithexceptionStack_PrintFile) {
 TEST(ExceptionsTest, Pattern_IsFWithexceptionHeap_PrintFile) {
 	LogLine logLine = GetLogLine("{:%F}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "myfile.cpp");
 }
@@ -574,7 +574,7 @@ TEST(ExceptionsTest, Pattern_IsFWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -585,11 +585,11 @@ TEST(ExceptionsTest, Pattern_IsFWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IsLWithexceptionStack_PrintLine) {
 	LogLine logLine = GetLogLine("{:%L}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "15");
 }
@@ -597,11 +597,11 @@ TEST(ExceptionsTest, Pattern_IsLWithexceptionStack_PrintLine) {
 TEST(ExceptionsTest, Pattern_IsLWithexceptionHeap_PrintLine) {
 	LogLine logLine = GetLogLine("{:%L}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "15");
 }
@@ -613,7 +613,7 @@ TEST(ExceptionsTest, Pattern_IsLWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -624,11 +624,11 @@ TEST(ExceptionsTest, Pattern_IsLWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IsfWithexceptionStack_PrintFunction) {
 	LogLine logLine = GetLogLine("{:%f}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "exfunc");
 }
@@ -636,11 +636,11 @@ TEST(ExceptionsTest, Pattern_IsfWithexceptionStack_PrintFunction) {
 TEST(ExceptionsTest, Pattern_IsfWithexceptionHeap_PrintFunction) {
 	LogLine logLine = GetLogLine("{:%f}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "exfunc");
 }
@@ -652,7 +652,7 @@ TEST(ExceptionsTest, Pattern_IsfWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -663,11 +663,11 @@ TEST(ExceptionsTest, Pattern_IsfWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IslWithexceptionStack_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
@@ -675,11 +675,11 @@ TEST(ExceptionsTest, Pattern_IslWithexceptionStack_PrintLogMessge) {
 TEST(ExceptionsTest, Pattern_IslWithexceptionStackAndNoMessage_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -687,11 +687,11 @@ TEST(ExceptionsTest, Pattern_IslWithexceptionStackAndNoMessage_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IslWithexceptionHeap_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
@@ -703,7 +703,7 @@ TEST(ExceptionsTest, Pattern_IslWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -711,11 +711,11 @@ TEST(ExceptionsTest, Pattern_IslWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IslWithsystemerrorStack_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
@@ -723,11 +723,11 @@ TEST(ExceptionsTest, Pattern_IslWithsystemerrorStack_PrintLogMessge) {
 TEST(ExceptionsTest, Pattern_IslWithsystemerrorStackAndNoMessage_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -735,11 +735,11 @@ TEST(ExceptionsTest, Pattern_IslWithsystemerrorStackAndNoMessage_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IslWithsystemerrorHeap_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
@@ -751,7 +751,7 @@ TEST(ExceptionsTest, Pattern_IslWithsystemerrorPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -759,11 +759,11 @@ TEST(ExceptionsTest, Pattern_IslWithsystemerrorPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IslWithSystemErrorStack_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
@@ -771,11 +771,11 @@ TEST(ExceptionsTest, Pattern_IslWithSystemErrorStack_PrintLogMessge) {
 TEST(ExceptionsTest, Pattern_IslWithSystemErrorStackAndNoMessage_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -783,11 +783,11 @@ TEST(ExceptionsTest, Pattern_IslWithSystemErrorStackAndNoMessage_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IslWithSystemErrorHeap_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
@@ -799,7 +799,7 @@ TEST(ExceptionsTest, Pattern_IslWithSystemErrorPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -810,11 +810,11 @@ TEST(ExceptionsTest, Pattern_IslWithSystemErrorPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IswWithexceptionStack_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
@@ -822,11 +822,11 @@ TEST(ExceptionsTest, Pattern_IswWithexceptionStack_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IswWithexceptionStackAndNomessage_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "testmsg");
 }
@@ -834,11 +834,11 @@ TEST(ExceptionsTest, Pattern_IswWithexceptionStackAndNomessage_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IswWithexceptionHeap_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
@@ -850,7 +850,7 @@ TEST(ExceptionsTest, Pattern_IswWithexceptionPlain_PrintWhat) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "testmsg");
 }
@@ -858,11 +858,11 @@ TEST(ExceptionsTest, Pattern_IswWithexceptionPlain_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IswWithsystemerrorStack_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test: This is an error message");
 }
@@ -871,11 +871,11 @@ TEST(ExceptionsTest, Pattern_IswWithsystemerrorStack_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IswWithsystemerrorStackAndNoMessage_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "testmsg: This is an error message");
 }
@@ -883,11 +883,11 @@ TEST(ExceptionsTest, Pattern_IswWithsystemerrorStackAndNoMessage_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IswWithsystemerrorHeap_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test: This is an error message");
 }
@@ -899,7 +899,7 @@ TEST(ExceptionsTest, Pattern_IswWithsystemerrorPlain_PrintWhat) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "testmsg: This is an error message");
 }
@@ -907,11 +907,11 @@ TEST(ExceptionsTest, Pattern_IswWithsystemerrorPlain_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IswWithSystemErrorStack_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test: This is an error message");
 }
@@ -919,11 +919,11 @@ TEST(ExceptionsTest, Pattern_IswWithSystemErrorStack_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IswWithSystemErrorStackAndNomessage_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "testmsg: This is an error message");
 }
@@ -931,11 +931,11 @@ TEST(ExceptionsTest, Pattern_IswWithSystemErrorStackAndNomessage_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IswWithSystemErrorHeap_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "Exception 1.8 - test: This is an error message");
 }
@@ -947,7 +947,7 @@ TEST(ExceptionsTest, Pattern_IswWithSystemErrorPlain_PrintWhat) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "testmsg: This is an error message");
 }
@@ -958,11 +958,11 @@ TEST(ExceptionsTest, Pattern_IswWithSystemErrorPlain_PrintWhat) {
 TEST(ExceptionsTest, Pattern_IscWithexceptionStack_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -970,11 +970,11 @@ TEST(ExceptionsTest, Pattern_IscWithexceptionStack_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IscWithexceptionHeap_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -986,7 +986,7 @@ TEST(ExceptionsTest, Pattern_IscWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -994,11 +994,11 @@ TEST(ExceptionsTest, Pattern_IscWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IscWithsystemerrorStack_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "7");
 }
@@ -1006,11 +1006,11 @@ TEST(ExceptionsTest, Pattern_IscWithsystemerrorStack_PrintCodeValue) {
 TEST(ExceptionsTest, Pattern_IscWithsystemerrorHeap_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "7");
 }
@@ -1022,7 +1022,7 @@ TEST(ExceptionsTest, Pattern_IscWithsystemerrorPlain_PrintCodeValue) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "7");
 }
@@ -1030,11 +1030,11 @@ TEST(ExceptionsTest, Pattern_IscWithsystemerrorPlain_PrintCodeValue) {
 TEST(ExceptionsTest, Pattern_IscWithSystemErrorStack_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "7");
 }
@@ -1042,11 +1042,11 @@ TEST(ExceptionsTest, Pattern_IscWithSystemErrorStack_PrintCodeValue) {
 TEST(ExceptionsTest, Pattern_IscWithSystemErrorHeap_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "7");
 }
@@ -1058,7 +1058,7 @@ TEST(ExceptionsTest, Pattern_IscWithSystemErrorPlain_PrintCodeValue) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "7");
 }
@@ -1069,11 +1069,11 @@ TEST(ExceptionsTest, Pattern_IscWithSystemErrorPlain_PrintCodeValue) {
 TEST(ExceptionsTest, Pattern_IsCWithexceptionStack_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -1081,11 +1081,11 @@ TEST(ExceptionsTest, Pattern_IsCWithexceptionStack_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IsCWithexceptionHeap_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -1097,7 +1097,7 @@ TEST(ExceptionsTest, Pattern_IsCWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -1105,11 +1105,11 @@ TEST(ExceptionsTest, Pattern_IsCWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IsCWithsystemerrorStack_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "TestError");
 }
@@ -1117,11 +1117,11 @@ TEST(ExceptionsTest, Pattern_IsCWithsystemerrorStack_PrintCategory) {
 TEST(ExceptionsTest, Pattern_IsCWithsystemerrorHeap_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "TestError");
 }
@@ -1133,7 +1133,7 @@ TEST(ExceptionsTest, Pattern_IsCWithsystemerrorPlain_PrintCategory) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "TestError");
 }
@@ -1141,11 +1141,11 @@ TEST(ExceptionsTest, Pattern_IsCWithsystemerrorPlain_PrintCategory) {
 TEST(ExceptionsTest, Pattern_IsCWithSystemErrorStack_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "TestError");
 }
@@ -1153,11 +1153,11 @@ TEST(ExceptionsTest, Pattern_IsCWithSystemErrorStack_PrintCategory) {
 TEST(ExceptionsTest, Pattern_IsCWithSystemErrorHeap_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "TestError");
 }
@@ -1169,7 +1169,7 @@ TEST(ExceptionsTest, Pattern_IsCWithSystemErrorPlain_PrintCategory) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "TestError");
 }
@@ -1180,11 +1180,11 @@ TEST(ExceptionsTest, Pattern_IsCWithSystemErrorPlain_PrintCategory) {
 TEST(ExceptionsTest, Pattern_IsmWithexceptionStack_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -1192,11 +1192,11 @@ TEST(ExceptionsTest, Pattern_IsmWithexceptionStack_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IsmWithexceptionHeap_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -1208,7 +1208,7 @@ TEST(ExceptionsTest, Pattern_IsmWithexceptionPlain_PrintNothing) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "");
 }
@@ -1216,11 +1216,11 @@ TEST(ExceptionsTest, Pattern_IsmWithexceptionPlain_PrintNothing) {
 TEST(ExceptionsTest, Pattern_IsmWithsystemerrorStack_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "This is an error message");
 }
@@ -1228,11 +1228,11 @@ TEST(ExceptionsTest, Pattern_IsmWithsystemerrorStack_PrintErrorMessage) {
 TEST(ExceptionsTest, Pattern_IsmWithsystemerrorHeap_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "This is an error message");
 }
@@ -1244,7 +1244,7 @@ TEST(ExceptionsTest, Pattern_IsmWithsystemerrorPlain_PrintErrorMessage) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "This is an error message");
 }
@@ -1252,11 +1252,11 @@ TEST(ExceptionsTest, Pattern_IsmWithsystemerrorPlain_PrintErrorMessage) {
 TEST(ExceptionsTest, Pattern_IsmWithSystemErrorStack_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "This is an error message");
 }
@@ -1264,11 +1264,11 @@ TEST(ExceptionsTest, Pattern_IsmWithSystemErrorStack_PrintErrorMessage) {
 TEST(ExceptionsTest, Pattern_IsmWithSystemErrorHeap_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "This is an error message");
 }
@@ -1280,7 +1280,7 @@ TEST(ExceptionsTest, Pattern_IsmWithSystemErrorPlain_PrintErrorMessage) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(str, "This is an error message");
 }
@@ -1292,11 +1292,11 @@ TEST(ExceptionsTest, Pattern_IsmWithSystemErrorPlain_PrintErrorMessage) {
 TEST(ExceptionsTest, DefaultPattern_Isexception_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("Error Exception 1\\.8 - test @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
@@ -1304,11 +1304,11 @@ TEST(ExceptionsTest, DefaultPattern_Isexception_PrintDefault) {
 TEST(ExceptionsTest, DefaultPattern_IsexceptionAndNoMessage_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("Error testmsg @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
@@ -1320,7 +1320,7 @@ TEST(ExceptionsTest, DefaultPattern_IsexceptionPlain_PrintDefault) {
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error testmsg", str);
 }
@@ -1328,11 +1328,11 @@ TEST(ExceptionsTest, DefaultPattern_IsexceptionPlain_PrintDefault) {
 TEST(ExceptionsTest, DefaultPattern_Issystemerror_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("Error Exception 1\\.8 - test: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
@@ -1340,11 +1340,11 @@ TEST(ExceptionsTest, DefaultPattern_Issystemerror_PrintDefault) {
 TEST(ExceptionsTest, DefaultPattern_IssystemerrorAndNoMessage_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("Error testmsg: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
@@ -1356,7 +1356,7 @@ TEST(ExceptionsTest, DefaultPattern_IssystemerrorPlain_PrintDefault) {
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error testmsg: This is an error message (TestError 7)", str);
 }
@@ -1364,11 +1364,11 @@ TEST(ExceptionsTest, DefaultPattern_IssystemerrorPlain_PrintDefault) {
 TEST(ExceptionsTest, DefaultPattern_IsSystemError_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("Error Exception 1\\.8 - test: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
@@ -1376,11 +1376,11 @@ TEST(ExceptionsTest, DefaultPattern_IsSystemError_PrintDefault) {
 TEST(ExceptionsTest, DefaultPattern_IsSystemErrorAndNoMessage_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex("Error testmsg: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
@@ -1392,7 +1392,7 @@ TEST(ExceptionsTest, DefaultPattern_SystemErrorPlain_PrintDefault) {
 	} catch (const std::exception& e) {
 		logLine << "Error" << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error testmsg: This is an error message (TestError 7)", str);
 }
@@ -1405,11 +1405,11 @@ TEST(ExceptionsTest, DefaultPattern_SystemErrorPlain_PrintDefault) {
 TEST(ExceptionsTest, Encoding_exceptionHasHexChar_PrintEscaped) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg\xE2"), "myfile.cpp", 15, "exfunc", "Exception\xE5 {} - {}", 1.8, L"test\xE3");
+		llamalog::throwException(std::invalid_argument("testmsg\xE2"), "myfile.cpp", 15, "exfunc", "Exception\xE5 {} - {}", 1.8, L"test\xE3");
 	} catch (const std::exception& e) {
 		logLine << "Error\xE4" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error\\xE4 caused by Exception\xE5 1.8 - test\\xC3\\xA3\n@ myfile.cpp:15", str);
 }
@@ -1421,7 +1421,7 @@ TEST(ExceptionsTest, Encoding_exceptionPlainHasHexChar_PrintEscaped) {
 	} catch (const std::exception& e) {
 		logLine << "Error\xE4" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error\\xE4 caused by testmsg\\xE2", str);
 }
@@ -1433,7 +1433,7 @@ TEST(ExceptionsTest, Encoding_systemerrorPlainHasHexChar_PrintEscaped) {
 	} catch (const std::exception& e) {
 		logLine << "Error\xE4" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error\\xE4 TestError\\xE0 (7=Error\\xE4\xE6) caused by testmsg\\xE2: This is an error message\\xE1", str);
 }
@@ -1445,7 +1445,7 @@ TEST(ExceptionsTest, Encoding_SystemErrorPlainHasHexChar_PrintEscaped) {
 	} catch (const std::exception& e) {
 		logLine << "Error\xE4" << e << "";
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("Error\\xE4 TestError\\xE0 (7=Error\\xE4\xE6) caused by testmsg\\xE2: This is an error message\\xE1", str);
 }
@@ -1457,11 +1457,11 @@ TEST(ExceptionsTest, Encoding_SystemErrorPlainHasHexChar_PrintEscaped) {
 TEST(ExceptionsTest, SubFormat_Isexception_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("myfile.cpp Exception 1.8 - test", str);
 }
@@ -1473,7 +1473,7 @@ TEST(ExceptionsTest, SubFormat_IsexceptionPlain_PrintValue) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("testmsg", str);
 }
@@ -1481,11 +1481,11 @@ TEST(ExceptionsTest, SubFormat_IsexceptionPlain_PrintValue) {
 TEST(ExceptionsTest, SubFormat_Issystemerror_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
-		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("TestError myfile.cpp Exception 1.8 - test: This is an error message", str);
 }
@@ -1497,7 +1497,7 @@ TEST(ExceptionsTest, SubFormat_IssystemerrorPlain_PrintValue) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("TestError testmsg: This is an error message", str);
 }
@@ -1505,11 +1505,11 @@ TEST(ExceptionsTest, SubFormat_IssystemerrorPlain_PrintValue) {
 TEST(ExceptionsTest, SubFormat_IsSystemError_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
-		llamalog::Throw(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+		llamalog::throwException(SystemError(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("TestError myfile.cpp Exception 1.8 - test: This is an error message", str);
 }
@@ -1521,7 +1521,7 @@ TEST(ExceptionsTest, SubFormat_IsSystemErrorPlain_PrintValue) {
 	} catch (const std::exception& e) {
 		logLine << e;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("TestError testmsg: This is an error message", str);
 }

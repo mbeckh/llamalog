@@ -164,7 +164,7 @@ public:
 };
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::TriviallyCopyable& arg) {
-	return logLine.AddCustomArgument(arg);
+	return logLine.addCustomArgument(arg);
 }
 
 
@@ -183,7 +183,7 @@ public:
 };
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::MoveConstructible& arg) {
-	return logLine.AddCustomArgument(arg);
+	return logLine.addCustomArgument(arg);
 }
 
 
@@ -202,15 +202,15 @@ public:
 };
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::CopyConstructible& arg) {
-	return logLine.AddCustomArgument(arg);
+	return logLine.addCustomArgument(arg);
 }
 
 namespace llamalog::test {
 
 namespace {
 
-LogLine GetLogLine(const char* const szPattern = "{}") {
-	return LogLine(Priority::kDebug, "file.cpp", 99, "myfunction()", szPattern);
+LogLine GetLogLine(const char* const pattern = "{}") {
+	return LogLine(Priority::kDebug, "file.cpp", 99, "myfunction()", pattern);
 }
 
 }  // namespace
@@ -227,7 +227,7 @@ TEST_F(CustomTypesTest, TriviallyCopyable_IsValue_PrintValue) {
 			EXPECT_EQ(1, g_instancesCreated);
 		}
 		EXPECT_EQ(1, g_instancesCreated);
-		const std::string str = logLine.GetLogMessage();
+		const std::string str = logLine.message();
 
 		// everything is just copied as raw binary data
 		EXPECT_EQ("T_1_7", str);
@@ -264,7 +264,7 @@ TEST_F(CustomTypesTest, MoveConstructible_IsValue_PrintValue) {
 		EXPECT_EQ(1, g_copyConstructorCalled);
 		EXPECT_EQ(1, g_moveConstructorCalled);
 		EXPECT_EQ(2, g_destructorCalled);
-		const std::string str = logLine.GetLogMessage();
+		const std::string str = logLine.message();
 
 		EXPECT_EQ("M_3_7", str);  // no need to print string of x'es
 		EXPECT_EQ(3, g_instancesCreated);
@@ -306,7 +306,7 @@ TEST_F(CustomTypesTest, CopyConstructible_IsValue_PrintValue) {
 		EXPECT_EQ(2, g_copyConstructorCalled);
 		EXPECT_EQ(0, g_moveConstructorCalled);
 		EXPECT_EQ(2, g_destructorCalled);
-		const std::string str = logLine.GetLogMessage();
+		const std::string str = logLine.message();
 
 		EXPECT_EQ("C_3_7", str);  // no need to print string of x'es
 		EXPECT_EQ(3, g_instancesCreated);

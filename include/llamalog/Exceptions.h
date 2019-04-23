@@ -49,7 +49,7 @@ protected:
 	/// @brief Create the formatted error message with placeholder replacement.
 	/// @param pCode An optional error code used to add an error message to the result.
 	/// @return The formatted error mesasge.
-	_Ret_z_ const char* what(_In_opt_ const std::error_code* pCode) const noexcept;  // NOLINT(readability-identifier-naming): cf. std::exception::what()
+	_Ret_z_ const char* what(_In_opt_ const std::error_code* pCode) const noexcept;
 
 protected:
 	LogLine m_logLine;                       ///< @brief Additional information for logging.
@@ -79,7 +79,7 @@ public:
 public:
 	/// @brief Get the system error code (as in `std::system_error::code()`).
 	/// @result The error code.
-	const std::error_code& code() const noexcept {  // NOLINT(readability-identifier-naming): cf. std::system_error::code()
+	const std::error_code& code() const noexcept {
 		return m_code;
 	}
 
@@ -100,7 +100,7 @@ private:
 /// @brief A namespace for functions which must exist in the headers but which users of the library SHALL NOT call directly.
 namespace internal {
 
-/// @brief The actual exception class thrown by `#Throw`.
+/// @brief The actual exception class thrown by `#throwException`.
 /// @tparam The type of the exception.
 template <typename E>
 class ExceptionDetail final : public E
@@ -132,8 +132,8 @@ public:
 	/// @brief Override `std::exception::what()` to allow formatted output.
 	/// @details Delegates to `BaseException::what()` for placeholder replacement if a message is present.
 	/// @return The formatted error mesasge.
-	_Ret_z_ const char* what() const noexcept override {  // NOLINT(readability-identifier-naming): cf. std::exception::what()
-		return m_logLine.GetPattern() ? What() : E::what();
+	_Ret_z_ const char* what() const noexcept override {
+		return m_logLine.pattern() ? doWhat() : E::what();
 	}
 
 private:
@@ -142,7 +142,7 @@ private:
 	/// @tparam X Required for SFINAE.
 	/// @return The formatted error message.
 	template <typename X = E, std::enable_if_t<!std::is_base_of_v<std::system_error, X> && !std::is_base_of_v<SystemError, X>, int> = 0>
-	_Ret_z_ const char* What() const noexcept {
+	_Ret_z_ const char* doWhat() const noexcept {
 		return BaseException::what(nullptr);
 	}
 
@@ -151,7 +151,7 @@ private:
 	/// @tparam X Required for SFINAE.
 	/// @return The formatted error message.
 	template <typename X = E, std::enable_if_t<std::is_base_of_v<std::system_error, X> || std::is_base_of_v<SystemError, X>, int> = 0>
-	_Ret_z_ const char* What() const noexcept {
+	_Ret_z_ const char* doWhat() const noexcept {
 		return BaseException::what(&E::code());
 	}
 };
@@ -168,7 +168,7 @@ private:
 /// @param line The source code line where the exception happened.
 /// @param function The function where the exception happened.
 template <typename E, typename... T>
-[[noreturn]] void Throw(E&& exception, _In_z_ const char* __restrict const file, std::uint32_t line, _In_z_ const char* __restrict const function) {
+[[noreturn]] void throwException(E&& exception, _In_z_ const char* __restrict const file, std::uint32_t line, _In_z_ const char* __restrict const function) {
 	throw internal::ExceptionDetail<E>(std::forward<E>(exception), file, line, function, nullptr);
 }
 
@@ -183,14 +183,14 @@ template <typename E, typename... T>
 /// @param message An additional logging message which MAY use {fmt} pattern syntax.
 /// @param args Arguments for the logging message.
 template <typename E, typename... T>
-[[noreturn]] void Throw(E&& exception, _In_z_ const char* __restrict const file, std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
+[[noreturn]] void throwException(E&& exception, _In_z_ const char* __restrict const file, std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
 	throw internal::ExceptionDetail<E>(std::forward<E>(exception), file, line, function, message, std::forward<T>(args)...);
 }
 
 /// @brief Get the additional logging context of an exception if it exists.
 /// @note The function MUST be called from within a catch block to get the object, elso `nullptr` is returned.
 /// @return The logging context if it exists, else `nullptr`.
-_Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexcept;
+_Ret_maybenull_ const BaseException* getCurrentExceptionAsBaseException() noexcept;
 
 }  // namespace llamalog
 
@@ -201,10 +201,10 @@ _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexce
 /// @brief Throw a new exception with additional logging context.
 /// @details The variable arguments MAY provide a literal message string and optional arguments.
 /// @param exception_ The exception to throw.
-#define LLAMALOG_THROW(exception_, ...)                                           \
-	do {                                                                          \
-		constexpr const char* __restrict file_ = llamalog::GetFilename(__FILE__); \
-		llamalog::Throw(exception_, file_, __LINE__, __func__, __VA_ARGS__);      \
+#define LLAMALOG_THROW(exception_, ...)                                               \
+	do {                                                                              \
+		constexpr const char* __restrict file_ = llamalog::getFilename(__FILE__);     \
+		llamalog::throwException(exception_, file_, __LINE__, __func__, __VA_ARGS__); \
 	} while (0)
 
 /// @brief Throw a new exception with additional logging context (alias for `LLAMALOG_THROW`).

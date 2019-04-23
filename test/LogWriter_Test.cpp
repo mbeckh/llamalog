@@ -111,16 +111,16 @@ public:
 	}
 
 protected:
-	void Log(const LogLine& logLine) final {
+	void log(const LogLine& logLine) final {
 		fmt::basic_memory_buffer<char, 256> buffer;
 		fmt::format_to(buffer, "{} {} [{}] {}:{} {} {}\n",
-					   FormatTimestamp(logLine.GetTimestamp()),
-					   FormatPriority(logLine.GetPriority()),
-					   logLine.GetThreadId(),
-					   logLine.GetFile(),
-					   logLine.GetLine(),
-					   logLine.GetFunction(),
-					   logLine.GetLogMessage());
+					   formatTimestamp(logLine.timestamp()),
+					   formatPriority(logLine.priority()),
+					   logLine.threadId(),
+					   logLine.file(),
+					   logLine.line(),
+					   logLine.function(),
+					   logLine.message());
 		m_out << std::string_view(buffer.data(), buffer.size());
 		++m_lines;
 	}
@@ -153,10 +153,10 @@ TEST_F(LogWriterTest, Log_HourlyNoOldFiles_CreateFileDeleteNone) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kHourly, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(1, m_lines);
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} DEBUG [^\\n]+ Test\\n"));
@@ -179,10 +179,10 @@ TEST_F(LogWriterTest, Log_EverySecondNoOldFiles_CreateFileDeleteNone) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kEverySecond, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(1, m_lines);
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} DEBUG [^\\n]+ Test\\n"));
@@ -205,10 +205,10 @@ TEST_F(LogWriterTest, Log_MonthlyNoOldFiles_CreateFileDeleteNone) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kMonthly, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(1, m_lines);
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} DEBUG [^\\n]+ Test\\n"));
@@ -242,10 +242,10 @@ TEST_F(LogWriterTest, Log_EveryMinuteThreeOldFiles_CreateFileDeleteNone) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kEveryMinute, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(1, m_lines);
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} DEBUG [^\\n]+ Test\\n"));
@@ -287,10 +287,10 @@ TEST_F(LogWriterTest, Log_DailyFiveOldFiles_CreateFileDeleteTwo) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(1, m_lines);
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} DEBUG [^\\n]+ Test\\n"));
@@ -305,13 +305,13 @@ TEST_F(LogWriterTest, FileTimeToSystemTime_Error_LogErrorAndDoNotCreateFile) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(3, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]*RollFile Error rolling log: [^\\n]+ \\(50\\)\\n){2}"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]*rollFile Error rolling log: [^\\n]+ \\(50\\)\\n){2}"));
 }
 
 TEST_F(LogWriterTest, CreateFile_TemporaryErrorDuringRollFile_LogError) {
@@ -327,15 +327,15 @@ TEST_F(LogWriterTest, CreateFile_TemporaryErrorDuringRollFile_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::flush();
 
-	llamalog::Shutdown();
+	llamalog::shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* RollFile Error creating log: [^\\n]+ \\(80\\)\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* rollFile Error creating log: [^\\n]+ \\(80\\)\\n"));
 }
 
 TEST_F(LogWriterTest, CreateFile_PermanentErrorDuringRollFile_LogError) {
@@ -347,15 +347,15 @@ TEST_F(LogWriterTest, CreateFile_PermanentErrorDuringRollFile_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::flush();
 
-	llamalog::Shutdown();
+	llamalog::shutdown();
 
 	EXPECT_EQ(3, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]* RollFile Error creating log: [^\\n]+ \\(80\\)\\n){2}"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]* rollFile Error creating log: [^\\n]+ \\(80\\)\\n){2}"));
 }
 
 TEST_F(LogWriterTest, WriteFile_WritePartially_WriteChunked) {
@@ -378,15 +378,15 @@ TEST_F(LogWriterTest, WriteFile_WritePartially_WriteChunked) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::flush();
 
-	llamalog::Shutdown();
+	llamalog::shutdown();
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex(std::string("[0-9:. -]{23} DEBUG \\[[0-9]+\\] ") + llamalog::GetFilename(__FILE__) + ":99 TestBody Test\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex(std::string("[0-9:. -]{23} DEBUG \\[[0-9]+\\] ") + llamalog::getFilename(__FILE__) + ":99 TestBody Test\\n"));
 }
 
 TEST_F(LogWriterTest, WriteFile_TemporaryError_LogError) {
@@ -406,15 +406,15 @@ TEST_F(LogWriterTest, WriteFile_TemporaryError_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::flush();
 
-	llamalog::Shutdown();
+	llamalog::shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* Log Error writing [0-9]+ bytes to log: [^\\n]+ \\(1392\\)\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} ERROR [^\\n]* log Error writing [0-9]+ bytes to log: [^\\n]+ \\(1392\\)\\n"));
 }
 
 TEST_F(LogWriterTest, WriteFile_PermanentError_LogError) {
@@ -434,15 +434,15 @@ TEST_F(LogWriterTest, WriteFile_PermanentError_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::flush();
 
-	llamalog::Shutdown();
+	llamalog::shutdown();
 
 	EXPECT_EQ(3, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]* Log Error writing [0-9]+ bytes to log: [^\\n]+ \\(1392\\)\\n){2}"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n([0-9:. -]{23} ERROR [^\\n]* log Error writing [0-9]+ bytes to log: [^\\n]+ \\(1392\\)\\n){2}"));
 }
 
 TEST_F(LogWriterTest, CloseHandle_ErrorDuringDestruct_KeepSilent) {
@@ -456,12 +456,12 @@ TEST_F(LogWriterTest, CloseHandle_ErrorDuringDestruct_KeepSilent) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::flush();
 
-	llamalog::Shutdown();
+	llamalog::shutdown();
 
 	// silent, error happens after closing the writer
 	EXPECT_EQ(1, m_lines);
@@ -484,17 +484,17 @@ TEST_F(LogWriterTest, CloseHandle_ErrorDuringRollFile_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kEverySecond, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
 	Sleep(1500);
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::flush();
 
-	llamalog::Shutdown();
+	llamalog::shutdown();
 
 	EXPECT_EQ(3, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error closing log: [^\\n]+ \\(50\\)\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* rollFile Error closing log: [^\\n]+ \\(50\\)\\n"));
 }
 
 TEST_F(LogWriterTest, FindFirstFileEx_ErrorDuringRollFile_LogError) {
@@ -516,13 +516,13 @@ TEST_F(LogWriterTest, FindFirstFileEx_ErrorDuringRollFile_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: [^\\n]+ \\(87\\)\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* rollFile Error deleting log: [^\\n]+ \\(87\\)\\n"));
 }
 
 TEST_F(LogWriterTest, FindNextFileW_ErrorDuringRollFile_LogError) {
@@ -546,13 +546,13 @@ TEST_F(LogWriterTest, FindNextFileW_ErrorDuringRollFile_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: [^\\n]+ \\(87\\)\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* rollFile Error deleting log: [^\\n]+ \\(87\\)\\n"));
 }
 
 TEST_F(LogWriterTest, FindClose_ErrorDuringRollFile_LogError) {
@@ -576,13 +576,13 @@ TEST_F(LogWriterTest, FindClose_ErrorDuringRollFile_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 0u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log: [^\\n]+ \\(6\\)\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* rollFile Error deleting log: [^\\n]+ \\(6\\)\\n"));
 }
 
 TEST_F(LogWriterTest, DeleteFileW_ErrorDuringRollFile_LogError) {
@@ -611,13 +611,13 @@ TEST_F(LogWriterTest, DeleteFileW_ErrorDuringRollFile_LogError) {
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 0u);
-	llamalog::Initialize(std::move(writer), std::move(fileWriter));
+	llamalog::initialize(std::move(writer), std::move(fileWriter));
 
-	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Shutdown();
+	llamalog::log(Priority::kDebug, getFilename(__FILE__), 99, __func__, "{}", "Test");
+	llamalog::shutdown();
 
 	EXPECT_EQ(2, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log 'll_test.2019-01-05.log': [^\\n]+ \\(2\\)\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* rollFile Error deleting log 'll_test.2019-01-05.log': [^\\n]+ \\(2\\)\\n"));
 }
 
 }  // namespace llamalog::test

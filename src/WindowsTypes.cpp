@@ -31,15 +31,15 @@ limitations under the License.
 
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::ErrorCode arg) {
-	return logLine.AddCustomArgument(arg);
+	return logLine.addCustomArgument(arg);
 }
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT& arg) {
-	return logLine.AddCustomArgument(arg);
+	return logLine.addCustomArgument(arg);
 }
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT& arg) {
-	return logLine.AddCustomArgument(arg);
+	return logLine.addCustomArgument(arg);
 }
 
 
@@ -136,7 +136,7 @@ fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorC
 // Specializations of fmt::formatter
 //
 
-fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(const fmt::format_parse_context& ctx) noexcept {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(const fmt::format_parse_context& ctx) noexcept {
 	auto it = ctx.begin();
 	if (it != ctx.end() && *it == ':') {
 		++it;
@@ -148,13 +148,13 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 	return end;
 }
 
-fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {
 	llamalog::FormatSystemErrorCodeTo(arg.code, ctx);
 	return fmt::format_to(ctx.out(), " ({})", arg.code);
 }
 
 
-fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::format_parse_context& ctx) {
 	auto it = ctx.begin();
 	if (it != ctx.end() && *it == ':') {
 		++it;
@@ -172,12 +172,12 @@ fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::form
 	return end;
 }
 
-fmt::format_context::iterator fmt::formatter<POINT>::format(const POINT& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+fmt::format_context::iterator fmt::formatter<POINT>::format(const POINT& arg, fmt::format_context& ctx) {
 	return fmt::format_to(ctx.out(), m_format, arg.x, arg.y);
 }
 
 
-fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::format_parse_context& ctx) {
 	auto it = ctx.begin();
 	if (it != ctx.end() && *it == ':') {
 		++it;
@@ -199,6 +199,6 @@ fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::forma
 	return end;
 }
 
-fmt::format_context::iterator fmt::formatter<RECT>::format(const RECT& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+fmt::format_context::iterator fmt::formatter<RECT>::format(const RECT& arg, fmt::format_context& ctx) {
 	return fmt::format_to(ctx.out(), m_format, arg.left, arg.top, arg.right, arg.bottom);
 }

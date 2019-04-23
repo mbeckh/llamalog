@@ -32,7 +32,7 @@ struct ErrorCode {
 
 /// @brief Get the result of `GetLastError()` as an `ErrorCode` suitable as a formatter argument.
 /// @return A newly created `ErrorCode` structure.
-inline ErrorCode LastError() noexcept {
+inline ErrorCode lastError() noexcept {
 	return ErrorCode{GetLastError()};
 }
 
@@ -96,13 +96,13 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) noexcept;  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) noexcept;
 
 	/// @brief Format the `llamalog::ErrorCode`.
 	/// @param arg A `llamalog::ErrorCode`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const llamalog::ErrorCode& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	fmt::format_context::iterator format(const llamalog::ErrorCode& arg, fmt::format_context& ctx);
 };
 
 
@@ -113,13 +113,13 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);
 
 	/// @brief Format the `POINT`.
 	/// @param arg A `POINT`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const POINT& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	fmt::format_context::iterator format(const POINT& arg, fmt::format_context& ctx);
 
 private:
 	std::string m_format;  ///< The format pattern for all four values.
@@ -133,13 +133,13 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);
 
 	/// @brief Format the `RECT`.
 	/// @param arg A `RECT`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const RECT& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use naming from fmt.
+	fmt::format_context::iterator format(const RECT& arg, fmt::format_context& ctx);
 
 private:
 	std::string m_format;  ///< The format pattern for all four values.

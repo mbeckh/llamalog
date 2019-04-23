@@ -79,7 +79,7 @@ CheckOptions:
   - key:   readability-identifier-naming.EnumConstantPrefix
     value: 'k'
   - key:   readability-identifier-naming.FunctionCase
-    value: 'CamelCase'
+    value: 'camelBack'
   - key:   readability-identifier-naming.NamespaceCase
     value: 'lower_case'
   - key:   readability-identifier-naming.VariableCase
@@ -149,7 +149,9 @@ CheckOptions:
   - key:   readability-identifier-naming.TemplateParameterCase
     value: 'CamelCase'
   - key:   readability-identifier-naming.ValueTemplateParameterCase
-    value: 'camelBack'
+    value: 'CamelCase'
+  - key:   readability-identifier-naming.ValueTemplateParameterPrefix
+    value: 'k'
   - key:   readability-identifier-naming.ParameterPackCase
     value: 'camelBack'
   - key:   readability-implicit-bool-conversion.AllowIntegerConditions

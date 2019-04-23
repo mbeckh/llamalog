@@ -32,8 +32,8 @@ namespace llamalog::test {
 
 namespace {
 
-LogLine GetLogLine(const char* const szPattern = "{}") {
-	return LogLine(Priority::kDebug, "file.cpp", 99, "myfunction()", szPattern);
+LogLine GetLogLine(const char* const pattern = "{}") {
+	return LogLine(Priority::kDebug, "file.cpp", 99, "myfunction()", pattern);
 }
 
 }  // namespace
@@ -59,7 +59,7 @@ TEST(WindowsTypesTest, ErrorCode_Log_PrintMessage) {
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
 }
@@ -68,9 +68,9 @@ TEST(WindowsTypesTest, ErrorCode_LastError_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
 		SetLastError(ERROR_ACCESS_DENIED);
-		logLine << LastError();
+		logLine << lastError();
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
 }
@@ -86,7 +86,7 @@ TEST(WindowsTypesTest, LARGEINTEGER_Log_PrintValue) {
 		const LARGE_INTEGER arg = {{0xFFu, -1L}};
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("-4294967041", str);
 }
@@ -102,7 +102,7 @@ TEST(WindowsTypesTest, ULARGEINTEGER_Log_PrintValue) {
 		const ULARGE_INTEGER arg = {{0xFFu, 0xFFu}};
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("1095216660735", str);
 }
@@ -120,7 +120,7 @@ TEST(WindowsTypesTest, HINSTANCE_LogValue_PrintValue) {
 		sprintf_s(sz, "0x%" PRIxPTR, reinterpret_cast<uintptr_t>(arg));
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ(sz, str);
 }
@@ -131,7 +131,7 @@ TEST(WindowsTypesTest, HINSTANCE_LogNullptr_PrintZero) {
 		const HINSTANCE arg = nullptr;  // NOLINT(misc-misplaced-const): We DO want a const variable.
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("0x0", str);
 }
@@ -166,7 +166,7 @@ TEST(WindowsTypesTest, POINT_LogValue_PrintValue) {
 		const POINT arg = {-10, 20};
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("(-10, 20)", str);
 }
@@ -176,7 +176,7 @@ TEST(WindowsTypesTest, POINT_LogInline_PrintValue) {
 	{
 		logLine << POINT{-10, 20};
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("(-10, 20)", str);
 }
@@ -187,7 +187,7 @@ TEST(WindowsTypesTest, POINT_LogValuePrintPadded_PrintPadded) {
 		const POINT arg = {-10, 20};
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("(-010,  020)", str);
 }
@@ -213,7 +213,7 @@ TEST(WindowsTypesTest, RECT_LogValue_PrintValue) {
 		const RECT arg = {-10, 20, 30, 40};
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("((-10, 20), (30, 40))", str);
 }
@@ -224,7 +224,7 @@ TEST(WindowsTypesTest, RECT_LogValuePrintPadded_PrintPadded) {
 		const RECT arg = {-10, 20, 30, 40};
 		logLine << arg;
 	}
-	const std::string str = logLine.GetLogMessage();
+	const std::string str = logLine.message();
 
 	EXPECT_EQ("((-010,  020), ( 030,  040))", str);
 }
