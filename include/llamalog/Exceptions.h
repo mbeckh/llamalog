@@ -133,26 +133,10 @@ public:
 	/// @details Delegates to `BaseException::what()` for placeholder replacement if a message is present.
 	/// @return The formatted error mesasge.
 	_Ret_z_ const char* what() const noexcept override {
-		return m_logLine.pattern() ? doWhat() : E::what();
-	}
-
-private:
-	/// @brief Helper for `#what()` because virtual functions cannot be templates.
-	/// @details This is the version used for regular exceptions.
-	/// @tparam X Required for SFINAE.
-	/// @return The formatted error message.
-	template <typename X = E, std::enable_if_t<!std::is_base_of_v<std::system_error, X> && !std::is_base_of_v<SystemError, X>, int> = 0>
-	_Ret_z_ const char* doWhat() const noexcept {
+		if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<SystemError, E>) {
+			return BaseException::what(&E::code());
+		}
 		return BaseException::what(nullptr);
-	}
-
-	/// @brief Helper for `#what()` because virtual functions cannot be templates.
-	/// @details This is the version used for exceptions having a `std::error_code`.
-	/// @tparam X Required for SFINAE.
-	/// @return The formatted error message.
-	template <typename X = E, std::enable_if_t<std::is_base_of_v<std::system_error, X> || std::is_base_of_v<SystemError, X>, int> = 0>
-	_Ret_z_ const char* doWhat() const noexcept {
-		return BaseException::what(&E::code());
 	}
 };
 
