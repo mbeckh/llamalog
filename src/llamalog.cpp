@@ -45,10 +45,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 #include "llamalog/llamalog.h"
 
-#include "finally.h"
 #include "llamalog/LogLine.h"
 #include "llamalog/LogWriter.h"
 #include "llamalog/WindowsTypes.h"
+#include "llamalog/finally.h"
 
 #include <windows.h>
 
@@ -447,7 +447,7 @@ private:
 		while (m_state.load() == State::kReady) {
 			if (m_buffer.tryPop(pLogLine)) {
 				// release any resources of the log line as quickly as possible
-				auto finally = internal::finally([pLogLine]() noexcept {
+				auto finally = llamalog::finally([pLogLine]() noexcept {
 					pLogLine->~LogLine();
 				});
 
@@ -480,7 +480,7 @@ private:
 		// pop and log all remaining entries
 		while (m_buffer.tryPop(pLogLine)) {
 			// release any resources of the log line as quickly as possible
-			auto finally = internal::finally([pLogLine]() noexcept {
+			auto finally = llamalog::finally([pLogLine]() noexcept {
 				pLogLine->~LogLine();
 			});
 

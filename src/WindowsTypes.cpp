@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "llamalog/WindowsTypes.h"
 
-#include "finally.h"
 #include "llamalog/CustomTypes.h"
 #include "llamalog/LogLine.h"
+#include "llamalog/finally.h"
 #include "llamalog/llamalog.h"
 
 #include <fmt/core.h>
@@ -113,7 +113,7 @@ fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorC
 	if (lastError == ERROR_INSUFFICIENT_BUFFER) {
 		wchar_t* pBuffer = nullptr;
 
-		auto finally = llamalog::internal::finally([&pBuffer]() noexcept {
+		auto finally = llamalog::finally([&pBuffer]() noexcept {
 			LocalFree(pBuffer);
 		});
 		// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API

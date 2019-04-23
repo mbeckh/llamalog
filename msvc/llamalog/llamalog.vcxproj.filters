@@ -59,8 +59,8 @@
     <ClInclude Include="..\..\include\llamalog\Exceptions.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\finally.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="..\..\include\llamalog\finally.h">
+      <Filter>Header Files\llamalog</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

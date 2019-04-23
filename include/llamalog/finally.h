@@ -15,16 +15,15 @@ limitations under the License.
 */
 
 /// @file
-
 #pragma once
-
-#include <fmt/core.h>
 
 #include <utility>
 
-namespace llamalog::internal {
+namespace llamalog {
 
-/// @brief Helper class for running code during stack unwinding (similar to finally from the gsl, but without copy or move).
+namespace internal {
+
+/// @brief Helper class for running code during stack unwinding (similar to finally from the gsl).
 /// @tparam F The type of the lambda called during stack unwinding.
 template <class F>
 class FinalAction final {
@@ -37,11 +36,20 @@ public:
 	}
 
 	FinalAction(const FinalAction&) = delete;  ///< @nocopyconstructor
-	FinalAction(FinalAction&&) = delete;       ///< @nomoveconstructor
 
-	/// @brief Calls the lambda.
+	/// @brief Transfers control of the lambda to this instance.
+	/// @param oth The previous owner.
+	FinalAction(FinalAction<F>&& that) noexcept
+		: m_f{std::move(that.m_f)}
+		, m_active{that.m_active} {
+		that.m_active = false;
+	}
+
+	/// @brief Calls the lambda if still owned by this instance.
 	~FinalAction() noexcept {
-		m_f();
+		if (m_active) {
+			m_f();
+		}
 	}
 
 public:
@@ -49,16 +57,19 @@ public:
 	FinalAction& operator=(FinalAction&&) = delete;       ///< @nomoveoperator
 
 private:
-	F m_f;  ///< @brief Our lambda.
+	F m_f;                 ///< @brief Our lambda.
+	bool m_active = true;  ///< @brief `true` if this instance is the owner of the lambda.
 };
+
+}  // namespace internal
+
 
 /// @brief Run code during stack unwinding.
 /// @tparam F The (auto-deducted) type of the lambda expression.
 /// @param f The lambda expression. The expression MUST NOT throw any exceptions.
-/// @return The guard object.
 template <class F>
-inline FinalAction<F> finally(F&& f) noexcept {
-	return FinalAction<F>(std::forward<F>(f));
+inline internal::FinalAction<F> finally(F&& f) noexcept {
+	return internal::FinalAction<F>(std::forward<F>(f));
 }
 
-}  // namespace llamalog::internal
+}  // namespace llamalog

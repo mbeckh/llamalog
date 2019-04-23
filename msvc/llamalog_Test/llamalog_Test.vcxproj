@@ -32,6 +32,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\test\CustomTypes_Test.cpp" />
     <ClCompile Include="..\..\test\Exceptions_Test.cpp" />
+    <ClCompile Include="..\..\test\finally_Test.cpp" />
     <ClCompile Include="..\..\test\LogLine_Test.cpp" />
     <ClCompile Include="..\..\test\llamalog_Test.cpp" />
     <ClCompile Include="..\..\test\LogWriter_Test.cpp" />

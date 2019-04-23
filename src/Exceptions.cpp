@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "llamalog/Exceptions.h"
 
-#include "finally.h"
 #include "llamalog/LogLine.h"
 #include "llamalog/WindowsTypes.h"
+#include "llamalog/finally.h"
 #include "llamalog/llamalog.h"
 
 #include <fmt/format.h>
