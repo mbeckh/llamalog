@@ -85,7 +85,7 @@ _Ret_z_ const char* SystemError::what() const noexcept {
 		return m_what.get();
 	}
 	try {
-		const std::size_t messageLen = m_message ? strlen(m_message) : 0;
+		const std::size_t messageLen = m_message ? std::strlen(m_message) : 0;
 
 		const std::string errorMessage = m_code.message();
 		const std::size_t errorMessageLen = errorMessage.length();
@@ -94,7 +94,7 @@ _Ret_z_ const char* SystemError::what() const noexcept {
 		const std::size_t len = offset + errorMessageLen;
 		m_what = std::shared_ptr<char[]>(new char[len + 1]);
 		char* const ptr = m_what.get();
-		if (m_message && messageLen) {
+		if (messageLen) {
 			std::memcpy(ptr, m_message, messageLen * sizeof(char));
 			ptr[messageLen] = ':';
 			ptr[messageLen + 1] = ' ';
