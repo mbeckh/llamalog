@@ -75,33 +75,6 @@ std::atomic_uint8_t g_currentPriority;
 /// @brief A lock free buffer supporting parallel readers and writers.
 /// @copyright Derived from `class Buffer` from NanoLog.
 class Buffer final {
-private:
-	/// @brief Wrapper for the actual data to support move operation.
-	/// @copyright Same as `struct Buffer::Item` from NanoLog.
-	class Item {
-	public:
-		/// @brief Move a `LogLine` into the structure.
-		/// @param logLine A `LogLine`.
-		explicit Item(LogLine&& logLine) noexcept
-			: logLine(std::move(logLine)) {
-			// empty
-		}
-		Item(const Item&) = delete;  ///< @nocopyconstructor
-		Item(Item&&) = delete;       ///< @nomoveconstructor
-		~Item() = default;
-
-	public:
-		Item& operator=(const Item&) = delete;  ///< @noassignmentoperator
-		Item& operator=(Item&&) = delete;       ///< @nomoveoperator
-
-	public:
-		/// @copyright Same as `Buffer::Item::logline` from NanoLog.
-		LogLine logLine;  ///< @brief The log entry.
-	};
-
-	static_assert(sizeof(Item) == sizeof(LogLine), "size of Buffer::Item is not equal to size of LogLine");
-	static_assert((sizeof(Item) & (sizeof(Item) - 1)) == 0, "size of Buffer::Item is not a power of 2");
-
 public:
 	/// @brief Initialize the internal structures.
 	/// @copyright A modified version of `Buffer::Buffer` from NanoLog.
@@ -120,7 +93,7 @@ public:
 	~Buffer() noexcept {
 		const std::uint_fast32_t writeCount = kBufferSize - m_remaining.load();
 		for (std::uint_fast32_t i = 0; i < writeCount; ++i) {
-			reinterpret_cast<Item*>(m_buffer)[i].~Item();
+			reinterpret_cast<LogLine*>(m_buffer)[i].~LogLine();
 		}
 	}
 
@@ -134,8 +107,8 @@ public:
 	/// @return Returns `true` if we need to switch to next buffer after this operation.
 	/// @copyright Same as `Buffer::push` from NanoLog.
 	bool push(const std::uint_fast32_t writeIndex, LogLine&& logLine) noexcept {
-		Item* item = new (&reinterpret_cast<Item*>(m_buffer)[writeIndex]) Item(std::move(logLine));
-		item->logLine.generateTimestamp();
+		LogLine* pLogLine = new (&reinterpret_cast<LogLine*>(m_buffer)[writeIndex]) LogLine(std::move(logLine));
+		pLogLine->generateTimestamp();
 		m_writeState[writeIndex].store(true, std::memory_order_release);
 		return m_remaining.fetch_sub(1, std::memory_order_acquire) == 1;
 	}
@@ -149,8 +122,8 @@ public:
 	/// @copyright Same as `Buffer::try_pop` from NanoLog.
 	bool tryPop(const std::uint_fast32_t readIndex, LogLine* const pLogLine) noexcept {
 		if (m_writeState[readIndex].load(std::memory_order_acquire)) {
-			Item& item = reinterpret_cast<Item*>(m_buffer)[readIndex];
-			new (pLogLine) LogLine(std::move(item.logLine));
+			LogLine& logLine = reinterpret_cast<LogLine*>(m_buffer)[readIndex];
+			new (pLogLine) LogLine(std::move(logLine));
 			return true;
 		}
 		return false;
@@ -161,12 +134,13 @@ public:
 	/// @details The size of `m_buffer` is just under 8 MB (to account for the two atomic fields.
 	/// @copyright Same as `Buffer::size` from NanoLog.
 	static constexpr std::uint_fast32_t kBufferSize =
-		(8388608 - sizeof(std::atomic_uint_fast32_t) - sizeof(std::atomic_bool)) / sizeof(Item);
+		(8388608 - sizeof(std::atomic_uint_fast32_t) - sizeof(std::atomic_bool)) / sizeof(LogLine);
 
 private:
+	static_assert((sizeof(LogLine) & (sizeof(LogLine) - 1)) == 0, "size of LogLine is not a power of 2");
 	/// @copyright Same as `Buffer::m_buffer` from NanoLog, but on stack instead of heap.
-	std::byte m_buffer[kBufferSize * sizeof(Item)];  ///< @brief The buffer holding the log events.
-	std::atomic_uint_fast32_t m_remaining;           ///< The number of free entries in this buffer.
+	std::byte m_buffer[kBufferSize * sizeof(LogLine)];  ///< @brief The buffer holding the log events.
+	std::atomic_uint_fast32_t m_remaining;              ///< The number of free entries in this buffer.
 
 	/// @copyright Same as `Buffer::m_write_state` from NanoLog, but on stack instead of heap.
 	std::atomic_bool m_writeState[kBufferSize];  ///< @brief `true` if this entry has been written.
