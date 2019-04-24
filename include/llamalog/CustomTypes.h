@@ -131,7 +131,7 @@ template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>,
 LogLine& LogLine::addCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
-	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression): comparison with constant is intended
+	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression, readability-magic-numbers): comparison with constant is intended
 	writeTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::createFormatArg<X>));
 	return *this;
 }

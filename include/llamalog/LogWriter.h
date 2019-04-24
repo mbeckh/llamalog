@@ -48,7 +48,7 @@ public:
 	/// @param priority The `#Priority` of the `LogLine`.
 	/// @return `true` if this writer logs events with the respective priority.
 	/// @copyright Derived from `is_logged(LogLevel)` from NanoLog.
-	bool isLogged(Priority priority) const noexcept;
+	[[nodiscard]] bool isLogged(Priority priority) const noexcept;
 
 	/// @brief Dynamically change the `#Priority`
 	/// @param priority The new `#Priority` for this writer.
@@ -64,13 +64,13 @@ public:
 	/// @param priority A `#Priority`.
 	/// @return One of `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` - or `-` for unknown priorities.
 	/// @copyright Derived from `to_string(LogLevel)` from NanoLog.
-	static __declspec(noalias) _Ret_z_ const char* formatPriority(Priority priority) noexcept;
+	[[nodiscard]] static __declspec(noalias) _Ret_z_ const char* formatPriority(Priority priority) noexcept;
 
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS`.
 	/// @details In case of an error, `0000-00-00 00:00:00.000` is returned.
 	/// @param timestamp The timestamp.
 	/// @return The timestamp as a string.
-	static std::string formatTimestamp(const FILETIME& timestamp);
+	[[nodiscard]] static std::string formatTimestamp(const FILETIME& timestamp);
 
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS` to a target buffer.
 	/// @details The buffer MUST be of type `fmt::basic_memory_buffer`.
@@ -124,7 +124,8 @@ public:
 	/// @param fileName File name for the log files.
 	/// @param frequency The interval at which a new the writer starts a new file.
 	/// @param maxFiles The maximum number of old log files which should be kept in @p directory.
-	RollingFileWriter(Priority priority, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = 60) noexcept;
+	RollingFileWriter(Priority priority, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = 60) noexcept;  // NOLINT(readability-magic-numbers)
+
 	RollingFileWriter(const RollingFileWriter&) = delete;  ///< @nocopyconstructor
 	RollingFileWriter(RollingFileWriter&&) = delete;       ///< @nomoveconstructor
 	~RollingFileWriter() noexcept;

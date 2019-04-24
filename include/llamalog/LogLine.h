@@ -59,6 +59,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 /// @brief The size of a log line in bytes.
 /// @details Defined as a macro to allow redefinition for different use cases.
 /// @note The value MUST be a power of 2, elso compilation will fail.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Use a macro to allow override in build settings.
 #define LLAMALOG_LOGLINE_SIZE 256
 #endif
 
@@ -252,7 +253,7 @@ public:
 public:
 	/// @brief Get the timestamp for the log event.
 	/// @return The timestamp.
-	const FILETIME& timestamp() const noexcept {
+	[[nodiscard]] const FILETIME& timestamp() const noexcept {
 		return m_timestamp;
 	}
 
@@ -264,37 +265,37 @@ public:
 
 	/// @brief Get the priority.
 	/// @return The priority.
-	Priority priority() const noexcept {
+	[[nodiscard]] Priority priority() const noexcept {
 		return m_priority;
 	}
 
 	/// @brief Get the thread if.
 	/// @return The thread id.
-	DWORD threadId() const noexcept {
+	[[nodiscard]] DWORD threadId() const noexcept {
 		return m_threadId;
 	}
 
 	/// @brief Get the name of the file.
 	/// @return The file name.
-	_Ret_z_ const char* file() const noexcept {
+	[[nodiscard]] _Ret_z_ const char* file() const noexcept {
 		return m_file;
 	}
 
 	/// @brief Get the source code line.
 	/// @return The line number.
-	std::uint32_t line() const noexcept {
+	[[nodiscard]] std::uint32_t line() const noexcept {
 		return m_line;
 	}
 
 	/// @brief Get the name of the function.
 	/// @return The function name.
-	_Ret_z_ const char* function() const noexcept {
+	[[nodiscard]] _Ret_z_ const char* function() const noexcept {
 		return m_function;
 	}
 
 	/// @brief Get the unformatted log message, i.e. before patter replacement.
 	/// @return The message pattern.
-	_Ret_z_ const char* pattern() const noexcept {
+	[[nodiscard]] _Ret_z_ const char* pattern() const noexcept {
 		return m_message;
 	}
 
@@ -309,7 +310,7 @@ public:
 	/// @brief Returns the formatted log message. @note The name `GetMessage` would conflict with the function from the
 	/// Windows API having the same name.
 	/// @return The log message.
-	std::string message() const;
+	[[nodiscard]] std::string message() const;
 
 	/// @brief Copy a log argument of a custom type to the argument buffer.
 	/// @details This function handles types which are trivially copyable.
@@ -339,18 +340,18 @@ private:
 	/// @brief Get the argument buffer for writing.
 	/// @return The start of the buffer.
 	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
-	_Ret_notnull_ __declspec(restrict) std::byte* buffer() noexcept;
+	[[nodiscard]] _Ret_notnull_ __declspec(restrict) std::byte* buffer() noexcept;
 
 	/// @brief Get the argument buffer.
 	/// @return The start of the buffer.
 	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
-	_Ret_notnull_ __declspec(restrict) const std::byte* buffer() const noexcept;
+	[[nodiscard]] _Ret_notnull_ __declspec(restrict) const std::byte* buffer() const noexcept;
 
 	/// @brief Get the current position in the argument buffer ensuring that enough space exists for the next argument.
 	/// @param additionalBytes The number of bytes that will be appended.
 	/// @return The next write position.
 	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
-	_Ret_notnull_ __declspec(restrict) std::byte* getWritePosition(Size additionalBytes);
+	[[nodiscard]] _Ret_notnull_ __declspec(restrict) std::byte* getWritePosition(Size additionalBytes);
 
 	/// @brief Copy an argument to the buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the bytes of the value.
@@ -408,7 +409,7 @@ private:
 	/// @param align The alignment requirement of the type.
 	/// @param functionTable A pointer to the `internal::FunctionTable`.
 	/// @return An adress where to copy the current argument.
-	__declspec(restrict) std::byte* writeNonTriviallyCopyable(Size objectSize, Align align, _In_ const void* functionTable);
+	[[nodiscard]] __declspec(restrict) std::byte* writeNonTriviallyCopyable(Size objectSize, Align align, _In_ const void* functionTable);
 
 private:
 	///< @brief The stack buffer used for small payloads.

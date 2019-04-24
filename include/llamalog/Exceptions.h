@@ -54,7 +54,19 @@ protected:
 	/// @return The formatted error mesasge.
 	_Ret_z_ const char* what(_In_opt_ const std::error_code* pCode) const noexcept;
 
-protected:
+	/// @brief Allow access to the `LogLine` by base classes.
+	/// @return The log line.
+	[[nodiscard]] LogLine& logLine() noexcept {
+		return m_logLine;
+	}
+
+	/// @brief Allow access to the `LogLine` by base classes.
+	/// @return The log line.
+	[[nodiscard]] const LogLine& logLine() const noexcept {
+		return m_logLine;
+	}
+
+private:
 	LogLine m_logLine;                       ///< @brief Additional information for logging.
 	mutable std::shared_ptr<char[]> m_what;  ///< @brief The error message. @details Uses a `std::shared_ptr` because exceptions must be copyable.
 
@@ -82,21 +94,18 @@ public:
 public:
 	/// @brief Get the system error code (as in `std::system_error::code()`).
 	/// @result The error code.
-	const std::error_code& code() const noexcept {
+	[[nodiscard]] const std::error_code& code() const noexcept {
 		return m_code;
 	}
 
 	/// @brief Create the formatted error message.
 	/// @return The formatted error mesasge.
-	_Ret_z_ const char* what() const noexcept override;
+	[[nodiscard]] _Ret_z_ const char* what() const noexcept override;
 
 private:
 	std::error_code m_code;                  ///< @brief The error code
 	const char* __restrict m_message;        ///< @brief The log message.
 	mutable std::shared_ptr<char[]> m_what;  ///< @brief The error message. @details Uses a `std::shared_ptr` because exceptions must be copyable.
-
-	//	friend class LogLine;        ///< @brief Allow more straight forward code for copying the data.
-	//	friend class BaseException;  ///< @brief Allow access to `CreateErrorMessage` to prevent additional copy.
 };
 
 
@@ -107,7 +116,7 @@ namespace internal {
 /// @tparam The type of the exception.
 template <typename E>
 class ExceptionDetail final : public E
-	, public virtual BaseException {
+	, public BaseException {
 public:
 	/// @brief Creates a new exception that carries additional logging context.
 	/// @tparam T The type of the arguments for the message.
@@ -121,7 +130,8 @@ public:
 	ExceptionDetail(E&& exception, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_opt_z_ const char* __restrict const message, T&&... args)
 		: E(std::forward<E>(exception))
 		, BaseException(file, line, function, message) {
-		(m_logLine << ... << std::forward<T>(args));
+#pragma warning(suppress : 4834)  // value MAY BE discarded if there are no args
+		(logLine() << ... << std::forward<T>(args));
 	}
 	ExceptionDetail(ExceptionDetail&) = default;            ///< @defaultconstructor
 	ExceptionDetail(ExceptionDetail&&) noexcept = default;  ///< @defaultconstructor
@@ -136,8 +146,8 @@ public:
 	/// @details Delegates to `BaseException::what()` for placeholder replacement if a message is present.
 	/// @return The formatted error mesasge.
 #pragma warning(suppress : 4702)
-	_Ret_z_ const char* what() const noexcept override {
-		if (m_logLine.pattern()) {
+	[[nodiscard]] _Ret_z_ const char* what() const noexcept override {
+		if (logLine().pattern()) {
 			if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<SystemError, E>) {
 				return BaseException::what(&E::code());
 			}
@@ -182,7 +192,7 @@ template <typename E, typename... T>
 /// @brief Get the additional logging context of an exception if it exists.
 /// @note The function MUST be called from within a catch block to get the object, elso `nullptr` is returned.
 /// @return The logging context if it exists, else `nullptr`.
-_Ret_maybenull_ const BaseException* getCurrentExceptionAsBaseException() noexcept;
+[[nodiscard]] _Ret_maybenull_ const BaseException* getCurrentExceptionAsBaseException() noexcept;
 
 }  // namespace llamalog
 
@@ -193,6 +203,7 @@ _Ret_maybenull_ const BaseException* getCurrentExceptionAsBaseException() noexce
 /// @brief Throw a new exception with additional logging context.
 /// @details The variable arguments MAY provide a literal message string and optional arguments.
 /// @param exception_ The exception to throw.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
 #define LLAMALOG_THROW(exception_, ...)                                               \
 	do {                                                                              \
 		constexpr const char* __restrict file_ = llamalog::getFilename(__FILE__);     \
@@ -202,4 +213,5 @@ _Ret_maybenull_ const BaseException* getCurrentExceptionAsBaseException() noexce
 /// @brief Throw a new exception with additional logging context (alias for `LLAMALOG_THROW`).
 /// @details The variable arguments MAY provide a literal message string and optional arguments.
 /// @param exception_ The exception to throw.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
 #define THROW(exception_, ...) LLAMALOG_THROW(exception_, __VA_ARGS__)

@@ -69,7 +69,7 @@ private:
 /// @tparam F The (auto-deducted) type of the lambda expression.
 /// @param f The lambda expression. The expression MUST NOT throw any exceptions.
 template <class F>
-inline internal::FinalAction<F> finally(F&& f) noexcept {
+[[nodiscard]] inline internal::FinalAction<F> finally(F&& f) noexcept {
 	return internal::FinalAction<F>(std::forward<F>(f));
 }
 

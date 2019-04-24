@@ -114,7 +114,7 @@ __declspec(noalias) _Ret_z_ char const* LogWriter::formatPriority(const Priority
 
 // Derived from `format_timestamp` from NanoLog.
 std::string LogWriter::formatTimestamp(const FILETIME& timestamp) {
-	fmt::basic_memory_buffer<char, 23> buffer;
+	fmt::basic_memory_buffer<char, 23> buffer;  // NOLINT(readability-magic-numbers): pattern has 23 characters
 	formatTimestampTo(buffer, timestamp);
 	return fmt::to_string(buffer);
 }
@@ -135,7 +135,7 @@ namespace {
 /// @param out The target buffer.
 /// @param sz The null-terminated string.
 template <typename Out>
-inline void Append(Out& out, _In_z_ const char* sz) {
+inline void append(Out& out, _In_z_ const char* sz) {
 	out.append(sz, sz + std::strlen(sz));
 }
 
@@ -147,16 +147,16 @@ inline void Append(Out& out, _In_z_ const char* sz) {
 
 // Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 void DebugWriter::log(const LogLine& logLine) {
-	fmt::basic_memory_buffer<char, 256> buffer;
+	fmt::basic_memory_buffer<char, 256> buffer;  // NOLINT(readability-magic-numbers): one-time buffer size
 
 	formatTimestampTo(buffer, logLine.timestamp());
 	buffer.push_back(' ');
-	Append(buffer, formatPriority(logLine.priority()));
+	append(buffer, formatPriority(logLine.priority()));
 	fmt::format_to(buffer, " [{}] ", logLine.threadId());
 
-	Append(buffer, logLine.file());
+	append(buffer, logLine.file());
 	fmt::format_to(buffer, ":{} ", logLine.line());
-	Append(buffer, logLine.function());
+	append(buffer, logLine.function());
 	buffer.push_back(' ');
 
 	std::vector<fmt::format_context::format_arg> args;
@@ -227,15 +227,15 @@ void RollingFileWriter::log(const LogLine& logLine) {
 		rollFile(logLine);
 	}
 
-	fmt::basic_memory_buffer<char, 256> buffer;
+	fmt::basic_memory_buffer<char, 256> buffer;  // NOLINT(readability-magic-numbers): one-time buffer size
 	formatTimestampTo(buffer, timestamp);
 	buffer.push_back(' ');
-	Append(buffer, formatPriority(logLine.priority()));
+	append(buffer, formatPriority(logLine.priority()));
 	fmt::format_to(buffer, " [{}] ", logLine.threadId());
 
-	Append(buffer, logLine.file());
+	append(buffer, logLine.file());
 	fmt::format_to(buffer, ":{} ", logLine.line());
-	Append(buffer, logLine.function());
+	append(buffer, logLine.function());
 	buffer.push_back(' ');
 
 	std::vector<fmt::format_context::format_arg> args;
@@ -293,7 +293,7 @@ void RollingFileWriter::rollFile(const LogLine& logLine) {
 	path += '.';
 	std::filesystem::path pattern(path);
 
-	fmt::basic_memory_buffer<char, 16> buffer;
+	fmt::basic_memory_buffer<char, 16> buffer;  // NOLINT(readability-magic-numbers): one-time buffer size
 	fmt::format_to(buffer, frequencyInfo.pattern, time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
 	path += std::string_view(buffer.data(), buffer.size());
 	path += fileName.extension();

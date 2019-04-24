@@ -45,7 +45,7 @@ _Ret_z_ const char* BaseException::what(_In_opt_ const std::error_code* const pC
 		std::vector<fmt::format_context::format_arg> args;
 		m_logLine.copyArgumentsTo(args);
 
-		fmt::basic_memory_buffer<char, 256> buf;
+		fmt::basic_memory_buffer<char, 256> buf;  // NOLINT(readability-magic-numbers)
 		fmt::vformat_to(buf, fmt::to_string_view(m_logLine.pattern()),
 						fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 

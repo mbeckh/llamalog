@@ -34,7 +34,7 @@ struct ErrorCode {
 
 /// @brief Get the result of `GetLastError()` as an `ErrorCode` suitable as a formatter argument.
 /// @return A newly created `ErrorCode` structure.
-inline ErrorCode lastError() noexcept {
+[[nodiscard]] inline ErrorCode lastError() noexcept {
 	return ErrorCode{GetLastError()};
 }
 
@@ -44,13 +44,13 @@ inline ErrorCode lastError() noexcept {
 /// @param logLine The `llamalog::LogLine`.
 /// @param arg The value.
 /// @return @p logLine to allow method chaining.
-llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::ErrorCode arg);
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, llamalog::ErrorCode arg);
 
 #ifdef __clang_analyzer__
 // make clang happy and define in namespace for ADL. MSVC can't find correct overload when the declaration is present.
 namespace llamalog {
-LogLine& operator<<(LogLine& logLine, const ErrorCode arg);
-}
+LogLine& operator<<(LogLine& logLine, ErrorCode arg);
+}  // namespace llamalog
 #endif
 
 /// @brief Log a `LARGE_INTEGER` structure as a 64 bit signed integer.

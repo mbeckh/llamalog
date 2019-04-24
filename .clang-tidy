@@ -3,6 +3,8 @@ Checks: '
   cert-*,
   clang-analyzer-*,
   cppcoreguidelines-*,
+    -cppcoreguidelines-avoid-c-arrays,
+    -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-owning-memory,
     -cppcoreguidelines-pro-type-reinterpret-cast,
     -cppcoreguidelines-pro-bounds-*,
@@ -17,6 +19,7 @@ Checks: '
   llvm-namespace-comment,
   misc-*,
   modernize-*,
+    -modernize-avoid-c-arrays,
     -modernize-use-auto,
   performance-*,
   readability-*,
@@ -122,22 +125,6 @@ CheckOptions:
     value: 'CamelCase'
   - key:   readability-identifier-naming.StaticConstantPrefix
     value: 'k'
-  - key:   readability-identifier-naming.LocalPointerCase
-    value: 'CamelCase'
-  - key:   readability-identifier-naming.LocalPointerPrefix
-    value: 'p'
-  - key:   readability-identifier-naming.LocalConstantPointerCase
-    value: 'CamelCase'
-  - key:   readability-identifier-naming.LocalConstantPointerPrefix
-    value: 'p'
-  - key:   readability-identifier-naming.PointerParameterCase
-    value: 'CamelCase'
-  - key:   readability-identifier-naming.PointerParameterPrefix
-    value: 'p'
-  - key:   readability-identifier-naming.ConstantPointerParameterCase
-    value: 'CamelCase'
-  - key:   readability-identifier-naming.ConstantPointerParameterPrefix
-    value: 'p'
   - key:   readability-identifier-naming.GlobalPointerCase
     value: 'CamelCase'
   - key:   readability-identifier-naming.GlobalPointerPrefix
@@ -164,4 +151,5 @@ CheckOptions:
     value: '1'
   - key:   readability-simplify-boolean-expr.ChainedConditionalAssignment
     value: '1'
-  
+  - key:   readability-uppercase-literal-suffix.NewSuffixes
+    value: 'L;LL;LU;LLU;u;ul;ull'

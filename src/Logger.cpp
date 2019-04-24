@@ -420,12 +420,12 @@ public:
 	void flush() {
 		AcquireSRWLockShared(&m_lock);
 		while (m_state.load(std::memory_order_acquire) == State::kInit) {
-			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, CONDITION_VARIABLE_LOCKMODE_SHARED);
+			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, kConditionInterval, CONDITION_VARIABLE_LOCKMODE_SHARED);
 		}
 		m_buffer.flush([this]() noexcept {
 			ReleaseSRWLockShared(&m_lock);
 			// do not use SleepConditionVariableSRW so that regular addLine does not have to do a WakeAllConditionVariable
-			Sleep(200);
+			Sleep(kFlushInterval);
 			AcquireSRWLockShared(&m_lock);
 		});
 		ReleaseSRWLockShared(&m_lock);
@@ -437,7 +437,7 @@ private:
 	void pop() noexcept {
 		AcquireSRWLockExclusive(&m_lock);
 		while (m_state.load(std::memory_order_acquire) == State::kInit) {
-			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, 0);
+			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, kConditionInterval, 0);
 		}
 
 		// the place where the logline is copied to
@@ -473,7 +473,7 @@ private:
 					}
 				}
 			} else {
-				SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, 5000, 0);
+				SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, kConditionInterval, 0);
 			}
 		}
 
@@ -518,6 +518,9 @@ private:
 		kReady,
 		kShutdown
 	};
+
+	static constexpr DWORD kConditionInterval = 5000u;  ///< @brief Milliseconds to wait on condition before wake-up.
+	static constexpr DWORD kFlushInterval = 200u;       ///< @brief Milliseconds to wait when lock is held in flush.
 
 	/**
 
@@ -567,7 +570,7 @@ Priority getInternalPriority(const Priority priority) noexcept {
 
 void panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
 	// avoid anything that could cause an error
-	char msg[1024];
+	char msg[1024];                                                                               // NOLINT(readability-magic-numbers)
 	if (sprintf_s(msg, "PANIC: %s @ %s(%s:%" PRIu32 ")\n", message, function, file, line) < 0) {  // NOLINT(cppcoreguidelines-pro-type-vararg): sprintf_s as a last resort
 		OutputDebugStringA("PANIC: Error writing log\n");
 	} else {

@@ -79,6 +79,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #ifdef __clang_analyzer__
 // MSVC does not yet have __builtin_offsetof which gives false errors in the clang-tidy
 #pragma push_macro("offsetof")
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): macro for clang
 #define offsetof __builtin_offsetof
 #endif
 
@@ -373,8 +374,8 @@ std::string escapeC(const std::string_view& sv) {
 	const auto end = sv.cend();
 
 	for (auto it = begin; it != end; ++it) {
-		const std::uint8_t c = *it;  // MUST be std::uint8_t, NOT char
-		if (c == '"' || c == '\\' || c < 0x20 || c > 0x7f) {
+		const std::uint8_t c = *it;                           // MUST be std::uint8_t, NOT char
+		if (c == '"' || c == '\\' || c < 0x20 || c > 0x7f) {  // NOLINT(readability-magic-numbers): ASCII code
 			if (result.empty()) {
 				const LogLine::Length len = static_cast<LogLine::Length>(sv.length());
 				const LogLine::Length extra = static_cast<LogLine::Length>(std::distance(it, end)) >> 2u;
@@ -410,8 +411,8 @@ std::string escapeC(const std::string_view& sv) {
 				break;
 			default:
 				result.push_back('x');
-				result.push_back(kHexDigits[c / 16]);
-				result.push_back(kHexDigits[c % 16]);
+				result.push_back(kHexDigits[c / 16]);  // NOLINT(readability-magic-numbers): HEX digits
+				result.push_back(kHexDigits[c % 16]);  // NOLINT(readability-magic-numbers): HEX digits
 			}
 			begin = it + 1;
 		}
@@ -438,7 +439,7 @@ public:
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(const char value) {
 		const fmt::format_specs* const specs = spec();
-		if ((!specs || !specs->type) && (value < 0x20 || value > 0x7f)) {
+		if ((!specs || !specs->type) && (value < 0x20 || value > 0x7f)) {  // NOLINT(readability-magic-numbers): ASCII code
 			const std::string_view sv(&value, 1);
 			const std::string str = escapeC(sv);
 			if (!str.empty()) {
@@ -530,9 +531,9 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 		const wchar_t* const wstr = reinterpret_cast<const wchar_t*>(&buffer[sizeof(length) + padding]);
 
 		DWORD lastError;
-		if (length <= 256) {
+		if (constexpr std::uint_fast16_t kFixedBufferSize = 256; length <= kFixedBufferSize) {
 			// try with a fixed size buffer
-			char sz[256];
+			char sz[kFixedBufferSize];
 			const int sizeInBytes = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(length), sz, sizeof(sz), nullptr, nullptr);
 			if (sizeInBytes) {
 				return fmt::vformat_to<llamalog::EscapingFormatter>(ctx.out(), fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(sz, sizeInBytes / sizeof(char)))));
@@ -618,7 +619,7 @@ struct ExceptionFormatter {
 	auto format(const T& arg, fmt::format_context& ctx) const {
 		std::vector<fmt::format_context::format_arg> args;
 
-		fmt::basic_memory_buffer<char, 128> buf;
+		fmt::basic_memory_buffer<char, 128> buf;  // NOLINT(readability-magic-numbers): one-time buffer size
 		std::back_insert_iterator<fmt::format_context::iterator::container_type> out(buf);
 		format(arg, m_format.cbegin(), m_format.cend(), ctx, out, args);
 		return std::copy(buf.begin(), buf.end(), ctx.out());
@@ -653,7 +654,7 @@ struct ExceptionFormatter {
 				}
 			} else if (*it == ']') {
 				if (--open == 0) {
-					fmt::basic_memory_buffer<char, 128> buf;
+					fmt::basic_memory_buffer<char, 128> buf;  // NOLINT(readability-magic-numbers): one-time buffer size
 					std::back_insert_iterator<fmt::format_context::iterator::container_type> subOut(buf);
 					if (format(arg, start, it, ctx, subOut, args)) {
 						std::copy(buf.begin(), buf.end(), out);
@@ -731,11 +732,11 @@ struct ExceptionFormatter {
 							break;
 						}
 						// check overflow
-						if (id > std::numeric_limits<unsigned>::max() / 10) {
+						if (id > std::numeric_limits<unsigned>::max() / 10) {  // NOLINT(readability-magic-numbers): multiply by ten
 							ctx.on_error("argument id in exception specifier is too big");
 							break;
 						}
-						id *= 10;
+						id *= 10;  // NOLINT(readability-magic-numbers): multiply by ten
 						id += *x - '0';
 					}
 					subArg = ctx.arg(id);
@@ -1918,6 +1919,7 @@ void copyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restric
 
 		/// @cond hide
 #pragma push_macro("DECODE_")
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
 #define DECODE_(type_)                                 \
 	case kTypeId<type_>:                               \
 		decodeArgument<type_>(args, buffer, position); \
@@ -1975,6 +1977,7 @@ void copyObjects(_In_reads_bytes_(used) const std::byte* __restrict const src, _
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
@@ -2069,6 +2072,7 @@ void moveObjects(_In_reads_bytes_(used) std::byte* __restrict const src, _Out_wr
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
@@ -2157,6 +2161,7 @@ void callDestructors(_Inout_updates_bytes_(used) std::byte* __restrict buffer, L
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
@@ -2235,41 +2240,41 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict file, st
 
 	static_assert(offsetof(LogLine, m_stackBuffer) == 0, "offset of m_stackBuffer");
 #if UINTPTR_MAX == UINT64_MAX
-	static_assert(offsetof(LogLine, m_priority) == LLAMALOG_LOGLINE_SIZE - 58, "offset of m_priority");
-	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == LLAMALOG_LOGLINE_SIZE - 57, "offset of m_hasNonTriviallyCopyable");
-	static_assert(offsetof(LogLine, m_timestamp) == LLAMALOG_LOGLINE_SIZE - 56, "offset of m_timestamp");
-	static_assert(offsetof(LogLine, m_file) == LLAMALOG_LOGLINE_SIZE - 48, "offset of m_file");
-	static_assert(offsetof(LogLine, m_function) == LLAMALOG_LOGLINE_SIZE - 40, "offset of m_function");
-	static_assert(offsetof(LogLine, m_message) == LLAMALOG_LOGLINE_SIZE - 32, "offset of m_message");
-	static_assert(offsetof(LogLine, m_threadId) == LLAMALOG_LOGLINE_SIZE - 24, "offset of m_threadId");
-	static_assert(offsetof(LogLine, m_line) == LLAMALOG_LOGLINE_SIZE - 20, "offset of m_line");
-	static_assert(offsetof(LogLine, m_used) == LLAMALOG_LOGLINE_SIZE - 16, "offset of m_used");
-	static_assert(offsetof(LogLine, m_size) == LLAMALOG_LOGLINE_SIZE - 12, "offset of m_size");
-	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_heapBuffer");
+	static_assert(offsetof(LogLine, m_priority) == LLAMALOG_LOGLINE_SIZE - 58, "offset of m_priority");                                // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == LLAMALOG_LOGLINE_SIZE - 57, "offset of m_hasNonTriviallyCopyable");  // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_timestamp) == LLAMALOG_LOGLINE_SIZE - 56, "offset of m_timestamp");                              // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_file) == LLAMALOG_LOGLINE_SIZE - 48, "offset of m_file");                                        // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_function) == LLAMALOG_LOGLINE_SIZE - 40, "offset of m_function");                                // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_message) == LLAMALOG_LOGLINE_SIZE - 32, "offset of m_message");                                  // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_threadId) == LLAMALOG_LOGLINE_SIZE - 24, "offset of m_threadId");                                // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_line) == LLAMALOG_LOGLINE_SIZE - 20, "offset of m_line");                                        // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_used) == LLAMALOG_LOGLINE_SIZE - 16, "offset of m_used");                                        // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_size) == LLAMALOG_LOGLINE_SIZE - 12, "offset of m_size");                                        // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_heapBuffer");                             // NOLINT(readability-magic-numbers)
 
-	static_assert(sizeof(ExceptionInformation) == 48);
-	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 46, "offset of hasNonTriviallyCopyable");
-	static_assert(sizeof(StackBasedException) == 48);
-	static_assert(sizeof(HeapBasedException) == 56);
-	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 48, "offset of pHeapBuffer");
+	static_assert(sizeof(ExceptionInformation) == 48);                                                                  // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 46, "offset of hasNonTriviallyCopyable");  // NOLINT(readability-magic-numbers)
+	static_assert(sizeof(StackBasedException) == 48);                                                                   // NOLINT(readability-magic-numbers)
+	static_assert(sizeof(HeapBasedException) == 56);                                                                    // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 48, "offset of pHeapBuffer");                            // NOLINT(readability-magic-numbers)
 #elif UINTPTR_MAX == UINT32_MAX
-	static_assert(offsetof(LogLine, m_priority) == LLAMALOG_LOGLINE_SIZE - 42, "offset of m_priority");
-	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == LLAMALOG_LOGLINE_SIZE - 41, "offset of m_hasNonTriviallyCopyable");
-	static_assert(offsetof(LogLine, m_timestamp) == LLAMALOG_LOGLINE_SIZE - 40, "offset of m_timestamp");
-	static_assert(offsetof(LogLine, m_file) == LLAMALOG_LOGLINE_SIZE - 32, "offset of m_file");
-	static_assert(offsetof(LogLine, m_function) == LLAMALOG_LOGLINE_SIZE - 28, "offset of m_function");
-	static_assert(offsetof(LogLine, m_message) == LLAMALOG_LOGLINE_SIZE - 24, "offset of m_message");
-	static_assert(offsetof(LogLine, m_threadId) == LLAMALOG_LOGLINE_SIZE - 20, "offset of m_threadId");
-	static_assert(offsetof(LogLine, m_line) == LLAMALOG_LOGLINE_SIZE - 16, "offset of m_line");
-	static_assert(offsetof(LogLine, m_used) == LLAMALOG_LOGLINE_SIZE - 12, "offset of m_used");
-	static_assert(offsetof(LogLine, m_size) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_size");
-	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 4, "offset of m_heapBuffer");
+	static_assert(offsetof(LogLine, m_priority) == LLAMALOG_LOGLINE_SIZE - 42, "offset of m_priority");                                // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == LLAMALOG_LOGLINE_SIZE - 41, "offset of m_hasNonTriviallyCopyable");  // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_timestamp) == LLAMALOG_LOGLINE_SIZE - 40, "offset of m_timestamp");                              // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_file) == LLAMALOG_LOGLINE_SIZE - 32, "offset of m_file");                                        // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_function) == LLAMALOG_LOGLINE_SIZE - 28, "offset of m_function");                                // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_message) == LLAMALOG_LOGLINE_SIZE - 24, "offset of m_message");                                  // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_threadId) == LLAMALOG_LOGLINE_SIZE - 20, "offset of m_threadId");                                // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_line) == LLAMALOG_LOGLINE_SIZE - 16, "offset of m_line");                                        // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_used) == LLAMALOG_LOGLINE_SIZE - 12, "offset of m_used");                                        // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_size) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_size");                                         // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 4, "offset of m_heapBuffer");                             // NOLINT(readability-magic-numbers)
 
-	static_assert(sizeof(ExceptionInformation) == 36);
-	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 34, "offset of hasNonTriviallyCopyable");
-	static_assert(sizeof(StackBasedException) == 36);
-	static_assert(sizeof(HeapBasedException) == 40);
-	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 36, "offset of pHeapBuffer");
+	static_assert(sizeof(ExceptionInformation) == 36);                                                                  // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 34, "offset of hasNonTriviallyCopyable");  // NOLINT(readability-magic-numbers)
+	static_assert(sizeof(StackBasedException) == 36);                                                                   // NOLINT(readability-magic-numbers)
+	static_assert(sizeof(HeapBasedException) == 40);                                                                    // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 36, "offset of pHeapBuffer");                            // NOLINT(readability-magic-numbers)
 #elif
 	static_assert(false, "layout assertions not defined");
 #endif
@@ -2293,10 +2298,10 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict file, st
 LogLine::LogLine(const LogLine& logLine)
 	: m_priority(logLine.m_priority)
 	, m_hasNonTriviallyCopyable(logLine.m_hasNonTriviallyCopyable)
+	, m_timestamp(logLine.m_timestamp)
 	, m_file(logLine.m_file)
 	, m_function(logLine.m_function)
 	, m_message(logLine.m_message)
-	, m_timestamp(logLine.m_timestamp)
 	, m_threadId(logLine.m_threadId)
 	, m_line(logLine.m_line)
 	, m_used(logLine.m_used)
@@ -2321,10 +2326,10 @@ LogLine::LogLine(const LogLine& logLine)
 LogLine::LogLine(LogLine&& logLine) noexcept
 	: m_priority(logLine.m_priority)
 	, m_hasNonTriviallyCopyable(logLine.m_hasNonTriviallyCopyable)
+	, m_timestamp(logLine.m_timestamp)
 	, m_file(logLine.m_file)
 	, m_function(logLine.m_function)
 	, m_message(logLine.m_message)
-	, m_timestamp(logLine.m_timestamp)
 	, m_threadId(logLine.m_threadId)
 	, m_line(logLine.m_line)
 	, m_used(logLine.m_used)
@@ -2351,10 +2356,10 @@ LogLine::~LogLine() noexcept {
 LogLine& LogLine::operator=(const LogLine& logLine) {
 	m_priority = logLine.m_priority;
 	m_hasNonTriviallyCopyable = logLine.m_hasNonTriviallyCopyable;
+	m_timestamp = logLine.m_timestamp;
 	m_file = logLine.m_file;
 	m_function = logLine.m_function;
 	m_message = logLine.m_message;
-	m_timestamp = logLine.m_timestamp;
 	m_threadId = logLine.m_threadId;
 	m_line = logLine.m_line;
 	m_used = logLine.m_used;
@@ -2379,10 +2384,10 @@ LogLine& LogLine::operator=(const LogLine& logLine) {
 LogLine& LogLine::operator=(LogLine&& logLine) noexcept {
 	m_priority = logLine.m_priority;
 	m_hasNonTriviallyCopyable = logLine.m_hasNonTriviallyCopyable;
+	m_timestamp = logLine.m_timestamp;
 	m_file = logLine.m_file;
 	m_function = logLine.m_function;
 	m_message = logLine.m_message;
-	m_timestamp = logLine.m_timestamp;
 	m_threadId = logLine.m_threadId;
 	m_line = logLine.m_line;
 	m_used = logLine.m_used;
@@ -2555,7 +2560,7 @@ std::string LogLine::message() const {
 	std::vector<fmt::format_context::format_arg> args;
 	copyArgumentsFromBufferTo(buffer(), m_used, args);
 
-	fmt::basic_memory_buffer<char, 256> buf;
+	fmt::basic_memory_buffer<char, 256> buf;  // NOLINT(readability-magic-numbers): one-time buffer size
 	fmt::vformat_to<EscapingFormatter>(buf, fmt::to_string_view(pattern()),
 									   fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 	return fmt::to_string(buf);

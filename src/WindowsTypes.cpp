@@ -56,12 +56,12 @@ namespace llamalog {
 namespace {
 
 /// @brief Remove trailing linefeeds from an error message, encode as UTF-8 and print.
-/// @remarks This function is a helper for `#FormatSystemErrorCodeTo()`.
+/// @remarks This function is a helper for `#formatSystemErrorCodeTo()`.
 /// @param message The error message.
 /// @param length The length of the error message NOT including a terminating null character.
 /// @param ctx The output target.
 /// @result The output iterator.
-fmt::format_context::iterator PostProcessErrorMessage(_In_reads_(length) wchar_t* __restrict const message, std::size_t length, fmt::format_context& ctx) {
+fmt::format_context::iterator postProcessErrorMessage(_In_reads_(length) wchar_t* __restrict const message, std::size_t length, fmt::format_context& ctx) {
 	if (length >= 2) {
 		if (message[length - 2] == L'\r' || message[length - 2] == L'\n') {
 			message[length -= 2] = L'\0';
@@ -73,9 +73,9 @@ fmt::format_context::iterator PostProcessErrorMessage(_In_reads_(length) wchar_t
 	}
 
 	DWORD lastError;
-	if (length <= 256) {
+	if (constexpr std::uint_fast16_t kFixedBufferSize = 256; length <= kFixedBufferSize) {
 		// try with a fixed size buffer
-		char sz[256];
+		char sz[kFixedBufferSize];
 		const int sizeInBytes = WideCharToMultiByte(CP_UTF8, 0, message, static_cast<int>(length), sz, sizeof(sz), nullptr, nullptr);
 		if (sizeInBytes) {
 			return std::copy(sz, sz + sizeInBytes / sizeof(char), ctx.out());
@@ -106,12 +106,12 @@ error:
 /// @param errorCode The system error code.
 /// @param ctx The output target.
 /// @result The output iterator.
-fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorCode, fmt::format_context& ctx) {
-	wchar_t buffer[256];
+fmt::format_context::iterator formatSystemErrorCodeTo(const std::uint32_t errorCode, fmt::format_context& ctx) {
+	wchar_t buffer[256];  // NOLINT(readability-magic-numbers): one-time buffer size
 	// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API
 	DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, errorCode, 0, buffer, sizeof(buffer) / sizeof(*buffer), nullptr);
 	if (length) {
-		return PostProcessErrorMessage(buffer, length, ctx);
+		return postProcessErrorMessage(buffer, length, ctx);
 	}
 
 	DWORD lastError = GetLastError();
@@ -124,7 +124,7 @@ fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorC
 		// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API
 		length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, errorCode, 0, reinterpret_cast<wchar_t*>(&pBuffer), 0, nullptr);
 		if (length) {
-			return PostProcessErrorMessage(pBuffer, length, ctx);
+			return postProcessErrorMessage(pBuffer, length, ctx);
 		}
 		lastError = GetLastError();
 	}
@@ -154,7 +154,7 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 }
 
 fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {
-	llamalog::FormatSystemErrorCodeTo(arg.code, ctx);
+	llamalog::formatSystemErrorCodeTo(arg.code, ctx);
 	return fmt::format_to(ctx.out(), " ({})", arg.code);
 }
 
@@ -191,7 +191,7 @@ fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::forma
 	while (end != ctx.end() && *end != '}') {
 		++end;
 	}
-	m_format.reserve((end - it + 3) * 4 + 12);
+	m_format.reserve((end - it + 3) * 4 + 12);  // NOLINT(readability-magic-numbers): length calculated from strings
 	m_format.append("(({:");
 	m_format.append(it, end);
 	m_format.append("}, {:");
