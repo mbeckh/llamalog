@@ -132,11 +132,16 @@ public:
 	/// @brief Override `std::exception::what()` to allow formatted output.
 	/// @details Delegates to `BaseException::what()` for placeholder replacement if a message is present.
 	/// @return The formatted error mesasge.
+#pragma warning(suppress : 4702)
 	_Ret_z_ const char* what() const noexcept override {
-		if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<SystemError, E>) {
-			return BaseException::what(&E::code());
+		if (m_logLine.pattern()) {
+			if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<SystemError, E>) {
+				return BaseException::what(&E::code());
+			}
+			return BaseException::what(nullptr);
 		}
-		return BaseException::what(nullptr);
+		// the error message for the error code is already part of what() for std::system_error and SystemError
+		return __super::what();
 	}
 };
 
