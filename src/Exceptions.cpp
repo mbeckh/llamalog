@@ -51,8 +51,10 @@ _Ret_z_ const char* BaseException::what(_In_opt_ const std::error_code* const pC
 						fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 
 		if (pCode) {
-			buf.push_back(':');
-			buf.push_back(' ');
+			if (buf.size()) {
+				buf.push_back(':');
+				buf.push_back(' ');
+			}
 			const std::string message = pCode->message();
 			buf.append(message.data(), message.data() + message.size());
 		}
