@@ -21,9 +21,6 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\llamalog.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\LogLine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -36,13 +33,13 @@
     <ClCompile Include="..\..\src\Exceptions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\llamalog\llamalog.h">
-      <Filter>Header Files\llamalog</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\llamalog\LogLine.h">
       <Filter>Header Files\llamalog</Filter>
@@ -60,6 +57,12 @@
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\llamalog\finally.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\Logger.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\llamalog.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
   </ItemGroup>

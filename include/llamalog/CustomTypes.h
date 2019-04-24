@@ -24,6 +24,8 @@ limitations under the License.
 
 #include <fmt/core.h>
 
+#include <sal.h>
+
 #include <cstddef>
 #include <memory>
 #include <new>

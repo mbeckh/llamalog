@@ -49,8 +49,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include "llamalog/CustomTypes.h"
 #include "llamalog/Exceptions.h"
 #include "llamalog/LogWriter.h"
+#include "llamalog/Logger.h"
 #include "llamalog/WindowsTypes.h"
-#include "llamalog/llamalog.h"
 
 #include <fmt/format.h>
 
@@ -65,12 +65,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
+// IWYU pragma: no_include <xutility>
+
 
 #ifdef __clang_analyzer__
 // MSVC does not yet have __builtin_offsetof which gives false errors in the clang-tidy
@@ -281,7 +285,7 @@ template <typename T>
 __declspec(noalias) LogLine::Align getPadding(_In_ const std::byte* __restrict const ptr) noexcept {
 	static_assert(alignof(T) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of type is too large");
 	constexpr LogLine::Align kMask = alignof(T) - 1u;
-	return static_cast<LogLine::Align>(alignof(T) - (reinterpret_cast<uintptr_t>(ptr) & kMask)) & kMask;
+	return static_cast<LogLine::Align>(alignof(T) - (reinterpret_cast<std::uintptr_t>(ptr) & kMask)) & kMask;
 }
 
 /// @brief Get the required padding for a type starting at the next possible offset.
@@ -291,7 +295,7 @@ __declspec(noalias) LogLine::Align getPadding(_In_ const std::byte* __restrict c
 __declspec(noalias) LogLine::Align getPadding(_In_ const std::byte* __restrict const ptr, const LogLine::Align align) noexcept {
 	assert(align <= __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 	const LogLine::Align mask = align - 1u;
-	return static_cast<LogLine::Align>(align - (reinterpret_cast<uintptr_t>(ptr) & mask)) & mask;
+	return static_cast<LogLine::Align>(align - (reinterpret_cast<std::uintptr_t>(ptr) & mask)) & mask;
 }
 
 
@@ -2571,7 +2575,7 @@ _Ret_notnull_ __declspec(restrict) const std::byte* LogLine::buffer() const noex
 _Ret_notnull_ __declspec(restrict) std::byte* LogLine::getWritePosition(const LogLine::Size additionalBytes) {
 	const std::size_t requiredSize = static_cast<std::size_t>(m_used) + additionalBytes;
 	if (requiredSize > std::numeric_limits<LogLine::Size>::max()) {
-		LLAMALOG_THROW(std::length_error("m_size"), "Buffer too big for {} more bytes: {}", additionalBytes, requiredSize);
+		LLAMALOG_THROW(std::length_error(nullptr), "Buffer too big for {} more bytes: {}", additionalBytes, requiredSize);
 	}
 
 	if (requiredSize <= m_size) {

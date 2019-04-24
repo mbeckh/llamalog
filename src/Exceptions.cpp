@@ -19,17 +19,16 @@ limitations under the License.
 #include "llamalog/Exceptions.h"
 
 #include "llamalog/LogLine.h"
-#include "llamalog/WindowsTypes.h"
-#include "llamalog/finally.h"
-#include "llamalog/llamalog.h"
+#include "llamalog/Logger.h"
 
 #include <fmt/format.h>
 
-#include <windows.h>
-
+#include <cstring>
 #include <exception>
 #include <memory>
+#include <new>
 #include <string>
+#include <vector>
 
 namespace llamalog {
 

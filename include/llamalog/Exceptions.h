@@ -18,12 +18,15 @@ limitations under the License.
 
 #pragma once
 
-#include "llamalog/LogLine.h"
+#include <llamalog/LogLine.h>
 
-#include <cstddef>
+#include <sal.h>
+
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <system_error>
+#include <utility>
 
 namespace llamalog {
 

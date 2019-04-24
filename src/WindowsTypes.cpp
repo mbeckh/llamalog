@@ -20,14 +20,19 @@ limitations under the License.
 
 #include "llamalog/CustomTypes.h"
 #include "llamalog/LogLine.h"
+#include "llamalog/Logger.h"
 #include "llamalog/finally.h"
-#include "llamalog/llamalog.h"
 
 #include <fmt/core.h>
 
 #include <windows.h>
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 #include <string>
+#include <string_view>
 
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::ErrorCode arg) {

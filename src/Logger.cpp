@@ -43,7 +43,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 */
 
-#include "llamalog/llamalog.h"
+#include "llamalog/Logger.h"
 
 #include "llamalog/LogLine.h"
 #include "llamalog/LogWriter.h"
@@ -53,10 +53,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <windows.h>
 
 #include <atomic>
-#include <chrono>
 #include <cinttypes>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <deque>
 #include <exception>
 #include <memory>

@@ -24,21 +24,24 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
-    <ClCompile />
+    <ClCompile>
+      <PreprocessorDefinitions>INCLUDETOOLBOX_BUG_70;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\llamalog\CustomTypes.h" />
     <ClInclude Include="..\..\include\llamalog\Exceptions.h" />
     <ClInclude Include="..\..\include\llamalog\finally.h" />
-    <ClInclude Include="..\..\include\llamalog\LogLine.h" />
     <ClInclude Include="..\..\include\llamalog\llamalog.h" />
+    <ClInclude Include="..\..\include\llamalog\LogLine.h" />
+    <ClInclude Include="..\..\include\llamalog\Logger.h" />
     <ClInclude Include="..\..\include\llamalog\LogWriter.h" />
     <ClInclude Include="..\..\include\llamalog\WindowsTypes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\Exceptions.cpp" />
     <ClCompile Include="..\..\src\LogLine.cpp" />
-    <ClCompile Include="..\..\src\llamalog.cpp" />
+    <ClCompile Include="..\..\src\Logger.cpp" />
     <ClCompile Include="..\..\src\LogWriter.cpp" />
     <ClCompile Include="..\..\src\WindowsTypes.cpp" />
   </ItemGroup>

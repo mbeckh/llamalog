@@ -19,24 +19,29 @@ limitations under the License.
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <sal.h>
 #include <windows.h>
 
 #include <algorithm>
 #include <atomic>
 #include <cassert>
-#include <chrono>
+#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <cwchar>
+#include <deque>
+#include <exception>
 #include <filesystem>
 #include <iterator>
 #include <limits>
 #include <memory>
 #include <new>
-#include <queue>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <thread>
 #include <tuple>
 #include <type_traits>

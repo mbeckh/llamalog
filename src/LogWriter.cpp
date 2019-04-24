@@ -46,8 +46,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include "llamalog/LogWriter.h"
 
 #include "llamalog/LogLine.h"
+#include "llamalog/Logger.h"
 #include "llamalog/WindowsTypes.h"
-#include "llamalog/llamalog.h"
 
 #include <fmt/format.h>
 
@@ -57,7 +57,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <atomic>
 #include <cassert>
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <limits>

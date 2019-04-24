@@ -23,6 +23,8 @@ limitations under the License.
 
 #include <windows.h>
 
+#include <string>
+
 namespace llamalog {
 
 /// @brief A struct for logging system error codes, e.g. `GetLastError()`, `HRESULT`, etc.
@@ -43,6 +45,13 @@ inline ErrorCode lastError() noexcept {
 /// @param arg The value.
 /// @return @p logLine to allow method chaining.
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::ErrorCode arg);
+
+#ifdef __clang_analyzer__
+// make clang happy and define in namespace for ADL. MSVC can't find correct overload when the declaration is present.
+namespace llamalog {
+LogLine& operator<<(LogLine& logLine, const ErrorCode arg);
+}
+#endif
 
 /// @brief Log a `LARGE_INTEGER` structure as a 64 bit signed integer.
 /// @param logLine The `llamalog::LogLine`.
