@@ -45,7 +45,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 // ErrorCode
 //
 
-TEST(WindowsTypesTest, ErrorCode_FormatDefault_PrintMessage) {
+TEST(WindowsTypesTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
@@ -55,24 +55,54 @@ TEST(WindowsTypesTest, ErrorCode_FormatDefault_PrintMessage) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
 }
 
-TEST(WindowsTypesTest, ErrorCode_FormatAsDecimal_PrintDecimal) {
+TEST(WindowsTypesTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
-		str = fmt::format("{:02}", arg);
+		str = fmt::format("{:02d}", arg);
 	}
 
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(05\\)"));
 }
 
-TEST(WindowsTypesTest, ErrorCode_FormatAsHex_PrintHex) {
+TEST(WindowsTypesTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
-		str = fmt::format("{:#x}", arg);
+		str = fmt::format("{:x}", arg);
 	}
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(0x5\\)"));
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+}
+
+TEST(WindowsTypesTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
+	std::string str;
+	{
+		const ErrorCode arg = {E_INVALIDARG};
+		str = fmt::format("{}", arg);
+	}
+
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(0x80070057\\)"));
+}
+
+TEST(WindowsTypesTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
+	std::string str;
+	{
+		const ErrorCode arg = {E_INVALIDARG};
+		str = fmt::format("{:02d}", arg);
+	}
+
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(2147942487\\)"));
+}
+
+TEST(WindowsTypesTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
+	std::string str;
+	{
+		const ErrorCode arg = {E_INVALIDARG};
+		str = fmt::format("{:x}", arg);
+	}
+
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(80070057\\)"));
 }
 
 TEST(WindowsTypesTest, ErrorCode_Log_PrintMessage) {

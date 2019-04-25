@@ -29,7 +29,15 @@ namespace llamalog {
 
 /// @brief A struct for logging system error codes, e.g. `GetLastError()`, `HRESULT`, etc.
 struct ErrorCode {
-	DWORD code;  ///< @brief The system error code.
+	constexpr ErrorCode(const DWORD code) noexcept
+		: code(code) {
+		// empty
+	}
+	constexpr ErrorCode(const HRESULT hr) noexcept
+		: code(hr) {
+		// empty
+	}
+	const DWORD code;  ///< @brief The system error code.
 };
 
 /// @brief Get the result of `GetLastError()` as an `ErrorCode` suitable as a formatter argument.
@@ -97,6 +105,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT& arg);
 //
 
 /// @brief Specialization of `fmt::formatter` for a `llamalog::ErrorCode`.
+/// @details Regular system error codes from e.g. `GetLastError()` are logged as decimal values. `HRESULT`s and other error codes are logged in hex.
 template <>
 struct fmt::formatter<llamalog::ErrorCode> {
 public:
