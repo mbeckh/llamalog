@@ -21,3 +21,9 @@ limitations under the License.
 #include <llamalog/Exceptions.h>    // IWYU pragma: export
 #include <llamalog/Logger.h>        // IWYU pragma: export
 #include <llamalog/WindowsTypes.h>  // IWYU pragma: export
+
+#ifdef LLAMALOG_SHORT_NAMESPACE
+namespace LLAMALOG_SHORT_NAMESPACE = llamalog;
+#else
+namespace lg = llamalog;
+#endif
