@@ -36,6 +36,9 @@
     <ClCompile Include="..\..\src\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Formatters.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -63,6 +66,9 @@
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\llamalog\llamalog.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\Formatters.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
   </ItemGroup>

@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "llamalog/LogLine.h"
 
-#include <fmt/core.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -44,66 +43,6 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 //
 // ErrorCode
 //
-
-TEST(WindowsTypesTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
-	std::string str;
-	{
-		const ErrorCode arg = {ERROR_ACCESS_DENIED};
-		str = fmt::format("{}", arg);
-	}
-
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
-}
-
-TEST(WindowsTypesTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
-	std::string str;
-	{
-		const ErrorCode arg = {ERROR_ACCESS_DENIED};
-		str = fmt::format("{:02d}", arg);
-	}
-
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(05\\)"));
-}
-
-TEST(WindowsTypesTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
-	std::string str;
-	{
-		const ErrorCode arg = {ERROR_ACCESS_DENIED};
-		str = fmt::format("{:x}", arg);
-	}
-
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
-}
-
-TEST(WindowsTypesTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
-	std::string str;
-	{
-		const ErrorCode arg = {E_INVALIDARG};
-		str = fmt::format("{}", arg);
-	}
-
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(0x80070057\\)"));
-}
-
-TEST(WindowsTypesTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
-	std::string str;
-	{
-		const ErrorCode arg = {E_INVALIDARG};
-		str = fmt::format("{:02d}", arg);
-	}
-
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(2147942487\\)"));
-}
-
-TEST(WindowsTypesTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
-	std::string str;
-	{
-		const ErrorCode arg = {E_INVALIDARG};
-		str = fmt::format("{:x}", arg);
-	}
-
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(80070057\\)"));
-}
 
 TEST(WindowsTypesTest, ErrorCode_Log_PrintMessage) {
 	LogLine logLine = GetLogLine();
@@ -193,25 +132,6 @@ TEST(WindowsTypesTest, HINSTANCE_LogNullptr_PrintZero) {
 // POINT
 //
 
-TEST(WindowsTypesTest, POINT_FormatValue_PrintValue) {
-	std::string str;
-	{
-		const POINT arg = {-10, 20};
-		str = fmt::format("{}", arg);
-	}
-
-	EXPECT_EQ("(-10, 20)", str);
-}
-
-TEST(WindowsTypesTest, POINT_FormatInline_PrintValue) {
-	std::string str;
-	{
-		str = fmt::format("{}", POINT{-10, 20});
-	}
-
-	EXPECT_EQ("(-10, 20)", str);
-}
-
 TEST(WindowsTypesTest, POINT_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
@@ -248,16 +168,6 @@ TEST(WindowsTypesTest, POINT_LogValuePrintPadded_PrintPadded) {
 //
 // RECT
 //
-
-TEST(WindowsTypesTest, POINT_Format_PrintValue) {
-	std::string str;
-	{
-		const RECT arg = {-10, 20, 30, 40};
-		str = fmt::format("{}", arg);
-	}
-
-	EXPECT_EQ("((-10, 20), (30, 40))", str);
-}
 
 TEST(WindowsTypesTest, RECT_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();

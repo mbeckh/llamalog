@@ -19,11 +19,7 @@ limitations under the License.
 
 #include <llamalog/LogLine.h>
 
-#include <fmt/core.h>
-
 #include <windows.h>
-
-#include <string>
 
 namespace llamalog {
 
@@ -98,68 +94,3 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT& arg);
 /// @param arg The value.
 /// @return @p logLine to allow method chaining.
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT& arg);
-
-
-//
-// Specializations of fmt::formatter
-//
-
-/// @brief Specialization of `fmt::formatter` for a `llamalog::ErrorCode`.
-/// @details Regular system error codes from e.g. `GetLastError()` are logged as decimal values. `HRESULT`s and other error codes are logged in hex.
-template <>
-struct fmt::formatter<llamalog::ErrorCode> {
-public:
-	/// @brief Parse the format string.
-	/// @param ctx see `fmt::formatter::parse`.
-	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-
-	/// @brief Format the `llamalog::ErrorCode`.
-	/// @param arg A `llamalog::ErrorCode`.
-	/// @param ctx see `fmt::formatter::format`.
-	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const llamalog::ErrorCode& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-
-private:
-	std::string m_format;  ///< The format pattern for the numerical error code.
-};
-
-
-/// @brief Specialization of `fmt::formatter` for a `POINT`.
-template <>
-struct fmt::formatter<POINT> {
-public:
-	/// @brief Parse the format string.
-	/// @param ctx see `fmt::formatter::parse`.
-	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-
-	/// @brief Format the `POINT`.
-	/// @param arg A `POINT`.
-	/// @param ctx see `fmt::formatter::format`.
-	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const POINT& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-
-private:
-	std::string m_format;  ///< The format pattern for all four values.
-};
-
-
-/// @brief Specialization of `fmt::formatter` for a `RECT`.
-template <>
-struct fmt::formatter<RECT> {
-public:
-	/// @brief Parse the format string.
-	/// @param ctx see `fmt::formatter::parse`.
-	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-
-	/// @brief Format the `RECT`.
-	/// @param arg A `RECT`.
-	/// @param ctx see `fmt::formatter::format`.
-	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const RECT& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-
-private:
-	std::string m_format;  ///< The format pattern for all four values.
-};
