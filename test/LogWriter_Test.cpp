@@ -16,13 +16,23 @@ limitations under the License.
 
 #include "llamalog/LogWriter.h"
 
-#include "llamalog/llamalog.h"
+#include "llamalog/LogLine.h"
+#include "llamalog/Logger.h"
 
-#include <detours.h>
+#include <fmt/format.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include <detours_gmock.h>
 #include <windows.h>
 
+#include <memory>
+#include <ostream>
 #include <regex>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <utility>
 
 namespace llamalog::test {
 

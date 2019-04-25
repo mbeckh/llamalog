@@ -21,21 +21,31 @@ limitations under the License.
 // If you wish to build your application for a previous Windows platform, include WinSDKVer.h and
 // set the _WIN32_WINNT macro to the platform you wish to support before including SDKDDKVer.h.
 
-
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <detours_gmock.h>
+#include <sal.h>
 #include <windows.h>
 
+#include <algorithm>
+#include <cfloat>
 #include <cinttypes>
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <exception>
 #include <memory>
+#include <ostream>
+#include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
+#include <thread>
 #include <type_traits>
 #include <utility>

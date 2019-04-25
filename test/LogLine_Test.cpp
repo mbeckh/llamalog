@@ -16,11 +16,10 @@ limitations under the License.
 
 #include "llamalog/LogLine.h"
 
-#include "llamalog/llamalog.h"
-
 #include <gtest/gtest.h>
 
-#include <cinttypes>
+#include <cfloat>
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>

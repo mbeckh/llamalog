@@ -18,15 +18,18 @@ limitations under the License.
 
 #include "llamalog/CustomTypes.h"
 #include "llamalog/LogLine.h"
-#include "llamalog/WindowsTypes.h"
-#include "llamalog/llamalog.h"
 
+#include <fmt/core.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <sal.h>
+
+#include <algorithm>
 #include <exception>
-#include <regex>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 namespace llamalog::test {
@@ -37,11 +40,18 @@ public:
 		: pCalled(p) {
 		// empty
 	}
-	TracingArg(const TracingArg&) = default;
-	TracingArg(TracingArg&&) = default;
-	~TracingArg() = default;
+	TracingArg(const TracingArg&) noexcept = default;
+	TracingArg(TracingArg&&) noexcept = default;
+	~TracingArg() noexcept = default;
 	bool* pCalled;
 };
+
+#ifdef __clang_analyzer__
+// make clang happy and define in namespace for ADL. MSVC can't find correct overload when the declaration is present.
+LogLine& operator<<(LogLine& logLine, const TracingArg& arg) {
+	return logLine.AddCustomArgument(arg);
+}
+#endif
 
 }  // namespace llamalog::test
 
