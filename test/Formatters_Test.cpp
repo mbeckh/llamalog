@@ -63,6 +63,16 @@ TEST(FormattersTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
 }
 
+TEST(FormattersTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
+	std::string str;
+	{
+		const ErrorCode arg = {ERROR_ACCESS_DENIED};
+		str = fmt::format("{:%}", arg);
+	}
+
+	EXPECT_THAT(str, testing::Not(testing::MatchesRegex(".+\\(.*\\)")));
+}
+
 TEST(FormattersTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
 	std::string str;
 	{
@@ -91,6 +101,16 @@ TEST(FormattersTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
 	}
 
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(80070057\\)"));
+}
+
+TEST(FormattersTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
+	std::string str;
+	{
+		const ErrorCode arg = {ERROR_ACCESS_DENIED};
+		str = fmt::format("{:%}", arg);
+	}
+
+	EXPECT_THAT(str, testing::Not(testing::MatchesRegex(".+\\(.*\\)")));
 }
 
 

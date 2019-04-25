@@ -94,7 +94,7 @@ error:
 fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorCode, fmt::format_context& ctx) {
 	wchar_t buffer[256];  // NOLINT(readability-magic-numbers): one-time buffer size
 	// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API
-	DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, errorCode, 0, buffer, sizeof(buffer) / sizeof(*buffer), nullptr);
+	DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, errorCode, 0, buffer, sizeof(buffer) / sizeof(*buffer), nullptr);
 	if (length) {
 		return PostProcessErrorMessage(buffer, length, ctx);
 	}
@@ -107,7 +107,7 @@ fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorC
 			LocalFree(pBuffer);
 		});
 		// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API
-		length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, errorCode, 0, reinterpret_cast<wchar_t*>(&pBuffer), 0, nullptr);
+		length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, errorCode, 0, reinterpret_cast<wchar_t*>(&pBuffer), 0, nullptr);
 		if (length) {
 			return PostProcessErrorMessage(pBuffer, length, ctx);
 		}
@@ -117,6 +117,8 @@ fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorC
 	const std::string_view sv("<ERROR>");
 	return std::copy(sv.cbegin(), sv.cend(), ctx.out());
 }
+
+constexpr char kSuppressErrorCode = '%';  ///< @brief Special character used in the format string to suppress printing the error code.
 
 }  // namespace
 }  // namespace llamalog
@@ -135,7 +137,10 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 	while (end != ctx.end() && *end != '}') {
 		++end;
 	}
-	if (end != it) {
+	if (end - it == 1 && *it == llamalog::kSuppressErrorCode) {
+		// a pattern consisting of only a percent is used to suppress the error code
+		m_format.push_back(llamalog::kSuppressErrorCode);
+	} else if (end != it) {
 		m_format.reserve(end - it + 6);
 		m_format.append(" ({:");
 		m_format.append(it, end);
@@ -145,12 +150,15 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 }
 
 fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-	llamalog::FormatSystemErrorCodeTo(arg.code, ctx);
+	auto out = llamalog::FormatSystemErrorCodeTo(arg.code, ctx);
 	if (m_format.empty()) {
 		// system error codes lie in the range < 0x10000
 		return fmt::format_to(ctx.out(), arg.code < 0x1000 ? " ({})" : " ({:#x})", arg.code);
 	}
-	return fmt::format_to(ctx.out(), m_format, arg.code);
+	if (m_format[0] == llamalog::kSuppressErrorCode) {
+		return out;
+	}
+	return fmt::format_to(out, m_format, arg.code);
 }
 
 
