@@ -27,7 +27,9 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
-    <ClCompile />
+    <ClCompile>
+      <PreprocessorDefinitions>INCLUDETOOLBOX_BUG_70;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\test\CustomTypes_Test.cpp" />
