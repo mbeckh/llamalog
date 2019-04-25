@@ -34,7 +34,7 @@
     <ClCompile Include="..\..\test\Exceptions_Test.cpp" />
     <ClCompile Include="..\..\test\finally_Test.cpp" />
     <ClCompile Include="..\..\test\LogLine_Test.cpp" />
-    <ClCompile Include="..\..\test\llamalog_Test.cpp" />
+    <ClCompile Include="..\..\test\Logger_Test.cpp" />
     <ClCompile Include="..\..\test\LogWriter_Test.cpp" />
     <ClCompile Include="..\..\test\main.cpp" />
     <ClCompile Include="..\..\test\WindowsTypes_Test.cpp" />
