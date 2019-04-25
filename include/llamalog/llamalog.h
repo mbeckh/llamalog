@@ -18,7 +18,6 @@ limitations under the License.
 
 #pragma once
 
-// IWYU pragma: begin_exports
-#include <llamalog/Exceptions.h>
-#include <llamalog/Logger.h>
-// IWYU pragma: end_exports
+#include <llamalog/Exceptions.h>    // IWYU pragma: export
+#include <llamalog/Logger.h>        // IWYU pragma: export
+#include <llamalog/WindowsTypes.h>  // IWYU pragma: export
