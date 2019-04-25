@@ -82,7 +82,7 @@ public:
 	/// @param code The error code.
 	/// @param category The error category.
 	/// @param message The error message.
-	SystemError(int code, const std::error_category& category, _In_z_ const char* __restrict message) noexcept;
+	SystemError(int code, const std::error_category& category, _In_opt_z_ const char* __restrict message) noexcept;
 	SystemError(SystemError&) noexcept = default;   ///< @defaultconstructor
 	SystemError(SystemError&&) noexcept = default;  ///< @defaultconstructor
 	~SystemError() noexcept = default;

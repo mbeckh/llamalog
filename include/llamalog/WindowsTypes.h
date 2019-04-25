@@ -25,6 +25,12 @@ namespace llamalog {
 
 /// @brief A struct for logging system error codes, e.g. `GetLastError()`, `HRESULT`, etc.
 struct ErrorCode {
+	constexpr ErrorCode(const int code) noexcept
+		: code(code) {
+		// change variable type if this assertion fails
+		static_assert(sizeof(int) <= sizeof(DWORD), "data truncation in ErrorCode");
+		// empty
+	}
 	constexpr ErrorCode(const DWORD code) noexcept
 		: code(code) {
 		// empty

@@ -72,7 +72,7 @@ _Ret_z_ const char* BaseException::What(_In_opt_ const std::error_code* const pC
 	return "<ERROR>";
 }
 
-SystemError::SystemError(int code, const std::error_category& category, _In_z_ const char* __restrict message) noexcept
+SystemError::SystemError(int code, const std::error_category& category, _In_opt_z_ const char* __restrict message) noexcept
 	: std::runtime_error(nullptr)
 	, m_code(code, category)
 	, m_message(message) {
