@@ -48,29 +48,29 @@ public:
 	/// @param priority The `#Priority` of the `LogLine`.
 	/// @return `true` if this writer logs events with the respective priority.
 	/// @copyright Derived from `is_logged(LogLevel)` from NanoLog.
-	[[nodiscard]] bool isLogged(Priority priority) const noexcept;
+	[[nodiscard]] bool IsLogged(Priority priority) const noexcept;
 
 	/// @brief Dynamically change the `#Priority`
 	/// @param priority The new `#Priority` for this writer.
 	/// @copyright Derived from `set_log_level(LogLevel)` from NanoLog.
-	void setPriority(Priority priority) noexcept;
+	void SetPriority(Priority priority) noexcept;
 
 	/// @brief Produce output for a `LogLine`.
 	/// @param logLine The data.
-	virtual void log(const LogLine& logLine) = 0;
+	virtual void Log(const LogLine& logLine) = 0;
 
 public:
 	/// @brief Return a string for a `#Priority`.
 	/// @param priority A `#Priority`.
 	/// @return One of `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL` - or `-` for unknown priorities.
 	/// @copyright Derived from `to_string(LogLevel)` from NanoLog.
-	[[nodiscard]] static __declspec(noalias) _Ret_z_ const char* formatPriority(Priority priority) noexcept;
+	[[nodiscard]] static __declspec(noalias) _Ret_z_ const char* FormatPriority(Priority priority) noexcept;
 
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS`.
 	/// @details In case of an error, `0000-00-00 00:00:00.000` is returned.
 	/// @param timestamp The timestamp.
 	/// @return The timestamp as a string.
-	[[nodiscard]] static std::string formatTimestamp(const FILETIME& timestamp);
+	[[nodiscard]] static std::string FormatTimestamp(const FILETIME& timestamp);
 
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS` to a target buffer.
 	/// @details The buffer MUST be of type `fmt::basic_memory_buffer`.
@@ -80,7 +80,7 @@ public:
 	/// @param out The target buffer.
 	/// @param timestamp The timestamp.
 	template <typename Out>
-	static void formatTimestampTo(Out& out, const FILETIME& timestamp);
+	static void FormatTimestampTo(Out& out, const FILETIME& timestamp);
 
 private:
 	std::atomic<Priority> m_priority;  ///< @brief Atomic store for the `#Priority`.
@@ -95,7 +95,7 @@ protected:
 	/// @brief Produce output for a `LogLine`.
 	/// @param logLine The data.
 	/// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
-	void log(const LogLine& logLine) final;
+	void Log(const LogLine& logLine) final;
 };
 
 
@@ -138,12 +138,12 @@ protected:
 	/// @brief Produce output for a `LogLine`.
 	/// @param logLine The data.
 	/// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
-	void log(const LogLine& logLine) final;
+	void Log(const LogLine& logLine) final;
 
 private:
 	/// @brief Start the next file.
 	/// @param logLine The `LogLine` which triggered the roll over.
-	void rollFile(const LogLine& logLine);
+	void RollFile(const LogLine& logLine);
 
 private:
 	const std::string m_directory;   ///< @brief The directory.

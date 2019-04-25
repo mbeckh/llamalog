@@ -65,19 +65,19 @@ class LogWriter;
 namespace internal {
 
 /// @brief Initialize the logger.
-/// @note `start` MUST be called after `initialize` before any logging takes place.
-/// @copyright Derived from `initialize` from NanoLog.
-void initialize();
+/// @note `Start` MUST be called after `Initialize` before any logging takes place.
+/// @copyright Derived from `Initialize` from NanoLog.
+void Initialize();
 
 /// @brief Actually start logging.
-/// @note `start` MUST be called after `initialize` before any logging takes place.
-void start();
+/// @note `Start` MUST be called after `Initialize` before any logging takes place.
+void Start();
 
 /// @brief Calculate the `Priority` for internal logging messages.
 /// @remarks The function prevents endless loops by encoding an error counter in the priority.
 /// @param priority The desired logging priority.
 /// @return The `Priority` to use for an internal logging message.
-[[nodiscard]] Priority getInternalPriority(Priority priority) noexcept;
+[[nodiscard]] Priority GetInternalPriority(Priority priority) noexcept;
 
 /// @brief Log a message if logging fails.
 /// @details The output is sent to `OutputDebugStringA`.
@@ -85,39 +85,39 @@ void start();
 /// @param line The line where the message is created.
 /// @param function The function where the message is created.
 /// @param message The message to log.
-void panic(const char* file, std::uint32_t line, const char* function, const char* message) noexcept;
+void Panic(const char* file, std::uint32_t line, const char* function, const char* message) noexcept;
 
 }  // namespace internal
 
 /// @brief Initialize the logger, add writers and start logging.
-/// @note `initialize` MUST be called before any logging takes place.
+/// @note `Initialize` MUST be called before any logging takes place.
 /// @tparam LogWriter MUST be of type `LogWriter`.
 /// @param writers One or more `LogWriter` objects.
 template <typename... LogWriter>
-void initialize(std::unique_ptr<LogWriter>&&... writers) {
-	internal::initialize();
-	(..., addWriter(std::move(writers)));
-	internal::start();
+void Initialize(std::unique_ptr<LogWriter>&&... writers) {
+	internal::Initialize();
+	(..., AddWriter(std::move(writers)));
+	internal::Start();
 }
 
 /// @brief Add a log writer.
 /// @param writer The `LogWriter` to add.
-void addWriter(std::unique_ptr<LogWriter>&& writer);
+void AddWriter(std::unique_ptr<LogWriter>&& writer);
 
 /// @brief Get the filename after the last slash or backslash character.
 /// @param path A start of the path to shorten.
 /// @param check The next character to check.
 /// @return Filename and extension after the last path separator.
-[[nodiscard]] constexpr __declspec(noalias) _Ret_z_ const char* getFilename(_In_z_ const char* const path, _In_opt_z_ const char* const check = nullptr) noexcept {
+[[nodiscard]] constexpr __declspec(noalias) _Ret_z_ const char* GetFilename(_In_z_ const char* const path, _In_opt_z_ const char* const check = nullptr) noexcept {
 	if (!check) {
 		// first call
-		return getFilename(path, path);
+		return GetFilename(path, path);
 	}
 	if (*check) {
 		if (*check == '/' || *check == '\\') {
-			return getFilename(check + 1, check + 1);
+			return GetFilename(check + 1, check + 1);
 		}
-		return getFilename(path, check + 1);
+		return GetFilename(path, check + 1);
 	}
 	return path;
 }
@@ -126,12 +126,12 @@ void addWriter(std::unique_ptr<LogWriter>&& writer);
 /// @brief Log a `LogLine`.
 /// @param logLine The `LogLine` to send to the logger.
 /// @copyright Derived from `Log::operator==` from NanoLog.
-void log(LogLine& logLine);
+void Log(LogLine& logLine);
 
 /// @brief Log a `LogLine`.
 /// @param logLine The `LogLine` to send to the logger.
 /// @copyright Derived from `Log::operator==` from NanoLog.
-void log(LogLine&& logLine);
+void Log(LogLine&& logLine);
 
 /// @brief Logs a new `LogLine`.
 /// @tparam T The types of the message arguments.
@@ -142,9 +142,9 @@ void log(LogLine&& logLine);
 /// @param message The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 /// @param args Any args for @p message.
 template <typename... T>
-void log(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
+void Log(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
 	LogLine logLine(priority, file, line, function, message);
-	log((logLine << ... << std::forward<T>(args)));
+	Log((logLine << ... << std::forward<T>(args)));
 }
 
 /// @brief Logs a new `LogLine` for an internal message from the logger itself.
@@ -157,23 +157,23 @@ void log(const Priority priority, _In_z_ const char* __restrict const file, cons
 /// @param message The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 /// @param args Any args for @p message.
 template <typename... T>
-void logInternal(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
-	const Priority internalPriority = internal::getInternalPriority(priority);
+void LogInternal(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
+	const Priority internalPriority = internal::GetInternalPriority(priority);
 	if ((static_cast<std::uint8_t>(internalPriority) & 3u) == 3u) {
-		internal::panic(file, line, function, "Error logging error");
+		internal::Panic(file, line, function, "Error logging error");
 		return;
 	}
 	LogLine logLine(internalPriority, file, line, function, message);
-	log((logLine << ... << std::forward<T>(args)));
+	Log((logLine << ... << std::forward<T>(args)));
 }
 
 /// @brief Waits until all currently available entries have been written.
 /// @details This function might block for a long time and its main purpose is to flush the log for testing.
 /// Use with care in your own code.
-void flush();
+void Flush();
 
 /// @brief End all logging. This MUST be the last function called.
-void shutdown() noexcept;
+void Shutdown() noexcept;
 
 }  // namespace llamalog
 
@@ -182,26 +182,26 @@ void shutdown() noexcept;
 //
 
 /// @brief Emit a log line. @details Without the explicit variable `file_` the compiler does not reliably evaluate
-/// `#llamalog::getFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
+/// `#llamalog::GetFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
 /// @param priority_ The `Priority`.
 /// @param message_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
 #define LLAMALOG_LOG(priority_, message_, ...)                                      \
 	do {                                                                            \
-		constexpr const char* file_ = llamalog::getFilename(__FILE__);              \
-		llamalog::log(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);              \
+		llamalog::Log(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
 	} while (0)
 
 /// @brief Emit a log line for an internal message from the logger itself.
 /// @details Without the explicit variable `file_` the compiler does not reliably evaluate
-/// `#llamalog::getFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
+/// `#llamalog::GetFilename` at compile time. Add a `do-while`-loop to force a semicolon after the macro.
 /// @param priority_ The `Priority`.
 /// @param message_ The log message which MAY contain {fmt} placeholders. This MUST be a literal string
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
 #define LLAMALOG_INTERNAL_LOG(priority_, message_, ...)                                     \
 	do {                                                                                    \
-		constexpr const char* file_ = llamalog::getFilename(__FILE__);                      \
-		llamalog::logInternal(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                      \
+		llamalog::LogInternal(priority_, file_, __LINE__, __func__, message_, __VA_ARGS__); \
 	} while (0)
 
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace`.
@@ -217,8 +217,8 @@ void shutdown() noexcept;
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
 #define LOG_TRACE_RESULT(result_, message_, ...)                                                             \
 	[&](decltype(result_) result, const char* const function) -> decltype(result_) {                         \
-		constexpr const char* file_ = llamalog::getFilename(__FILE__);                                       \
-		llamalog::log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, result, __VA_ARGS__); \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                       \
+		llamalog::Log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, result, __VA_ARGS__); \
 		return result;                                                                                       \
 	}(result_, __func__)
 
@@ -263,4 +263,4 @@ void shutdown() noexcept;
 /// @details The output is sent to `OutputDebugStringA`.
 /// @param message_ The message.
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
-#define LLAMALOG_PANIC(message_) llamalog::internal::panic(__FILE__, __LINE__, __func__, message_)
+#define LLAMALOG_PANIC(message_) llamalog::internal::Panic(__FILE__, __LINE__, __func__, message_)

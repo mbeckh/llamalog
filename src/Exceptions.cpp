@@ -34,19 +34,19 @@ namespace llamalog {
 
 BaseException::BaseException(_In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_opt_z_ const char* __restrict const message) noexcept
 	: m_logLine(Priority::kNone /* unused */, file, line, function, message) {
-	m_logLine.generateTimestamp();
+	m_logLine.GenerateTimestamp();
 }
 
-_Ret_z_ const char* BaseException::what(_In_opt_ const std::error_code* const pCode) const noexcept {
+_Ret_z_ const char* BaseException::What(_In_opt_ const std::error_code* const pCode) const noexcept {
 	if (m_what) {
 		return m_what.get();
 	}
 	try {
 		std::vector<fmt::format_context::format_arg> args;
-		m_logLine.copyArgumentsTo(args);
+		m_logLine.CopyArgumentsTo(args);
 
 		fmt::basic_memory_buffer<char, 256> buf;  // NOLINT(readability-magic-numbers)
-		fmt::vformat_to(buf, fmt::to_string_view(m_logLine.pattern()),
+		fmt::vformat_to(buf, fmt::to_string_view(m_logLine.GetPattern()),
 						fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 
 		if (pCode) {
@@ -109,7 +109,7 @@ _Ret_z_ const char* SystemError::what() const noexcept {
 	return "<ERROR>";
 }
 
-_Ret_maybenull_ const BaseException* getCurrentExceptionAsBaseException() noexcept {
+_Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexcept {
 	try {
 		throw;
 	} catch (const BaseException& e) {

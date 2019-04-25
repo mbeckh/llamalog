@@ -36,15 +36,15 @@ limitations under the License.
 
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::ErrorCode arg) {
-	return logLine.addCustomArgument(arg);
+	return logLine.AddCustomArgument(arg);
 }
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT& arg) {
-	return logLine.addCustomArgument(arg);
+	return logLine.AddCustomArgument(arg);
 }
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT& arg) {
-	return logLine.addCustomArgument(arg);
+	return logLine.AddCustomArgument(arg);
 }
 
 
@@ -56,12 +56,12 @@ namespace llamalog {
 namespace {
 
 /// @brief Remove trailing linefeeds from an error message, encode as UTF-8 and print.
-/// @remarks This function is a helper for `#formatSystemErrorCodeTo()`.
+/// @remarks This function is a helper for `#FormatSystemErrorCodeTo()`.
 /// @param message The error message.
 /// @param length The length of the error message NOT including a terminating null character.
 /// @param ctx The output target.
 /// @result The output iterator.
-fmt::format_context::iterator postProcessErrorMessage(_In_reads_(length) wchar_t* __restrict const message, std::size_t length, fmt::format_context& ctx) {
+fmt::format_context::iterator PostProcessErrorMessage(_In_reads_(length) wchar_t* __restrict const message, std::size_t length, fmt::format_context& ctx) {
 	if (length >= 2) {
 		if (message[length - 2] == L'\r' || message[length - 2] == L'\n') {
 			message[length -= 2] = L'\0';
@@ -106,12 +106,12 @@ error:
 /// @param errorCode The system error code.
 /// @param ctx The output target.
 /// @result The output iterator.
-fmt::format_context::iterator formatSystemErrorCodeTo(const std::uint32_t errorCode, fmt::format_context& ctx) {
+fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorCode, fmt::format_context& ctx) {
 	wchar_t buffer[256];  // NOLINT(readability-magic-numbers): one-time buffer size
 	// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API
 	DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, errorCode, 0, buffer, sizeof(buffer) / sizeof(*buffer), nullptr);
 	if (length) {
-		return postProcessErrorMessage(buffer, length, ctx);
+		return PostProcessErrorMessage(buffer, length, ctx);
 	}
 
 	DWORD lastError = GetLastError();
@@ -124,7 +124,7 @@ fmt::format_context::iterator formatSystemErrorCodeTo(const std::uint32_t errorC
 		// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API
 		length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, errorCode, 0, reinterpret_cast<wchar_t*>(&pBuffer), 0, nullptr);
 		if (length) {
-			return postProcessErrorMessage(pBuffer, length, ctx);
+			return PostProcessErrorMessage(pBuffer, length, ctx);
 		}
 		lastError = GetLastError();
 	}
@@ -141,7 +141,7 @@ fmt::format_context::iterator formatSystemErrorCodeTo(const std::uint32_t errorC
 // Specializations of fmt::formatter
 //
 
-fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(const fmt::format_parse_context& ctx) noexcept {
+fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto it = ctx.begin();
 	if (it != ctx.end() && *it == ':') {
 		++it;
@@ -153,13 +153,13 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 	return end;
 }
 
-fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {
-	llamalog::formatSystemErrorCodeTo(arg.code, ctx);
+fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+	llamalog::FormatSystemErrorCodeTo(arg.code, ctx);
 	return fmt::format_to(ctx.out(), " ({})", arg.code);
 }
 
 
-fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::format_parse_context& ctx) {
+fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto it = ctx.begin();
 	if (it != ctx.end() && *it == ':') {
 		++it;
@@ -177,12 +177,12 @@ fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::form
 	return end;
 }
 
-fmt::format_context::iterator fmt::formatter<POINT>::format(const POINT& arg, fmt::format_context& ctx) {
+fmt::format_context::iterator fmt::formatter<POINT>::format(const POINT& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	return fmt::format_to(ctx.out(), m_format, arg.x, arg.y);
 }
 
 
-fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::format_parse_context& ctx) {
+fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto it = ctx.begin();
 	if (it != ctx.end() && *it == ':') {
 		++it;
@@ -204,6 +204,6 @@ fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::forma
 	return end;
 }
 
-fmt::format_context::iterator fmt::formatter<RECT>::format(const RECT& arg, fmt::format_context& ctx) {
+fmt::format_context::iterator fmt::formatter<RECT>::format(const RECT& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	return fmt::format_to(ctx.out(), m_format, arg.left, arg.top, arg.right, arg.bottom);
 }

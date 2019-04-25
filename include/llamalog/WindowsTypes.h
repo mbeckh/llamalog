@@ -34,9 +34,14 @@ struct ErrorCode {
 
 /// @brief Get the result of `GetLastError()` as an `ErrorCode` suitable as a formatter argument.
 /// @return A newly created `ErrorCode` structure.
-[[nodiscard]] inline ErrorCode lastError() noexcept {
+[[nodiscard]] inline ErrorCode LastError() noexcept {
 	return ErrorCode{GetLastError()};
 }
+
+#ifdef __clang_analyzer__
+// make clang happy and define in namespace for ADL. MSVC can't find correct overload when the declaration is present.
+LogLine& operator<<(LogLine& logLine, ErrorCode arg);
+#endif
 
 }  // namespace llamalog
 
@@ -45,13 +50,6 @@ struct ErrorCode {
 /// @param arg The value.
 /// @return @p logLine to allow method chaining.
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, llamalog::ErrorCode arg);
-
-#ifdef __clang_analyzer__
-// make clang happy and define in namespace for ADL. MSVC can't find correct overload when the declaration is present.
-namespace llamalog {
-LogLine& operator<<(LogLine& logLine, ErrorCode arg);
-}  // namespace llamalog
-#endif
 
 /// @brief Log a `LARGE_INTEGER` structure as a 64 bit signed integer.
 /// @param logLine The `llamalog::LogLine`.
@@ -105,13 +103,13 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) noexcept;
+	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 	/// @brief Format the `llamalog::ErrorCode`.
 	/// @param arg A `llamalog::ErrorCode`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const llamalog::ErrorCode& arg, fmt::format_context& ctx);
+	fmt::format_context::iterator format(const llamalog::ErrorCode& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 };
 
 
@@ -122,13 +120,13 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);
+	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 	/// @brief Format the `POINT`.
 	/// @param arg A `POINT`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const POINT& arg, fmt::format_context& ctx);
+	fmt::format_context::iterator format(const POINT& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 private:
 	std::string m_format;  ///< The format pattern for all four values.
@@ -142,13 +140,13 @@ public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);
+	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 	/// @brief Format the `RECT`.
 	/// @param arg A `RECT`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const RECT& arg, fmt::format_context& ctx);
+	fmt::format_context::iterator format(const RECT& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 private:
 	std::string m_format;  ///< The format pattern for all four values.

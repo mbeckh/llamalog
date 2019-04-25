@@ -164,7 +164,7 @@ public:
 };
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::TriviallyCopyable& arg) {
-	return logLine.addCustomArgument(arg);
+	return logLine.AddCustomArgument(arg);
 }
 
 
@@ -183,7 +183,7 @@ public:
 };
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::MoveConstructible& arg) {
-	return logLine.addCustomArgument(arg);
+	return logLine.AddCustomArgument(arg);
 }
 
 
@@ -202,7 +202,7 @@ public:
 };
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::CopyConstructible& arg) {
-	return logLine.addCustomArgument(arg);
+	return logLine.AddCustomArgument(arg);
 }
 
 namespace llamalog::test {
@@ -227,7 +227,7 @@ TEST_F(CustomTypesTest, TriviallyCopyable_IsValue_PrintValue) {
 			EXPECT_EQ(1, g_instancesCreated);
 		}
 		EXPECT_EQ(1, g_instancesCreated);
-		const std::string str = logLine.message();
+		const std::string str = logLine.GetLogMessage();
 
 		// everything is just copied as raw binary data
 		EXPECT_EQ("T_1_7", str);
@@ -264,7 +264,7 @@ TEST_F(CustomTypesTest, MoveConstructible_IsValue_PrintValue) {
 		EXPECT_EQ(1, g_copyConstructorCalled);
 		EXPECT_EQ(1, g_moveConstructorCalled);
 		EXPECT_EQ(2, g_destructorCalled);
-		const std::string str = logLine.message();
+		const std::string str = logLine.GetLogMessage();
 
 		EXPECT_EQ("M_3_7", str);  // no need to print string of x'es
 		EXPECT_EQ(3, g_instancesCreated);
@@ -306,7 +306,7 @@ TEST_F(CustomTypesTest, CopyConstructible_IsValue_PrintValue) {
 		EXPECT_EQ(2, g_copyConstructorCalled);
 		EXPECT_EQ(0, g_moveConstructorCalled);
 		EXPECT_EQ(2, g_destructorCalled);
-		const std::string str = logLine.message();
+		const std::string str = logLine.GetLogMessage();
 
 		EXPECT_EQ("C_3_7", str);  // no need to print string of x'es
 		EXPECT_EQ(3, g_instancesCreated);

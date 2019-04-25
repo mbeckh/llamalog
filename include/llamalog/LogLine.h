@@ -86,7 +86,7 @@ enum class Priority : std::uint8_t {
 class alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) LogLine final {
 public:
 	/// @brief Create a new target for the various `operator<<` overloads.
-	/// @details The timestamp is not set until `#generateTimestamp` is called.
+	/// @details The timestamp is not set until `#GenerateTimestamp` is called.
 	/// @param priority The `#Priority`.
 	/// @param file The logged file name. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 	/// @param line The logged line number.
@@ -253,49 +253,49 @@ public:
 public:
 	/// @brief Get the timestamp for the log event.
 	/// @return The timestamp.
-	[[nodiscard]] const FILETIME& timestamp() const noexcept {
+	[[nodiscard]] const FILETIME& GetTimestamp() const noexcept {
 		return m_timestamp;
 	}
 
 	/// @brief Generate the timestamp for the log event.
 	/// @note Not part of the constructor to support setting it from the logger queue.
-	void generateTimestamp() noexcept {
+	void GenerateTimestamp() noexcept {
 		GetSystemTimeAsFileTime(&m_timestamp);
 	}
 
 	/// @brief Get the priority.
 	/// @return The priority.
-	[[nodiscard]] Priority priority() const noexcept {
+	[[nodiscard]] Priority GetPriority() const noexcept {
 		return m_priority;
 	}
 
 	/// @brief Get the thread if.
 	/// @return The thread id.
-	[[nodiscard]] DWORD threadId() const noexcept {
+	[[nodiscard]] DWORD GetThreadId() const noexcept {
 		return m_threadId;
 	}
 
 	/// @brief Get the name of the file.
 	/// @return The file name.
-	[[nodiscard]] _Ret_z_ const char* file() const noexcept {
+	[[nodiscard]] _Ret_z_ const char* GetFile() const noexcept {
 		return m_file;
 	}
 
 	/// @brief Get the source code line.
 	/// @return The line number.
-	[[nodiscard]] std::uint32_t line() const noexcept {
+	[[nodiscard]] std::uint32_t GetLine() const noexcept {
 		return m_line;
 	}
 
 	/// @brief Get the name of the function.
 	/// @return The function name.
-	[[nodiscard]] _Ret_z_ const char* function() const noexcept {
+	[[nodiscard]] _Ret_z_ const char* GetFunction() const noexcept {
 		return m_function;
 	}
 
 	/// @brief Get the unformatted log message, i.e. before patter replacement.
 	/// @return The message pattern.
-	[[nodiscard]] _Ret_z_ const char* pattern() const noexcept {
+	[[nodiscard]] _Ret_z_ const char* GetPattern() const noexcept {
 		return m_message;
 	}
 
@@ -305,12 +305,12 @@ public:
 	/// @tparam T This MUST be `std::vector<fmt::format_context::format_arg>`.
 	/// @param args The `std::vector` to receive the message arguments.
 	template <typename T>
-	void copyArgumentsTo(T& args) const;
+	void CopyArgumentsTo(T& args) const;
 
 	/// @brief Returns the formatted log message. @note The name `GetMessage` would conflict with the function from the
 	/// Windows API having the same name.
 	/// @return The log message.
-	[[nodiscard]] std::string message() const;
+	[[nodiscard]] std::string GetLogMessage() const;
 
 	/// @brief Copy a log argument of a custom type to the argument buffer.
 	/// @details This function handles types which are trivially copyable.
@@ -319,7 +319,7 @@ public:
 	/// @param arg The object.
 	/// @return The current object for method chaining.
 	template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int> = 0>
-	LogLine& addCustomArgument(const T& arg);
+	LogLine& AddCustomArgument(const T& arg);
 
 	/// @brief Copy a log argument of a custom type to the argument buffer.
 	/// @details This function handles types which are not trivially copyable. However, the type MUST support copy construction.
@@ -329,7 +329,7 @@ public:
 	/// @param arg The object.
 	/// @return The current object for method chaining.
 	template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
-	LogLine& addCustomArgument(const T& arg);
+	LogLine& AddCustomArgument(const T& arg);
 
 public:
 	using Size = std::uint32_t;    ///< @brief A data type for indexes in the buffer representing *bytes*.
@@ -340,18 +340,18 @@ private:
 	/// @brief Get the argument buffer for writing.
 	/// @return The start of the buffer.
 	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
-	[[nodiscard]] _Ret_notnull_ __declspec(restrict) std::byte* buffer() noexcept;
+	[[nodiscard]] _Ret_notnull_ __declspec(restrict) std::byte* GetBuffer() noexcept;
 
 	/// @brief Get the argument buffer.
 	/// @return The start of the buffer.
 	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
-	[[nodiscard]] _Ret_notnull_ __declspec(restrict) const std::byte* buffer() const noexcept;
+	[[nodiscard]] _Ret_notnull_ __declspec(restrict) const std::byte* GetBuffer() const noexcept;
 
 	/// @brief Get the current position in the argument buffer ensuring that enough space exists for the next argument.
 	/// @param additionalBytes The number of bytes that will be appended.
 	/// @return The next write position.
 	/// @copyright Derived from `NanoLogLine::buffer` from NanoLog.
-	[[nodiscard]] _Ret_notnull_ __declspec(restrict) std::byte* getWritePosition(Size additionalBytes);
+	[[nodiscard]] _Ret_notnull_ __declspec(restrict) std::byte* GetWritePosition(Size additionalBytes);
 
 	/// @brief Copy an argument to the buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the bytes of the value.
@@ -359,17 +359,17 @@ private:
 	/// @param arg The value to add.
 	/// @copyright Derived from both methods `NanoLogLine::encode` from NanoLog.
 	template <typename T>
-	void write(T arg);
+	void Write(T arg);
 
 	/// @brief Copy a string to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the string in characters (NOT
 	/// including a terminating null character) and finally the string's characters (again NOT including a terminating null character).
-	/// This function is optimized compared to `writeString(const wchar_t*, std::size_t)` because `char` has no alignment requirenents.
+	/// This function is optimized compared to `WriteString(const wchar_t*, std::size_t)` because `char` has no alignment requirenents.
 	/// @remarks The type of @p len is `std::size_t` because the check if the length exceeds the capacity of `#Length` happens inside this function.
 	/// @param arg The string to add.
 	/// @param len The string length in characters NOT including a terminating null character.
 	/// @copyright Derived from `NanoLogLine::encode_c_string` from NanoLog.
-	void writeString(_In_reads_(len) const char* __restrict arg, std::size_t len);
+	void WriteString(_In_reads_(len) const char* __restrict arg, std::size_t len);
 
 	/// @brief Copy a string to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the string in characters (NOT
@@ -379,13 +379,13 @@ private:
 	/// @param arg The string to add.
 	/// @param len The string length in characters NOT including a terminating null character.
 	/// @copyright Derived from `NanoLogLine::encode_c_string` from NanoLog.
-	void writeString(_In_reads_(len) const wchar_t* __restrict arg, std::size_t len);
+	void WriteString(_In_reads_(len) const wchar_t* __restrict arg, std::size_t len);
 
 	/// @brief Add an exception object to the argument buffer.
 	/// @param message The exception message.
 	/// @param pBaseException The (optional) `BaseException` object carrying additional logging information.
 	/// @param pCode The error code for `std::system_error`s.
-	void writeException(_In_opt_z_ const char* message, _In_opt_ const BaseException* pBaseException, _In_opt_ const std::error_code* pCode);
+	void WriteException(_In_opt_z_ const char* message, _In_opt_ const BaseException* pBaseException, _In_opt_ const std::error_code* pCode);
 
 	/// @brief Add a custom object to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, a pointer
@@ -398,7 +398,7 @@ private:
 	/// @param align The alignment requirement of the type.
 	/// @param createFormatArg A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::format_context::format_arg` object.
-	void writeTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byte* __restrict ptr, Size objectSize, Align align, _In_ void (*createFormatArg)());
+	void WriteTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byte* __restrict ptr, Size objectSize, Align align, _In_ void (*createFormatArg)());
 
 	/// @brief Add a custom object to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the padding for @p T, the pointer
@@ -409,7 +409,7 @@ private:
 	/// @param align The alignment requirement of the type.
 	/// @param functionTable A pointer to the `internal::FunctionTable`.
 	/// @return An adress where to copy the current argument.
-	[[nodiscard]] __declspec(restrict) std::byte* writeNonTriviallyCopyable(Size objectSize, Align align, _In_ const void* functionTable);
+	[[nodiscard]] __declspec(restrict) std::byte* WriteNonTriviallyCopyable(Size objectSize, Align align, _In_ const void* functionTable);
 
 private:
 	///< @brief The stack buffer used for small payloads.

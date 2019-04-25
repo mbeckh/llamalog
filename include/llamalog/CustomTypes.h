@@ -16,7 +16,7 @@ limitations under the License.
 
 /// @file
 /// @brief Include for implementation of custom types. Include this file in every .cpp calling
-/// `LogLine::addCustomArgument`. @details The templated function `llamalog::LogLine::addCustomArgument` has been moved
+/// `LogLine::AddCustomArgument`. @details The templated function `llamalog::LogLine::AddCustomArgument` has been moved
 /// to a separate file to not make {fmt} a dependency for all users of llamalog.
 #pragma once
 
@@ -31,6 +31,13 @@ limitations under the License.
 #include <new>
 #include <type_traits>
 
+#ifdef __clang_analyzer__
+// MSVC does not yet have __builtin_offsetof which gives false errors in clang-tidy
+#pragma push_macro("offsetof")
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): macro for clang
+#define offsetof __builtin_offsetof
+#endif
+
 namespace llamalog {
 
 namespace internal {
@@ -40,7 +47,7 @@ namespace internal {
 /// @param objectData The serialized byte stream of an object of type @p T.
 /// @return A newly created `fmt::format_context::format_arg`.
 template <typename T>
-fmt::format_context::format_arg createFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
+fmt::format_context::format_arg CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
 	return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const T*>(objectData));
 }
 
@@ -49,7 +56,7 @@ fmt::format_context::format_arg createFormatArg(_In_reads_bytes_(sizeof(T)) cons
 /// @param src The source address.
 /// @param dst The target address.
 template <typename T>
-void copy(_In_reads_bytes_(sizeof(T)) const std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) {
+void Copy(_In_reads_bytes_(sizeof(T)) const std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) {
 	new (dst) T(*reinterpret_cast<const T*>(src));
 }
 
@@ -58,7 +65,7 @@ void copy(_In_reads_bytes_(sizeof(T)) const std::byte* const src, _Out_writes_by
 /// @param src The source address.
 /// @param dst The target address.
 template <typename T, typename std::enable_if_t<std::is_nothrow_move_constructible_v<T>, int> = 0>
-void move(_Inout_updates_bytes_(sizeof(T)) std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
+void Move(_Inout_updates_bytes_(sizeof(T)) std::byte* const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
 	static_assert(!std::is_trivially_copyable_v<T>, "Move MUST NOT be used for trivially copyable types");
 	new (dst) T(std::move(*reinterpret_cast<T*>(src)));
 }
@@ -69,7 +76,7 @@ void move(_Inout_updates_bytes_(sizeof(T)) std::byte* const src, _Out_writes_byt
 /// @param src The source address.
 /// @param dst The target address.
 template <typename T, typename std::enable_if_t<!std::is_nothrow_move_constructible_v<T>, int> = 0>
-void move(_In_reads_bytes_(sizeof(T)) std::byte* __restrict const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
+void Move(_In_reads_bytes_(sizeof(T)) std::byte* __restrict const src, _Out_writes_bytes_(sizeof(T)) std::byte* __restrict const dst) noexcept {
 	static_assert(!std::is_trivially_copyable_v<T>, "Move MUST NOT be used for trivially copyable types");
 	static_assert(std::is_nothrow_copy_constructible_v<T>, "type MUST be nothrow copy constructible of it's not nothrow move constructible");
 	new (dst) T(*reinterpret_cast<const T*>(src));
@@ -79,7 +86,7 @@ void move(_In_reads_bytes_(sizeof(T)) std::byte* __restrict const src, _Out_writ
 /// @tparam T The type of the argument.
 /// @param obj The object.
 template <typename T>
-void destruct(_Inout_updates_bytes_(sizeof(T)) std::byte* __restrict const obj) noexcept {
+void Destruct(_Inout_updates_bytes_(sizeof(T)) std::byte* __restrict const obj) noexcept {
 	static_assert(!std::is_trivially_copyable_v<T>, "Destruct MUST NOT be used for trivially copyable types");
 	static_assert(std::is_nothrow_destructible_v<T>, "type MUST be nothrow destructible");
 	reinterpret_cast<T*>(obj)->~T();
@@ -114,30 +121,30 @@ struct FunctionTable {
 template <typename T>
 struct FunctionTableInstance {
 	/// @brief A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
-	FunctionTable::Copy copy = internal::copy<T>;
+	FunctionTable::Copy copy = Copy<T>;
 	/// @brief A pointer to a function which creates the custom type either by copy or move, whichever is
 	/// more efficient. Both adresses can be assumed to be properly aligned.
-	FunctionTable::Move move = internal::move<T>;
+	FunctionTable::Move move = Move<T>;
 	/// @brief A pointer to a function which calls the type's destructor.
-	FunctionTable::Destruct destruct = internal::destruct<T>;
+	FunctionTable::Destruct destruct = Destruct<T>;
 	/// @brief A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::format_context::format_arg` object.
-	FunctionTable::CreateFormatArg createFormatArg = internal::createFormatArg<T>;
+	FunctionTable::CreateFormatArg createFormatArg = CreateFormatArg<T>;
 };
 
 }  // namespace internal
 
 template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
-LogLine& LogLine::addCustomArgument(const T& arg) {
+LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
 	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression, readability-magic-numbers): comparison with constant is intended
-	writeTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::createFormatArg<X>));
+	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::CreateFormatArg<X>));
 	return *this;
 }
 
 template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int>>
-LogLine& LogLine::addCustomArgument(const T& arg) {
+LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 
 	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
@@ -150,9 +157,13 @@ LogLine& LogLine::addCustomArgument(const T& arg) {
 	static_assert(offsetof(internal::FunctionTableInstance<X>, createFormatArg) == offsetof(internal::FunctionTable, createFormatArg));
 
 	static constexpr internal::FunctionTableInstance<X> functionTable;
-	std::byte* __restrict const ptr = writeNonTriviallyCopyable(sizeof(X), alignof(X), static_cast<const void*>(&functionTable));
+	std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), static_cast<const void*>(&functionTable));
 	new (ptr) X(arg);
 	return *this;
 }
 
 }  // namespace llamalog
+
+#ifdef __clang_analyzer__
+#pragma pop_macro("offsetof")
+#endif
