@@ -43,7 +43,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 // ErrorCode
 //
 
-TEST(WindowsTypesTest, ErrorCode_Format_PrintMessage) {
+TEST(WindowsTypesTest, ErrorCode_FormatDefault_PrintMessage) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
@@ -51,6 +51,26 @@ TEST(WindowsTypesTest, ErrorCode_Format_PrintMessage) {
 	}
 
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+}
+
+TEST(WindowsTypesTest, ErrorCode_FormatAsDecimal_PrintDecimal) {
+	std::string str;
+	{
+		const ErrorCode arg = {ERROR_ACCESS_DENIED};
+		str = fmt::format("{:02}", arg);
+	}
+
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(05\\)"));
+}
+
+TEST(WindowsTypesTest, ErrorCode_FormatAsHex_PrintHex) {
+	std::string str;
+	{
+		const ErrorCode arg = {ERROR_ACCESS_DENIED};
+		str = fmt::format("{:#x}", arg);
+	}
+
+	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(0x5\\)"));
 }
 
 TEST(WindowsTypesTest, ErrorCode_Log_PrintMessage) {

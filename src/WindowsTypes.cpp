@@ -150,12 +150,16 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 	while (end != ctx.end() && *end != '}') {
 		++end;
 	}
+	m_format.reserve(end - it + 6);
+	m_format.append(" ({:");
+	m_format.append(it, end);
+	m_format.append("})");
 	return end;
 }
 
 fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	llamalog::FormatSystemErrorCodeTo(arg.code, ctx);
-	return fmt::format_to(ctx.out(), " ({})", arg.code);
+	return fmt::format_to(ctx.out(), m_format, arg.code);
 }
 
 

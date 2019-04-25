@@ -110,6 +110,9 @@ public:
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
 	fmt::format_context::iterator format(const llamalog::ErrorCode& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+
+private:
+	std::string m_format;  ///< The format pattern for the numerical error code.
 };
 
 
