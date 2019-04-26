@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace llamalog {
 
-/// @brief A struct for logging system error codes, e.g. `GetLastError()`, `HRESULT`, etc.
+/// @brief A struct for logging Windows system error codes, e.g. `GetLastError()`, `HRESULT`, etc.
 struct ErrorCode {
 	constexpr ErrorCode(const int code) noexcept
 		: code(code) {

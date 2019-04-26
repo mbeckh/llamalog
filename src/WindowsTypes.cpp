@@ -19,8 +19,8 @@ limitations under the License.
 #include "llamalog/WindowsTypes.h"
 
 #include "llamalog/CustomTypes.h"
-#include "llamalog/Formatters.h"  // IWYU pragma: keep
 #include "llamalog/LogLine.h"
+#include "llamalog/WindowsFormatters.h"  // IWYU pragma: keep
 
 #include <windows.h>
 
