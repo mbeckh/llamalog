@@ -24,7 +24,7 @@ limitations under the License.
 
 #include <windows.h>
 
-llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::ErrorCode arg) {
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::error_code arg) {
 	return logLine.AddCustomArgument(arg);
 }
 

@@ -25,18 +25,18 @@ limitations under the License.
 namespace llamalog {
 
 /// @brief A struct for logging Windows system error codes, e.g. `GetLastError()`, `HRESULT`, etc.
-struct ErrorCode {
-	constexpr explicit ErrorCode(const int code) noexcept
+struct error_code {  // NOLINT(readability-identifier-naming): looks better when named similar to std::error_code.
+	constexpr explicit error_code(const int code) noexcept
 		: code(code) {
 		// change variable type if this assertion fails
-		static_assert(sizeof(int) <= sizeof(DWORD), "data truncation in ErrorCode");
+		static_assert(sizeof(int) <= sizeof(DWORD), "data truncation in error_code");
 		// empty
 	}
-	constexpr explicit ErrorCode(const DWORD code) noexcept
+	constexpr explicit error_code(const DWORD code) noexcept
 		: code(code) {
 		// empty
 	}
-	constexpr explicit ErrorCode(const HRESULT hr) noexcept
+	constexpr explicit error_code(const HRESULT hr) noexcept
 		: code(hr) {
 		// empty
 	}
@@ -45,24 +45,24 @@ struct ErrorCode {
 	const DWORD code;  ///< @brief The system error code.
 };
 
-/// @brief Get the result of `GetLastError()` as an `ErrorCode` suitable as a formatter argument.
-/// @return A newly created `ErrorCode` structure.
-[[nodiscard]] inline ErrorCode LastError() noexcept {
-	return ErrorCode{GetLastError()};
+/// @brief Get the result of `GetLastError()` as an `error_code` suitable as a formatter argument.
+/// @return A newly created `error_code` structure.
+[[nodiscard]] inline error_code LastError() noexcept {
+	return error_code{GetLastError()};
 }
 
 #ifdef __clang_analyzer__
 // make clang happy and define in namespace for ADL. MSVC can't find correct overload when the declaration is present.
-LogLine& operator<<(LogLine& logLine, ErrorCode arg);
+LogLine& operator<<(LogLine& logLine, error_code arg);
 #endif
 
 }  // namespace llamalog
 
-/// @brief Log an `ErrorCode` structure.
+/// @brief Log an `error_code` structure.
 /// @param logLine The `llamalog::LogLine`.
 /// @param arg The value.
 /// @return @p logLine to allow method chaining.
-llamalog::LogLine& operator<<(llamalog::LogLine& logLine, llamalog::ErrorCode arg);
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, llamalog::error_code arg);
 
 /// @brief Log a `LARGE_INTEGER` structure as a 64 bit signed integer.
 /// @param logLine The `llamalog::LogLine`.
@@ -103,3 +103,30 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT& arg);
 /// @param arg The value.
 /// @return @p logLine to allow method chaining.
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT& arg);
+
+
+//
+// Macros
+//
+
+#if !(defined(LLAMALOG_LEVEL_FATAL) || defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE))
+#define LLAMALOG_LEVEL_DEBUG
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace` for function return values of type `HRESULT`.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_TRACE_HRESULT(result_, message_, ...)                                                                                  \
+	[&](HRESULT result, const char* const function) -> HRESULT {                                                                   \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                                             \
+		llamalog::Log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, llamalog::error_code{result}, __VA_ARGS__); \
+		return result;                                                                                                             \
+	}(result_, __func__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_TRACE_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif

@@ -30,13 +30,13 @@ limitations under the License.
 namespace llamalog::test {
 
 //
-// ErrorCode
+// error_code
 //
 
 TEST(winapi_formatTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
 	std::string str;
 	{
-		const ErrorCode arg{ERROR_ACCESS_DENIED};
+		const error_code arg{ERROR_ACCESS_DENIED};
 		str = fmt::format("{}", arg);
 	}
 
@@ -46,7 +46,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
 TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
 	std::string str;
 	{
-		const ErrorCode arg{ERROR_ACCESS_DENIED};
+		const error_code arg{ERROR_ACCESS_DENIED};
 		str = fmt::format("{:02d}", arg);
 	}
 
@@ -56,7 +56,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
 TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 	std::string str;
 	{
-		const ErrorCode arg{ERROR_ACCESS_DENIED};
+		const error_code arg{ERROR_ACCESS_DENIED};
 		str = fmt::format("{:x}", arg);
 	}
 
@@ -66,7 +66,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 TEST(winapi_formatTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
 	std::string str;
 	{
-		const ErrorCode arg{ERROR_ACCESS_DENIED};
+		const error_code arg{ERROR_ACCESS_DENIED};
 		str = fmt::format("{:%}", arg);
 	}
 
@@ -76,7 +76,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
 TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
 	std::string str;
 	{
-		const ErrorCode arg{E_INVALIDARG};
+		const error_code arg{E_INVALIDARG};
 		str = fmt::format("{}", arg);
 	}
 
@@ -86,7 +86,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
 TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
 	std::string str;
 	{
-		const ErrorCode arg{E_INVALIDARG};
+		const error_code arg{E_INVALIDARG};
 		str = fmt::format("{:02d}", arg);
 	}
 
@@ -96,7 +96,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
 TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
 	std::string str;
 	{
-		const ErrorCode arg{E_INVALIDARG};
+		const error_code arg{E_INVALIDARG};
 		str = fmt::format("{:x}", arg);
 	}
 
@@ -106,7 +106,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
 TEST(winapi_formatTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
 	std::string str;
 	{
-		const ErrorCode arg{ERROR_ACCESS_DENIED};
+		const error_code arg{ERROR_ACCESS_DENIED};
 		str = fmt::format("{:%}", arg);
 	}
 

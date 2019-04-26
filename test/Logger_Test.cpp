@@ -591,4 +591,38 @@ TEST_F(LoggerTest, LOGFATAL_WithArgs) {
 	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test 1.1\n"));
 }
 
+TEST_F(LoggerTest, LOGTRACERESULT) {
+	int result = 0;
+	{
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kTrace, m_out, m_lines);
+		llamalog::Initialize(std::move(writer));
+
+		int i = 1;
+		result = LOG_TRACE_RESULT(++i, "{}");
+
+		llamalog::Shutdown();
+	}
+
+	EXPECT_EQ(2, result);
+	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] logger_test.cpp:\\d+ TestBody 2\n"));
+}
+
+TEST_F(LoggerTest, LOGTRACERESULT_WithArgs) {
+	int result = 0;
+	{
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kTrace, m_out, m_lines);
+		llamalog::Initialize(std::move(writer));
+
+		int i = 1;
+		result = LOG_TRACE_RESULT(++i, "{} {}", "arg");
+
+		llamalog::Shutdown();
+	}
+
+	EXPECT_EQ(2, result);
+	EXPECT_EQ(1, m_lines);
+	EXPECT_THAT(m_out.str(), testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] logger_test.cpp:\\d+ TestBody 2 arg\n"));
+}
+
 }  // namespace llamalog::test

@@ -110,8 +110,14 @@ My aim was not to build the fastest logger but something that is easily useable 
 
 
 ## Usage
+### Configuration
+All configuration is done in code when creating an instance of a `LogWriter`. The global log level SHOULD be set using on of the preprocessor symbols `LLAMALOG_LEVEL_*`. The value defines the lowest log level for which logging code will be compiled in the executable. Logging macros for log levels lower than `LLAMALOG_LEVEL_...` are defined as empty macros. The names are `LLAMALOG_LEVEL_FATAL`, `LLAMALOG_LEVEL_ERROR`, `LLAMALOG_LEVEL_WARN`, `LLAMALOG_LEVEL_INFO`, `LLAMALOG_LEVEL_DEBUG` and `LLAMALOG_LEVEL_TRACE`  with the default being `LLAMALOG_LEVEL_DEBUG`. Irrespective of the value, llamalog itself always logs internal messages as `WARN` and `ERROR`. For very special cases, the size of the internal buffer MAY be set using the preprocessor symbol`LLAMALOG_LOGLINE_SIZE`. Use this when the default size of 256 bytes is too small or large for the arguments in the arguments buffer.
+
 ### Basic Example
 ```cpp
+// set global log level to kTrace 
+#define LLAMALOG_LEVEL_TRACE
+
 #include <llamalog/llamalog.h>
 #include <llamalog/LogWriter.h>
 #include <memory>
@@ -179,7 +185,7 @@ More than one argument specifier MAY be used, e.g. `{:%F:%L}` will print the fil
 |`%C`|The name of the error category for `std::system_error`, `llamalog::SystemError` and derived classes.|
 |`%c`|The error code for `std::system_error`, `llamalog::SystemError` and derived classes.|
 |`%m`|The error message for `std::system_error`, `llamalog::SystemError` and derived classes.|
-|`%w`|The exception message, i.e. the result of `std::exception` `what()`. If the exception was thrown using `llamalog::Throw` (and `LLAMALOG_THROW` respectively) the log message is returned and - in case of `std::system_error` and `llamalog::SystemError` - includes the error message `%m` (i.e. the output matches `std::system_error` except for the exception argument replaced by the log message). |
+|`%w`|The exception message, i.e. the result of `std::exception` `what()`. If the exception was thrown using `llamalog::Throw` (and `LLAMALOG_THROW` respectively) the log message is returned and - in case of `std::system_error` and `llamalog::system_error` - includes the error message `%m` (i.e. the output matches `std::system_error` except for the exception argument replaced by the log message). |
 |`%T`|The timestamp as `yyyy-MM-dd HH:mm:ss.SSS`.|
 |`%t`|The thread id of the thread which has thrown the exception.|
 |`%F`|The file name where the exception was thrown.|

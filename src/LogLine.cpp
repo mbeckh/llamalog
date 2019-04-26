@@ -557,7 +557,7 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 		}
 
 	error:
-		LLAMALOG_INTERNAL_ERROR("WideCharToMultiByte for length {}: {}", length, llamalog::ErrorCode{lastError});
+		LLAMALOG_INTERNAL_ERROR("WideCharToMultiByte for length {}: {}", length, llamalog::error_code{lastError});
 		const std::string_view sv("<ERROR>");
 		return std::copy(sv.cbegin(), sv.cend(), ctx.out());
 	}

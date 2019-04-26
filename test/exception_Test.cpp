@@ -69,8 +69,8 @@ public:
 		return ctx.begin();
 	}
 
-	/// @brief Format the `llamalog::ErrorCode`.
-	/// @param arg A `llamalog::ErrorCode`.
+	/// @brief Format the `llamalog::error_code`.
+	/// @param arg A `llamalog::error_code`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
 	fmt::format_context::iterator format(const llamalog::test::TracingArg& arg, fmt::format_context& ctx) {

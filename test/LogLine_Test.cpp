@@ -821,7 +821,7 @@ public:
 public:
 	virtual void Append(ArgumentAppender appender) const final {
 		m_line = __LINE__ + 1;
-		M3C_THROW(ComException(E_INVALIDARG, "check"));
+		M3C_THROW(com_exception(E_INVALIDARG, "check"));
 	}
 public:
 	int& m_line;

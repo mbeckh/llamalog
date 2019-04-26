@@ -83,7 +83,7 @@ fmt::format_context::iterator PostProcessErrorMessage(_In_reads_(length) wchar_t
 	}
 
 error:
-	LLAMALOG_INTERNAL_ERROR("WideCharToMultiByte for length {}: {}", length, ErrorCode{lastError});
+	LLAMALOG_INTERNAL_ERROR("WideCharToMultiByte for length {}: {}", length, error_code{lastError});
 	const std::string_view sv("<ERROR>");
 	return std::copy(sv.cbegin(), sv.cend(), ctx.out());
 }
@@ -114,7 +114,7 @@ fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorC
 		}
 		lastError = GetLastError();
 	}
-	LLAMALOG_INTERNAL_ERROR("FormatMessageW for code {}: {}", errorCode, ErrorCode{lastError});
+	LLAMALOG_INTERNAL_ERROR("FormatMessageW for code {}: {}", errorCode, error_code{lastError});
 	const std::string_view sv("<ERROR>");
 	return std::copy(sv.cbegin(), sv.cend(), ctx.out());
 }
@@ -129,7 +129,7 @@ constexpr char kSuppressErrorCode = '%';  ///< @brief Special character used in 
 // Specializations of fmt::formatter
 //
 
-fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+fmt::format_parse_context::iterator fmt::formatter<llamalog::error_code>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto it = ctx.begin();
 	if (it != ctx.end() && *it == ':') {
 		++it;
@@ -152,7 +152,7 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 	return end;
 }
 
-fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+fmt::format_context::iterator fmt::formatter<llamalog::error_code>::format(const llamalog::error_code& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto out = llamalog::FormatSystemErrorCodeTo(arg.code, ctx);
 	if (m_format.empty()) {
 		// system error codes lie in the range <= 0xFFFF

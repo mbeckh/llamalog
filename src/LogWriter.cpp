@@ -316,7 +316,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 	HANDLE hFindResult = FindFirstFileExW(pattern.c_str(), FindExInfoBasic, &findData, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 	if (hFindResult == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		if (const DWORD lastError = GetLastError(); lastError != ERROR_FILE_NOT_FOUND) {
-			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", ErrorCode{lastError});
+			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", error_code{lastError});
 		}
 	} else {
 		do {
@@ -324,7 +324,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 		} while (FindNextFileW(hFindResult, &findData));  // NOLINT(readability-implicit-bool-conversion): Compare BOOL in a condition.
 		const DWORD error = GetLastError();
 		if (error != ERROR_NO_MORE_FILES) {
-			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", ErrorCode{error});
+			LLAMALOG_INTERNAL_WARN("Error deleting log: {}", error_code{error});
 			// do not try to delete anything on find errors
 		} else {
 			std::sort(files.begin(), files.end());

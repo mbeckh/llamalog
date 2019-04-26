@@ -41,13 +41,13 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 
 
 //
-// ErrorCode
+// error_code
 //
 
-TEST(winapi_logTest, ErrorCode_Log_PrintMessage) {
+TEST(winapi_logTest, errorcode_Log_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
-		const ErrorCode arg{ERROR_ACCESS_DENIED};
+		const error_code arg{ERROR_ACCESS_DENIED};
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
@@ -55,7 +55,7 @@ TEST(winapi_logTest, ErrorCode_Log_PrintMessage) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
 }
 
-TEST(winapi_logTest, ErrorCode_LastError_PrintMessage) {
+TEST(winapi_logTest, errorcode_LastError_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
 		SetLastError(ERROR_ACCESS_DENIED);

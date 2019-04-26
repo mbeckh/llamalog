@@ -31,21 +31,21 @@ limitations under the License.
 // Specializations of fmt::formatter
 //
 
-/// @brief Specialization of `fmt::formatter` for a `llamalog::ErrorCode`.
+/// @brief Specialization of `fmt::formatter` for a `llamalog::error_code`.
 /// @details Regular system error codes from e.g. `GetLastError()` are logged as decimal values. `HRESULT`s and other error codes are logged in hex.
 template <>
-struct fmt::formatter<llamalog::ErrorCode> {
+struct fmt::formatter<llamalog::error_code> {
 public:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
 	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
-	/// @brief Format the `llamalog::ErrorCode`.
-	/// @param arg A `llamalog::ErrorCode`.
+	/// @brief Format the `llamalog::error_code`.
+	/// @param arg A `llamalog::error_code`.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	fmt::format_context::iterator format(const llamalog::ErrorCode& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+	fmt::format_context::iterator format(const llamalog::error_code& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 private:
 	std::string m_format;  ///< The format pattern for the numerical error code.
