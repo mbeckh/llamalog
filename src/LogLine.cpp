@@ -95,7 +95,7 @@ namespace {
 constexpr LogLine::Size kGrowBytes = 512u;
 
 /// @brief Basic information of a logged exception inside the buffer.
-struct ExceptionInformation {
+struct ExceptionInformation final {
 	FILETIME timestamp;               ///< @brief Same as `LogLine::m_timestamp`.
 	const char* __restrict file;      ///< @brief Same as `LogLine::m_file`.
 	const char* __restrict function;  ///< @brief Same as `LogLine::m_function`.
@@ -109,14 +109,16 @@ struct ExceptionInformation {
 };
 
 /// @brief Marker type for type-based lookup and layout of exception not using the heap for log arguments.
-struct StackBasedException final : ExceptionInformation {
+struct StackBasedException final {
+	ExceptionInformation exceptionInformation;
 	/* char exceptionMessage[length] */  // dynamic length
 	/* std::byte padding[] */            // dynamic length
 	/* std::byte stackBuffer[used] */    // dynamic length
 };
 
 /// @brief Marker type for type-based lookup and layout of exception using the heap for log arguments.
-struct HeapBasedException final : ExceptionInformation {
+struct HeapBasedException final {
+	ExceptionInformation exceptionInformation;
 	std::byte* __restrict pHeapBuffer;   ///< @brief Same as `LogLine::m_heapBuffer`.
 	/* char exceptionMessage[length] */  // dynamic length
 };
@@ -255,16 +257,16 @@ constexpr std::uint8_t kTypeSizes[] = {
 	sizeof(TypeId) + sizeof(void*),
 	sizeof(TypeId) + sizeof(LogLine::Length) /* + std::byte[padding] + char[std::strlen(str)] */,
 	sizeof(TypeId) + sizeof(LogLine::Length) /* + std::byte[padding] + wchar_t[std::wcslen(str)] */,
-	sizeof(TypeId) /* + std::byte[padding] */ + offsetof(StackBasedException, padding) /* + char[StackBasedException::length] + std::byte[padding] + std::byte[StackBasedException::m_used] */,
-	sizeof(TypeId) /* + std::byte[padding] */ + offsetof(StackBasedException, padding) /* + char[StackBasedException::length] + std::byte[padding] + std::byte[StackBasedException::m_used] */ + sizeof(StackBasedSystemError),
-	sizeof(TypeId) /* + std::byte[padding] */ + sizeof(HeapBasedException) /* + char[HeapBasedException::length] */,
-	sizeof(TypeId) /* + std::byte[padding] */ + sizeof(HeapBasedException) /* + char[HeapBasedException::length] */ + sizeof(HeapBasedSystemError),
+	sizeof(TypeId) /* + std::byte[padding] */ + offsetof(ExceptionInformation /* StackBasedException */, padding) /* + char[ExceptionInformation::length] + std::byte[padding] + std::byte[ExceptionInformation::m_used] */,
+	sizeof(TypeId) /* + std::byte[padding] */ + offsetof(ExceptionInformation /* StackBasedException */, padding) /* + char[ExceptionInformation::length] + std::byte[padding] + std::byte[ExceptionInformation::m_used] */ + sizeof(StackBasedSystemError),
+	sizeof(TypeId) /* + std::byte[padding] */ + sizeof(HeapBasedException) /* + char[ExceptionInformation::length] */,
+	sizeof(TypeId) /* + std::byte[padding] */ + sizeof(HeapBasedException) /* + char[ExceptionInformation::length] */ + sizeof(HeapBasedSystemError),
 	sizeof(TypeId) + sizeof(PlainException) /* + char[PlainException::length] */,
 	sizeof(TypeId) + sizeof(PlainSystemError) /* + char[PlainSystemError::length] */,
 	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable::CreateFormatArg) + sizeof(LogLine::Size) /* + std::byte[padding] + sizeof(arg) */,
 	sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable*) + sizeof(LogLine::Size) /* + std::byte[padding] + sizeof(arg) */
 };
-static_assert(sizeof(TypeId) + offsetof(StackBasedException, padding) + sizeof(StackBasedSystemError) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
+static_assert(sizeof(TypeId) + offsetof(ExceptionInformation /* StackBasedException */, padding) + sizeof(StackBasedSystemError) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
 static_assert(sizeof(TypeId) + sizeof(HeapBasedException) + sizeof(HeapBasedSystemError) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
 static_assert(sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable::CreateFormatArg) + sizeof(LogLine::Size) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
 static_assert(sizeof(TypeId) + sizeof(LogLine::Align) + sizeof(internal::FunctionTable*) + sizeof(LogLine::Size) <= std::numeric_limits<std::uint8_t>::max(), "type for sizes is too small");
@@ -1340,11 +1342,11 @@ _Ret_notnull_ const StackBasedException* DecodeStackBasedException(_In_ const st
 	const LogLine::Align padding = GetPadding<StackBasedException>(&buffer[pos]);
 	const LogLine::Size offset = pos + padding;
 	const StackBasedException* const pException = reinterpret_cast<const StackBasedException*>(&buffer[offset]);
-	const LogLine::Size messageOffset = offset + offsetof(StackBasedException, padding);
-	const LogLine::Size bufferPos = messageOffset + pException->length * sizeof(char);
+	const LogLine::Size messageOffset = offset + offsetof(ExceptionInformation /* StackBasedException */, padding);
+	const LogLine::Size bufferPos = messageOffset + pException->exceptionInformation.length * sizeof(char);
 	const LogLine::Align bufferPadding = GetPadding(&buffer[bufferPos], __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 
-	position = bufferPos + bufferPadding + pException->used;
+	position = bufferPos + bufferPadding + pException->exceptionInformation.used;
 	return pException;
 }
 
@@ -1359,7 +1361,7 @@ _Ret_notnull_ const HeapBasedException* DecodeHeapBasedException(_In_ const std:
 	const LogLine::Size offset = pos + padding;
 	const HeapBasedException* const pException = reinterpret_cast<const HeapBasedException*>(&buffer[offset]);
 
-	position = offset + sizeof(HeapBasedException) + pException->length * sizeof(char);
+	position = offset + sizeof(HeapBasedException) + pException->exceptionInformation.length * sizeof(char);
 	return pException;
 }
 
@@ -1597,27 +1599,27 @@ void CopyStackBasedException(_In_ const std::byte* __restrict const src, _Out_ s
 	const LogLine::Align padding = GetPadding<StackBasedException>(&src[pos]);
 	const LogLine::Size offset = pos + padding;
 	const StackBasedException* const pSrcException = reinterpret_cast<const StackBasedException*>(&src[offset]);
-	const LogLine::Size messageOffset = offset + offsetof(StackBasedException, padding);
-	const LogLine::Size bufferPos = messageOffset + pSrcException->length * sizeof(char);
+	const LogLine::Size messageOffset = offset + offsetof(ExceptionInformation /* StackBasedException */, padding);
+	const LogLine::Size bufferPos = messageOffset + pSrcException->exceptionInformation.length * sizeof(char);
 	const LogLine::Align bufferPadding = GetPadding(&src[bufferPos], __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 
-	if (pSrcException->hasNonTriviallyCopyable) {
+	if (pSrcException->exceptionInformation.hasNonTriviallyCopyable) {
 		const LogLine::Size bufferOffset = bufferPos + bufferPadding;
 
 		// copy management data
-		std::memcpy(&dst[offset], pSrcException, offsetof(StackBasedException, padding));
+		std::memcpy(&dst[offset], pSrcException, offsetof(ExceptionInformation /* StackBasedException */, padding));
 
 		// copy exception message
-		std::memcpy(&dst[messageOffset], &src[messageOffset], pSrcException->length * sizeof(char));
+		std::memcpy(&dst[messageOffset], &src[messageOffset], pSrcException->exceptionInformation.length * sizeof(char));
 
 		// copy buffers
-		CopyObjects(&src[bufferOffset], &dst[bufferOffset], pSrcException->used);
+		CopyObjects(&src[bufferOffset], &dst[bufferOffset], pSrcException->exceptionInformation.used);
 	} else {
 		// copy everything in one turn
-		std::memcpy(&dst[offset], pSrcException, offsetof(StackBasedException, padding) + pSrcException->length * sizeof(char) + bufferPadding + pSrcException->used);
+		std::memcpy(&dst[offset], pSrcException, offsetof(ExceptionInformation /* StackBasedException */, padding) + pSrcException->exceptionInformation.length * sizeof(char) + bufferPadding + pSrcException->exceptionInformation.used);
 	}
 
-	position = bufferPos + bufferPadding + pSrcException->used;
+	position = bufferPos + bufferPadding + pSrcException->exceptionInformation.used;
 }
 
 /// @brief Copies a `StackBasedSystemError` argument and sets @p position to the start of the next log argument.
@@ -1647,21 +1649,21 @@ void CopyHeapBasedException(_In_ const std::byte* __restrict const src, _Out_ st
 	const HeapBasedException* const pSrcException = reinterpret_cast<const HeapBasedException*>(&src[offset]);
 	HeapBasedException* const pDstException = reinterpret_cast<HeapBasedException*>(&dst[offset]);
 
-	std::memcpy(pDstException, pSrcException, sizeof(HeapBasedException) + pSrcException->length * sizeof(char));
+	std::memcpy(pDstException, pSrcException, sizeof(HeapBasedException) + pSrcException->exceptionInformation.length * sizeof(char));
 
-	std::unique_ptr<std::byte[]> heapBuffer = std::make_unique<std::byte[]>(pSrcException->used);
+	std::unique_ptr<std::byte[]> heapBuffer = std::make_unique<std::byte[]>(pSrcException->exceptionInformation.used);
 	pDstException->pHeapBuffer = heapBuffer.get();
 
-	if (pSrcException->hasNonTriviallyCopyable) {
+	if (pSrcException->exceptionInformation.hasNonTriviallyCopyable) {
 		// copy buffers
-		CopyObjects(pSrcException->pHeapBuffer, pDstException->pHeapBuffer, pSrcException->used);
+		CopyObjects(pSrcException->pHeapBuffer, pDstException->pHeapBuffer, pSrcException->exceptionInformation.used);
 	} else {
 		// copy everything in one turn
-		std::memcpy(pDstException->pHeapBuffer, pSrcException->pHeapBuffer, sizeof(HeapBasedException) + pSrcException->used);
+		std::memcpy(pDstException->pHeapBuffer, pSrcException->pHeapBuffer, sizeof(HeapBasedException) + pSrcException->exceptionInformation.used);
 	}
 	heapBuffer.release();
 
-	position = offset + sizeof(HeapBasedException) + pSrcException->length * sizeof(char);
+	position = offset + sizeof(HeapBasedException) + pSrcException->exceptionInformation.length * sizeof(char);
 }
 
 /// @brief Copies a `HeapBasedSystemError` argument and sets @p position to the start of the next log argument.
@@ -1722,27 +1724,27 @@ void MoveStackBasedException(_Inout_ std::byte* __restrict const src, _Out_ std:
 	const LogLine::Align padding = GetPadding<StackBasedException>(&src[pos]);
 	const LogLine::Size offset = pos + padding;
 	const StackBasedException* const pSrcException = reinterpret_cast<const StackBasedException*>(&src[offset]);
-	const LogLine::Size messageOffset = offset + offsetof(StackBasedException, padding);
-	const LogLine::Size bufferPos = messageOffset + pSrcException->length * sizeof(char);
+	const LogLine::Size messageOffset = offset + offsetof(ExceptionInformation /* StackBasedException */, padding);
+	const LogLine::Size bufferPos = messageOffset + pSrcException->exceptionInformation.length * sizeof(char);
 	const LogLine::Align bufferPadding = GetPadding(&src[bufferPos], __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 
-	if (pSrcException->hasNonTriviallyCopyable) {
+	if (pSrcException->exceptionInformation.hasNonTriviallyCopyable) {
 		const LogLine::Size bufferOffset = bufferPos + bufferPadding;
 
 		// copy management data
-		std::memcpy(&dst[offset], pSrcException, offsetof(StackBasedException, padding));
+		std::memcpy(&dst[offset], pSrcException, offsetof(ExceptionInformation /* StackBasedException */, padding));
 
 		// copy exception message
-		std::memcpy(&dst[messageOffset], &src[messageOffset], pSrcException->length * sizeof(char));
+		std::memcpy(&dst[messageOffset], &src[messageOffset], pSrcException->exceptionInformation.length * sizeof(char));
 
 		// move buffers
-		MoveObjects(&src[bufferOffset], &dst[bufferOffset], pSrcException->used);
+		MoveObjects(&src[bufferOffset], &dst[bufferOffset], pSrcException->exceptionInformation.used);
 	} else {
 		// copy everything in one turn
-		std::memcpy(&dst[offset], pSrcException, offsetof(StackBasedException, padding) + pSrcException->length * sizeof(char) + bufferPadding + pSrcException->used);
+		std::memcpy(&dst[offset], pSrcException, offsetof(ExceptionInformation /* StackBasedException */, padding) + pSrcException->exceptionInformation.length * sizeof(char) + bufferPadding + pSrcException->exceptionInformation.used);
 	}
 
-	position = bufferPos + bufferPadding + pSrcException->used;
+	position = bufferPos + bufferPadding + pSrcException->exceptionInformation.used;
 }
 
 /// @brief Moves a `StackBasedSystemError` argument and sets @p position to the start of the next log argument.
@@ -1771,9 +1773,9 @@ __declspec(noalias) void MoveHeapBasedException(_In_ const std::byte* __restrict
 	const LogLine::Size offset = pos + padding;
 	const HeapBasedException* const pSrcException = reinterpret_cast<const HeapBasedException*>(&src[offset]);
 
-	std::memcpy(&dst[offset], pSrcException, sizeof(HeapBasedException) + pSrcException->length * sizeof(char));
+	std::memcpy(&dst[offset], pSrcException, sizeof(HeapBasedException) + pSrcException->exceptionInformation.length * sizeof(char));
 
-	position = offset + sizeof(HeapBasedException) + pSrcException->length * sizeof(char);
+	position = offset + sizeof(HeapBasedException) + pSrcException->exceptionInformation.length * sizeof(char);
 }
 
 /// @brief Moves a `HeapBasedSystemError` argument and sets @p position to the start of the next log argument.
@@ -1832,17 +1834,17 @@ void DestructStackBasedException(_In_ std::byte* __restrict const buffer, _Inout
 	const LogLine::Align padding = GetPadding<StackBasedException>(&buffer[pos]);
 	const LogLine::Size offset = pos + padding;
 	const StackBasedException* const pException = reinterpret_cast<const StackBasedException*>(&buffer[offset]);
-	const LogLine::Size messageOffset = offset + offsetof(StackBasedException, padding);
-	const LogLine::Size bufferPos = messageOffset + pException->length * sizeof(char);
+	const LogLine::Size messageOffset = offset + offsetof(ExceptionInformation /* StackBasedException */, padding);
+	const LogLine::Size bufferPos = messageOffset + pException->exceptionInformation.length * sizeof(char);
 	const LogLine::Align bufferPadding = GetPadding(&buffer[bufferPos], __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 
-	if (pException->hasNonTriviallyCopyable) {
+	if (pException->exceptionInformation.hasNonTriviallyCopyable) {
 		const LogLine::Size bufferOffset = bufferPos + bufferPadding;
 
-		CallDestructors(&buffer[bufferOffset], pException->used);
+		CallDestructors(&buffer[bufferOffset], pException->exceptionInformation.used);
 	}
 
-	position = bufferPos + bufferPadding + pException->used;
+	position = bufferPos + bufferPadding + pException->exceptionInformation.used;
 }
 
 /// @brief Call the destructor of all `StackBasedSystemError`'s arguments and moves @p position to the next log argument.
@@ -1863,13 +1865,13 @@ void DestructHeapBasedException(_In_ const std::byte* __restrict const buffer, _
 	const LogLine::Size offset = pos + padding;
 	const HeapBasedException* const pException = reinterpret_cast<const HeapBasedException*>(&buffer[offset]);
 
-	if (pException->hasNonTriviallyCopyable) {
-		CallDestructors(pException->pHeapBuffer, pException->used);
+	if (pException->exceptionInformation.hasNonTriviallyCopyable) {
+		CallDestructors(pException->pHeapBuffer, pException->exceptionInformation.used);
 	}
 
 	delete[] pException->pHeapBuffer;
 
-	position = offset + sizeof(HeapBasedException) + pException->length * sizeof(char);
+	position = offset + sizeof(HeapBasedException) + pException->exceptionInformation.length * sizeof(char);
 }
 
 /// @brief Call the destructor of all `HeapBasedSystemError`'s arguments and moves @p position to the next log argument.
@@ -2290,8 +2292,8 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict file, st
 	static_assert(offsetof(ExceptionInformation, padding) == offsetof(ExceptionInformation, hasNonTriviallyCopyable) + sizeof(ExceptionInformation::hasNonTriviallyCopyable), "offset of padding");
 	static_assert(offsetof(ExceptionInformation, padding) == sizeof(ExceptionInformation) - sizeof(ExceptionInformation::padding), "length of padding");
 
-	static_assert(offsetof(StackBasedException, hasNonTriviallyCopyable) == offsetof(ExceptionInformation, hasNonTriviallyCopyable), "offset of hasNonTriviallyCopyable");
-	static_assert(offsetof(HeapBasedException, hasNonTriviallyCopyable) == offsetof(ExceptionInformation, hasNonTriviallyCopyable), "offset of hasNonTriviallyCopyable");
+	static_assert(sizeof(StackBasedException) == sizeof(ExceptionInformation), "size of StackBasedException");
+	static_assert(sizeof(HeapBasedException) == sizeof(ExceptionInformation) + sizeof(HeapBasedException::pHeapBuffer), "size of HeapBasedException");
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): m_stackBuffer does not need initialization in every case
@@ -2725,7 +2727,7 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 			buffer = GetWritePosition(size + padding);
 		}
 
-		const LogLine::Size messageOffset = offset + offsetof(StackBasedException, padding);
+		const LogLine::Size messageOffset = offset + offsetof(ExceptionInformation /* StackBasedException */, padding);
 
 		const LogLine::Size bufferPos = messageOffset + messageLength * sizeof(char);
 		const LogLine::Align bufferPadding = GetPadding(&buffer[bufferPos], __STDCPP_DEFAULT_NEW_ALIGNMENT__);
@@ -2736,9 +2738,9 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 		const LogLine::Size bufferOffset = bufferPos + bufferPadding;
 
 		std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
-		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(StackBasedException, length));  // copy up to used
-		std::memcpy(&buffer[offset + offsetof(StackBasedException, length)], &messageLength, sizeof(messageLength));
-		std::memcpy(&buffer[offset + offsetof(StackBasedException, hasNonTriviallyCopyable)], &logLine.m_hasNonTriviallyCopyable, sizeof(bool));
+		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(ExceptionInformation /* StackBasedException */, length));  // copy up to used
+		std::memcpy(&buffer[offset + offsetof(ExceptionInformation /* StackBasedException */, length)], &messageLength, sizeof(messageLength));
+		std::memcpy(&buffer[offset + offsetof(ExceptionInformation /* StackBasedException */, hasNonTriviallyCopyable)], &logLine.m_hasNonTriviallyCopyable, sizeof(bool));
 		if (message) {
 			std::memcpy(&buffer[messageOffset], message, messageLength);
 		}
@@ -2777,9 +2779,9 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 		const LogLine::Size messageOffset = offset + sizeof(HeapBasedException);
 
 		std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
-		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(HeapBasedException, length));  // copy up to used
-		std::memcpy(&buffer[offset + offsetof(HeapBasedException, length)], &messageLength, sizeof(messageLength));
-		std::memcpy(&buffer[offset + offsetof(HeapBasedException, hasNonTriviallyCopyable)], &logLine.m_hasNonTriviallyCopyable, sizeof(bool));
+		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(ExceptionInformation /* StackBasedException */, length));  // copy up to used
+		std::memcpy(&buffer[offset + offsetof(ExceptionInformation /* StackBasedException */, length)], &messageLength, sizeof(messageLength));
+		std::memcpy(&buffer[offset + offsetof(ExceptionInformation /* StackBasedException */, hasNonTriviallyCopyable)], &logLine.m_hasNonTriviallyCopyable, sizeof(bool));
 		if (message) {
 			std::memcpy(&buffer[messageOffset], message, messageLength);
 		}

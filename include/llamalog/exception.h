@@ -76,7 +76,7 @@ private:
 
 /// @brief A helper class to transfer system errros.
 /// @details Other than `std::system_error` the message is not formatted until the time the `LogLine` is written or `#system_error::what()` is called.
-class system_error : public std::runtime_error {
+class system_error : public std::runtime_error {  // NOLINT(readability-identifier-naming): looks better when named similar to std::system_error.
 public:
 	/// @brief Creates a new instance for the provided error code and category.
 	/// @param code The error code.
@@ -148,7 +148,7 @@ public:
 #pragma warning(suppress : 4702)
 	[[nodiscard]] _Ret_z_ const char* what() const noexcept override {  // NOLINT(readability-identifier-naming): override must use same name.
 		if (GetLogLine().GetPattern()) {
-			if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<system_error, E>) {
+			if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<system_error, E>) {  // NOLINT(readability-braces-around-statements, bugprone-suspicious-semicolon): clang-tidy chokes on if constexpr.
 				return BaseException::What(&E::code());
 			}
 			return BaseException::What(nullptr);

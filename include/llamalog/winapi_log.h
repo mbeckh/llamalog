@@ -26,20 +26,22 @@ namespace llamalog {
 
 /// @brief A struct for logging Windows system error codes, e.g. `GetLastError()`, `HRESULT`, etc.
 struct ErrorCode {
-	constexpr ErrorCode(const int code) noexcept
+	constexpr explicit ErrorCode(const int code) noexcept
 		: code(code) {
 		// change variable type if this assertion fails
 		static_assert(sizeof(int) <= sizeof(DWORD), "data truncation in ErrorCode");
 		// empty
 	}
-	constexpr ErrorCode(const DWORD code) noexcept
+	constexpr explicit ErrorCode(const DWORD code) noexcept
 		: code(code) {
 		// empty
 	}
-	constexpr ErrorCode(const HRESULT hr) noexcept
+	constexpr explicit ErrorCode(const HRESULT hr) noexcept
 		: code(hr) {
 		// empty
 	}
+
+	// NOLINTNEXTLINE(readability-identifier-naming, misc-non-private-member-variables-in-classes): clang-tidy can't properly decide between public member and constant member. Plus does not handle structs.
 	const DWORD code;  ///< @brief The system error code.
 };
 

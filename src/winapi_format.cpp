@@ -29,6 +29,7 @@ limitations under the License.
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <string_view>
 
@@ -141,10 +142,12 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 		// a pattern consisting of only a percent is used to suppress the error code
 		m_format.push_back(llamalog::kSuppressErrorCode);
 	} else if (end != it) {
-		m_format.reserve(end - it + 6);
+		m_format.reserve(end - it + 6);  // NOLINT(readability-magic-numbers): counted from number of characters
 		m_format.append(" ({:");
 		m_format.append(it, end);
 		m_format.append("})");
+	} else {
+		// use an empty format
 	}
 	return end;
 }
@@ -152,8 +155,8 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::ErrorCode>::parse(c
 fmt::format_context::iterator fmt::formatter<llamalog::ErrorCode>::format(const llamalog::ErrorCode& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto out = llamalog::FormatSystemErrorCodeTo(arg.code, ctx);
 	if (m_format.empty()) {
-		// system error codes lie in the range < 0x10000
-		return fmt::format_to(ctx.out(), arg.code < 0x1000 ? " ({})" : " ({:#x})", arg.code);
+		// system error codes lie in the range <= 0xFFFF
+		return fmt::format_to(ctx.out(), arg.code <= std::numeric_limits<std::uint16_t>::max() ? " ({})" : " ({:#x})", arg.code);
 	}
 	if (m_format[0] == llamalog::kSuppressErrorCode) {
 		return out;

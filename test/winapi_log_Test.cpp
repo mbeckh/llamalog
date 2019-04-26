@@ -47,7 +47,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 TEST(winapi_logTest, ErrorCode_Log_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
-		const ErrorCode arg = {ERROR_ACCESS_DENIED};
+		const ErrorCode arg{ERROR_ACCESS_DENIED};
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
