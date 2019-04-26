@@ -75,21 +75,21 @@ private:
 
 
 /// @brief A helper class to transfer system errros.
-/// @details Other than `std::system_error` the message is not formatted until the time the `LogLine` is written or `WindowsError::what()` is called.
-class SystemError : public std::runtime_error {
+/// @details Other than `std::system_error` the message is not formatted until the time the `LogLine` is written or `#system_error::what()` is called.
+class system_error : public std::runtime_error {
 public:
 	/// @brief Creates a new instance for the provided error code and category.
 	/// @param code The error code.
 	/// @param category The error category.
 	/// @param message The error message.
-	SystemError(int code, const std::error_category& category, _In_opt_z_ const char* __restrict message) noexcept;
-	SystemError(SystemError&) noexcept = default;   ///< @defaultconstructor
-	SystemError(SystemError&&) noexcept = default;  ///< @defaultconstructor
-	~SystemError() noexcept = default;
+	system_error(int code, const std::error_category& category, _In_opt_z_ const char* __restrict message) noexcept;
+	system_error(system_error&) noexcept = default;   ///< @defaultconstructor
+	system_error(system_error&&) noexcept = default;  ///< @defaultconstructor
+	~system_error() noexcept = default;
 
 public:
-	SystemError& operator=(const SystemError&) noexcept = default;  ///< @defaultoperator
-	SystemError& operator=(SystemError&&) noexcept = default;       ///< @defaultoperator
+	system_error& operator=(const system_error&) noexcept = default;  ///< @defaultoperator
+	system_error& operator=(system_error&&) noexcept = default;       ///< @defaultoperator
 
 public:
 	/// @brief Get the system error code (as in `std::system_error::code()`).
@@ -148,12 +148,12 @@ public:
 #pragma warning(suppress : 4702)
 	[[nodiscard]] _Ret_z_ const char* what() const noexcept override {  // NOLINT(readability-identifier-naming): override must use same name.
 		if (GetLogLine().GetPattern()) {
-			if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<SystemError, E>) {
+			if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<system_error, E>) {
 				return BaseException::What(&E::code());
 			}
 			return BaseException::What(nullptr);
 		}
-		// the error message for the error code is already part of what() for std::system_error and SystemError
+		// the error message for the error code is already part of what() for std::system_error and system_error
 		return __super::what();
 	}
 };

@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-/// @file
+/// @file Enables logging of some types from the Windows API.
+
 #pragma once
 
 #include <llamalog/LogLine.h>

@@ -16,11 +16,11 @@ limitations under the License.
 
 /// @file
 
-#include "llamalog/WindowsFormatters.h"
+#include "llamalog/winapi_format.h"
 
 #include "llamalog/Logger.h"
-#include "llamalog/WindowsTypes.h"
 #include "llamalog/finally.h"
+#include "llamalog/winapi_log.h"
 
 #include <fmt/core.h>
 

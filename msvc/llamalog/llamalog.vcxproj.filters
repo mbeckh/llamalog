@@ -24,19 +24,19 @@
     <ClCompile Include="..\..\src\LogLine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\WindowsTypes.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\LogWriter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Exceptions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\WindowsFormatters.cpp">
+    <ClCompile Include="..\..\src\exception.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\winapi_format.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\winapi_log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,16 +47,7 @@
     <ClInclude Include="..\..\include\llamalog\LogLine.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\llamalog\WindowsTypes.h">
-      <Filter>Header Files\llamalog</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\llamalog\LogWriter.h">
-      <Filter>Header Files\llamalog</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\llamalog\CustomTypes.h">
-      <Filter>Header Files\llamalog</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\llamalog\Exceptions.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\llamalog\finally.h">
@@ -68,7 +59,16 @@
     <ClInclude Include="..\..\include\llamalog\llamalog.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\llamalog\WindowsFormatters.h">
+    <ClInclude Include="..\..\include\llamalog\exception.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\winapi_format.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\winapi_log.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\custom_types.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
   </ItemGroup>

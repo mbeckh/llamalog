@@ -29,23 +29,23 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\llamalog\CustomTypes.h" />
-    <ClInclude Include="..\..\include\llamalog\Exceptions.h" />
+    <ClInclude Include="..\..\include\llamalog\custom_types.h" />
+    <ClInclude Include="..\..\include\llamalog\exception.h" />
     <ClInclude Include="..\..\include\llamalog\finally.h" />
-    <ClInclude Include="..\..\include\llamalog\WindowsFormatters.h" />
+    <ClInclude Include="..\..\include\llamalog\winapi_format.h" />
     <ClInclude Include="..\..\include\llamalog\llamalog.h" />
     <ClInclude Include="..\..\include\llamalog\LogLine.h" />
     <ClInclude Include="..\..\include\llamalog\Logger.h" />
     <ClInclude Include="..\..\include\llamalog\LogWriter.h" />
-    <ClInclude Include="..\..\include\llamalog\WindowsTypes.h" />
+    <ClInclude Include="..\..\include\llamalog\winapi_log.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\Exceptions.cpp" />
-    <ClCompile Include="..\..\src\WindowsFormatters.cpp" />
+    <ClCompile Include="..\..\src\exception.cpp" />
+    <ClCompile Include="..\..\src\winapi_format.cpp" />
     <ClCompile Include="..\..\src\LogLine.cpp" />
     <ClCompile Include="..\..\src\Logger.cpp" />
     <ClCompile Include="..\..\src\LogWriter.cpp" />
-    <ClCompile Include="..\..\src\WindowsTypes.cpp" />
+    <ClCompile Include="..\..\src\winapi_log.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

@@ -45,7 +45,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 */
 
 #include <llamalog/LogLine.h>
-// IWYU pragma: no_include "llamalog/WindowsTypes.h"
+// IWYU pragma: no_include "llamalog/winapi_log.h"
 
 #include <sal.h>
 

@@ -314,7 +314,7 @@ public:
 
 	/// @brief Copy a log argument of a custom type to the argument buffer.
 	/// @details This function handles types which are trivially copyable.
-	/// @remark Include `<llamalog/CustomTypes.h>` in your implementation file before calling this function.
+	/// @remark Include `<llamalog/custom_types.h>` in your implementation file before calling this function.
 	/// @tparam T The type of the argument. This type MUST have a copy constructor.
 	/// @param arg The object.
 	/// @return The current object for method chaining.
@@ -324,7 +324,7 @@ public:
 	/// @brief Copy a log argument of a custom type to the argument buffer.
 	/// @details This function handles types which are not trivially copyable. However, the type MUST support copy construction.
 	/// @note The type @p T MUST be both copy constructible and either nothrow move constructible or nothrow copy constructible.
-	/// @remark Include `<llamalog/CustomTypes.h>` in your implementation file before calling this function.
+	/// @remark Include `<llamalog/custom_types.h>` in your implementation file before calling this function.
 	/// @tparam T The type of the argument.
 	/// @param arg The object.
 	/// @return The current object for method chaining.

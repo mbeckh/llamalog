@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "llamalog/WindowsTypes.h"
+#include "llamalog/winapi_log.h"
 
 #include "llamalog/LogLine.h"
 
@@ -44,7 +44,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 // ErrorCode
 //
 
-TEST(WindowsTypesTest, ErrorCode_Log_PrintMessage) {
+TEST(winapi_logTest, ErrorCode_Log_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
@@ -55,7 +55,7 @@ TEST(WindowsTypesTest, ErrorCode_Log_PrintMessage) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
 }
 
-TEST(WindowsTypesTest, ErrorCode_LastError_PrintMessage) {
+TEST(winapi_logTest, ErrorCode_LastError_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
 		SetLastError(ERROR_ACCESS_DENIED);
@@ -71,7 +71,7 @@ TEST(WindowsTypesTest, ErrorCode_LastError_PrintMessage) {
 // LARGE_INTEGER
 //
 
-TEST(WindowsTypesTest, LARGEINTEGER_Log_PrintValue) {
+TEST(winapi_logTest, LARGEINTEGER_Log_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const LARGE_INTEGER arg = {{0xFFu, -1L}};
@@ -87,7 +87,7 @@ TEST(WindowsTypesTest, LARGEINTEGER_Log_PrintValue) {
 // ULARGE_INTEGER
 //
 
-TEST(WindowsTypesTest, ULARGEINTEGER_Log_PrintValue) {
+TEST(winapi_logTest, ULARGEINTEGER_Log_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const ULARGE_INTEGER arg = {{0xFFu, 0xFFu}};
@@ -103,7 +103,7 @@ TEST(WindowsTypesTest, ULARGEINTEGER_Log_PrintValue) {
 // HINSTANCE
 //
 
-TEST(WindowsTypesTest, HINSTANCE_LogValue_PrintValue) {
+TEST(winapi_logTest, HINSTANCE_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	char sz[1024];
 	{
@@ -116,7 +116,7 @@ TEST(WindowsTypesTest, HINSTANCE_LogValue_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(WindowsTypesTest, HINSTANCE_LogNullptr_PrintZero) {
+TEST(winapi_logTest, HINSTANCE_LogNullptr_PrintZero) {
 	LogLine logLine = GetLogLine();
 	{
 		const HINSTANCE arg = nullptr;  // NOLINT(misc-misplaced-const): We DO want a const variable.
@@ -132,7 +132,7 @@ TEST(WindowsTypesTest, HINSTANCE_LogNullptr_PrintZero) {
 // POINT
 //
 
-TEST(WindowsTypesTest, POINT_LogValue_PrintValue) {
+TEST(winapi_logTest, POINT_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const POINT arg = {-10, 20};
@@ -143,7 +143,7 @@ TEST(WindowsTypesTest, POINT_LogValue_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(WindowsTypesTest, POINT_LogInline_PrintValue) {
+TEST(winapi_logTest, POINT_LogInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		logLine << POINT{-10, 20};
@@ -153,7 +153,7 @@ TEST(WindowsTypesTest, POINT_LogInline_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(WindowsTypesTest, POINT_LogValuePrintPadded_PrintPadded) {
+TEST(winapi_logTest, POINT_LogValuePrintPadded_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const POINT arg = {-10, 20};
@@ -169,7 +169,7 @@ TEST(WindowsTypesTest, POINT_LogValuePrintPadded_PrintPadded) {
 // RECT
 //
 
-TEST(WindowsTypesTest, RECT_LogValue_PrintValue) {
+TEST(winapi_logTest, RECT_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const RECT arg = {-10, 20, 30, 40};
@@ -180,7 +180,7 @@ TEST(WindowsTypesTest, RECT_LogValue_PrintValue) {
 	EXPECT_EQ("((-10, 20), (30, 40))", str);
 }
 
-TEST(WindowsTypesTest, RECT_LogValuePrintPadded_PrintPadded) {
+TEST(winapi_logTest, RECT_LogValuePrintPadded_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const RECT arg = {-10, 20, 30, 40};

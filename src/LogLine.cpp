@@ -46,11 +46,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 #include "llamalog/LogLine.h"
 
-#include "llamalog/CustomTypes.h"
-#include "llamalog/Exceptions.h"
 #include "llamalog/LogWriter.h"
 #include "llamalog/Logger.h"
-#include "llamalog/WindowsTypes.h"
+#include "llamalog/custom_types.h"
+#include "llamalog/exception.h"
+#include "llamalog/winapi_log.h"
 
 #include <fmt/format.h>
 
@@ -321,12 +321,12 @@ DWORD GetCurrentThreadId() noexcept {
 
 /// @brief Get the additional logging context of an exception if it exists and get optional information for `std::error_code`.
 /// @note The function MUST be called from within a catch block to get the object, elso `nullptr` is returned for both values.
-/// @param pCode A pointer which is set if the exception is of type `std::system_error` or `SystemError`, else the parameter is set to `nullptr`.
+/// @param pCode A pointer which is set if the exception is of type `std::system_error` or `system_error`, else the parameter is set to `nullptr`.
 /// @return The logging context if it exists, else `nullptr`.
 _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException(_Out_ const std::error_code*& pCode) noexcept {
 	try {
 		throw;
-	} catch (const SystemError& e) {
+	} catch (const system_error& e) {
 		pCode = &e.code();
 	} catch (const std::system_error& e) {
 		pCode = &e.code();
@@ -1105,7 +1105,7 @@ private:
 		return false;
 	}
 
-	/// @brief Format the error message for `std::system_error`s and `SystemError`s having additional logging data.
+	/// @brief Format the error message for `std::system_error`s and `system_error`s having additional logging data.
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @param ptr The address of the exception argument in the buffer.
 	/// @param out The output target.
@@ -1129,7 +1129,7 @@ private:
 		return true;
 	}
 
-	/// @brief Format the error message for `std::system_error`s and `SystemError`s thrown using plain `throw`.
+	/// @brief Format the error message for `std::system_error`s and `system_error`s thrown using plain `throw`.
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @param ptr The address of the exception argument in the buffer.
 	/// @param out The output target.

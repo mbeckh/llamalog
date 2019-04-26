@@ -15,11 +15,11 @@ limitations under the License.
 */
 
 /// @file
-/// @brief Contains the formatters which may be used from own code but which are not required in the public namespace for logging.
+/// @brief Contains formatters for types from the Windows API which may be used from own code but which are not required in the public namespace for logging.
 
 #pragma once
 
-#include <llamalog/WindowsTypes.h>
+#include <llamalog/winapi_log.h>
 
 #include <fmt/core.h>
 

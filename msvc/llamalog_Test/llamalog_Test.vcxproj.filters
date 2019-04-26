@@ -24,15 +24,6 @@
     <ClCompile Include="..\..\test\LogLine_Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\test\WindowsTypes_Test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\test\CustomTypes_Test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\test\Exceptions_Test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\test\LogWriter_Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -42,7 +33,16 @@
     <ClCompile Include="..\..\test\Logger_Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\test\Formatters_Test.cpp">
+    <ClCompile Include="..\..\test\winapi_log_Test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\test\winapi_format_Test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\test\exception_Test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\test\custom_types_Test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

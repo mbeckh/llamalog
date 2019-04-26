@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "llamalog/Formatters.h"  // IWYU pragma: keep
+#include "llamalog/winapi_format.h"  // IWYU pragma: keep
 
-#include "llamalog/WindowsTypes.h"
+#include "llamalog/winapi_log.h"
 
 #include <fmt/core.h>
 #include <gmock/gmock.h>
@@ -33,7 +33,7 @@ namespace llamalog::test {
 // ErrorCode
 //
 
-TEST(FormattersTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
+TEST(winapi_formatTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
@@ -43,7 +43,7 @@ TEST(FormattersTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
 }
 
-TEST(FormattersTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
+TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
@@ -53,7 +53,7 @@ TEST(FormattersTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(05\\)"));
 }
 
-TEST(FormattersTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
+TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
@@ -63,7 +63,7 @@ TEST(FormattersTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
 }
 
-TEST(FormattersTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
+TEST(winapi_formatTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
@@ -73,7 +73,7 @@ TEST(FormattersTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
 	EXPECT_THAT(str, testing::Not(testing::MatchesRegex(".+\\(.*\\)")));
 }
 
-TEST(FormattersTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
+TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
 	std::string str;
 	{
 		const ErrorCode arg = {E_INVALIDARG};
@@ -83,7 +83,7 @@ TEST(FormattersTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(0x80070057\\)"));
 }
 
-TEST(FormattersTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
+TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
 	std::string str;
 	{
 		const ErrorCode arg = {E_INVALIDARG};
@@ -93,7 +93,7 @@ TEST(FormattersTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(2147942487\\)"));
 }
 
-TEST(FormattersTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
+TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
 	std::string str;
 	{
 		const ErrorCode arg = {E_INVALIDARG};
@@ -103,7 +103,7 @@ TEST(FormattersTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
 	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(80070057\\)"));
 }
 
-TEST(FormattersTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
+TEST(winapi_formatTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
 	std::string str;
 	{
 		const ErrorCode arg = {ERROR_ACCESS_DENIED};
@@ -118,7 +118,7 @@ TEST(FormattersTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
 // POINT
 //
 
-TEST(FormattersTest, POINT_FormatValue_PrintValue) {
+TEST(winapi_formatTest, POINT_FormatValue_PrintValue) {
 	std::string str;
 	{
 		const POINT arg = {-10, 20};
@@ -128,7 +128,7 @@ TEST(FormattersTest, POINT_FormatValue_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(FormattersTest, POINT_FormatInline_PrintValue) {
+TEST(winapi_formatTest, POINT_FormatInline_PrintValue) {
 	std::string str;
 	{
 		str = fmt::format("{}", POINT{-10, 20});
@@ -142,7 +142,7 @@ TEST(FormattersTest, POINT_FormatInline_PrintValue) {
 // RECT
 //
 
-TEST(FormattersTest, POINT_Format_PrintValue) {
+TEST(winapi_formatTest, POINT_Format_PrintValue) {
 	std::string str;
 	{
 		const RECT arg = {-10, 20, 30, 40};

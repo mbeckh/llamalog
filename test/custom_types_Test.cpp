@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "llamalog/CustomTypes.h"
+#include "llamalog/custom_types.h"
 
 #include "llamalog/LogLine.h"
 
@@ -33,9 +33,9 @@ thread_local int g_destructorCalled;
 thread_local int g_copyConstructorCalled;
 thread_local int g_moveConstructorCalled;
 
-class CustomTypesTest : public testing::Test {
+class custom_typesTest : public testing::Test {
 public:
-	CustomTypesTest() {
+	custom_typesTest() {
 		g_instancesCreated = 0;
 		g_destructorCalled = 0;
 		g_copyConstructorCalled = 0;
@@ -215,7 +215,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 
 }  // namespace
 
-TEST_F(CustomTypesTest, TriviallyCopyable_IsValue_PrintValue) {
+TEST_F(custom_typesTest, TriviallyCopyable_IsValue_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -236,7 +236,7 @@ TEST_F(CustomTypesTest, TriviallyCopyable_IsValue_PrintValue) {
 	EXPECT_EQ(1, g_instancesCreated);
 }
 
-TEST_F(CustomTypesTest, MoveConstructible_IsValue_PrintValue) {
+TEST_F(custom_typesTest, MoveConstructible_IsValue_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -278,7 +278,7 @@ TEST_F(CustomTypesTest, MoveConstructible_IsValue_PrintValue) {
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(CustomTypesTest, CopyConstructible_IsValue_PrintValue) {
+TEST_F(custom_typesTest, CopyConstructible_IsValue_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{

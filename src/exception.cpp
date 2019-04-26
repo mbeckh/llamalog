@@ -16,10 +16,9 @@ limitations under the License.
 
 /// @file
 
-#include "llamalog/Exceptions.h"
-
 #include "llamalog/LogLine.h"
 #include "llamalog/Logger.h"
+#include "llamalog/exception.h"
 
 #include <fmt/format.h>
 
@@ -72,14 +71,14 @@ _Ret_z_ const char* BaseException::What(_In_opt_ const std::error_code* const pC
 	return "<ERROR>";
 }
 
-SystemError::SystemError(int code, const std::error_category& category, _In_opt_z_ const char* __restrict message) noexcept
+system_error::system_error(int code, const std::error_category& category, _In_opt_z_ const char* __restrict message) noexcept
 	: std::runtime_error(nullptr)
 	, m_code(code, category)
 	, m_message(message) {
 	// empty
 }
 
-_Ret_z_ const char* SystemError::what() const noexcept {
+_Ret_z_ const char* system_error::what() const noexcept {
 	if (m_what) {
 		return m_what.get();
 	}

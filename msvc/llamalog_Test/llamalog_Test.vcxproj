@@ -32,15 +32,15 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\test\CustomTypes_Test.cpp" />
-    <ClCompile Include="..\..\test\Exceptions_Test.cpp" />
+    <ClCompile Include="..\..\test\custom_types_Test.cpp" />
+    <ClCompile Include="..\..\test\exception_Test.cpp" />
     <ClCompile Include="..\..\test\finally_Test.cpp" />
-    <ClCompile Include="..\..\test\Formatters_Test.cpp" />
+    <ClCompile Include="..\..\test\winapi_format_Test.cpp" />
     <ClCompile Include="..\..\test\LogLine_Test.cpp" />
     <ClCompile Include="..\..\test\Logger_Test.cpp" />
     <ClCompile Include="..\..\test\LogWriter_Test.cpp" />
     <ClCompile Include="..\..\test\main.cpp" />
-    <ClCompile Include="..\..\test\WindowsTypes_Test.cpp" />
+    <ClCompile Include="..\..\test\winapi_log_Test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

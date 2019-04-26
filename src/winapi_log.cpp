@@ -16,11 +16,11 @@ limitations under the License.
 
 /// @file
 
-#include "llamalog/WindowsTypes.h"
+#include "llamalog/winapi_log.h"
 
-#include "llamalog/CustomTypes.h"
 #include "llamalog/LogLine.h"
-#include "llamalog/WindowsFormatters.h"  // IWYU pragma: keep
+#include "llamalog/custom_types.h"
+#include "llamalog/winapi_format.h"  // IWYU pragma: keep
 
 #include <windows.h>
 
