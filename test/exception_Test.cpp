@@ -34,6 +34,8 @@ limitations under the License.
 
 namespace llamalog::test {
 
+namespace t = testing;
+
 struct TracingArg {
 public:
 	TracingArg(bool* p) noexcept
@@ -484,7 +486,7 @@ TEST(exceptionTest, Pattern_IsTWithexceptionStack_PrintTimestamp) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d"));
+	EXPECT_THAT(str, t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d"));
 }
 
 TEST(exceptionTest, Pattern_IsTWithexceptionHeap_PrintTimestamp) {
@@ -496,7 +498,7 @@ TEST(exceptionTest, Pattern_IsTWithexceptionHeap_PrintTimestamp) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d"));
+	EXPECT_THAT(str, t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d"));
 }
 
 TEST(exceptionTest, Pattern_IsTWithexceptionPlain_PrintNothing) {
@@ -523,7 +525,7 @@ TEST(exceptionTest, Pattern_IstWithexceptionStack_PrintThread) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("\\d+"));
+	EXPECT_THAT(str, t::MatchesRegex("\\d+"));
 }
 
 TEST(exceptionTest, Pattern_IstWithexceptionHeap_PrintThread) {
@@ -535,7 +537,7 @@ TEST(exceptionTest, Pattern_IstWithexceptionHeap_PrintThread) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("\\d+"));
+	EXPECT_THAT(str, t::MatchesRegex("\\d+"));
 }
 
 TEST(exceptionTest, Pattern_IstWithexceptionPlain_PrintNothing) {
@@ -1308,7 +1310,7 @@ TEST(exceptionTest, DefaultPattern_Isexception_PrintDefault) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("Error Exception 1\\.8 - test @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
+	EXPECT_THAT(str, t::MatchesRegex("Error Exception 1\\.8 - test @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
 TEST(exceptionTest, DefaultPattern_IsexceptionAndNoMessage_PrintDefault) {
@@ -1320,7 +1322,7 @@ TEST(exceptionTest, DefaultPattern_IsexceptionAndNoMessage_PrintDefault) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("Error testmsg @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
+	EXPECT_THAT(str, t::MatchesRegex("Error testmsg @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
 TEST(exceptionTest, DefaultPattern_IsexceptionPlain_PrintDefault) {
@@ -1344,7 +1346,7 @@ TEST(exceptionTest, DefaultPattern_Isstdsystemerror_PrintDefault) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("Error Exception 1\\.8 - test: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
+	EXPECT_THAT(str, t::MatchesRegex("Error Exception 1\\.8 - test: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
 TEST(exceptionTest, DefaultPattern_IsstdsystemerrorAndNoMessage_PrintDefault) {
@@ -1356,7 +1358,7 @@ TEST(exceptionTest, DefaultPattern_IsstdsystemerrorAndNoMessage_PrintDefault) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("Error testmsg: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
+	EXPECT_THAT(str, t::MatchesRegex("Error testmsg: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
 TEST(exceptionTest, DefaultPattern_IsstdsystemerrorPlain_PrintDefault) {
@@ -1380,7 +1382,7 @@ TEST(exceptionTest, DefaultPattern_Issystemerror_PrintDefault) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("Error Exception 1\\.8 - test: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
+	EXPECT_THAT(str, t::MatchesRegex("Error Exception 1\\.8 - test: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
 TEST(exceptionTest, DefaultPattern_IssystemerrorAndNoMessage_PrintDefault) {
@@ -1392,7 +1394,7 @@ TEST(exceptionTest, DefaultPattern_IssystemerrorAndNoMessage_PrintDefault) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex("Error testmsg: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
+	EXPECT_THAT(str, t::MatchesRegex("Error testmsg: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
 TEST(exceptionTest, DefaultPattern_systemerrorPlain_PrintDefault) {

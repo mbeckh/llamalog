@@ -31,6 +31,8 @@ limitations under the License.
 
 namespace llamalog::test {
 
+namespace t = testing;
+
 namespace {
 
 LogLine GetLogLine(const char* const pattern = "{}") {
@@ -52,7 +54,7 @@ TEST(winapi_logTest, errorcode_Log_PrintMessage) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+ \\(5\\)"));
 }
 
 TEST(winapi_logTest, errorcode_LastError_PrintMessage) {
@@ -63,7 +65,7 @@ TEST(winapi_logTest, errorcode_LastError_PrintMessage) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+ \\(5\\)"));
 }
 
 

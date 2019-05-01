@@ -17,7 +17,9 @@ limitations under the License.
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+namespace t = testing;
+
 int main(int argc, char** argv) {
-	testing::InitGoogleMock(&argc, argv);
+	t::InitGoogleMock(&argc, argv);
 	return RUN_ALL_TESTS();
 }

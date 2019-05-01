@@ -36,6 +36,8 @@ limitations under the License.
 
 namespace llamalog::test {
 
+namespace t = testing;
+
 namespace {
 
 #pragma warning(suppress : 4100)
@@ -63,7 +65,7 @@ MATCHER_P(MatchesRegex, pattern, "") {
 	fn_(1, BOOL, WINAPI, DeleteFileW,                                                                                                                                                              \
 		(LPCWSTR lpFileName),                                                                                                                                                                      \
 		(lpFileName),                                                                                                                                                                              \
-		testing::Return(TRUE));                                                                                                                                                                    \
+		t::Return(TRUE));                                                                                                                                                                          \
 	fn_(6, HANDLE, WINAPI, FindFirstFileExW,                                                                                                                                                       \
 		(LPCWSTR lpFileName, FINDEX_INFO_LEVELS fInfoLevelId, LPVOID lpFindFileData, FINDEX_SEARCH_OPS fSearchOp, LPVOID lpSearchFilter, DWORD dwAdditionalFlags),                                 \
 		(lpFileName, fInfoLevelId, lpFindFileData, fSearchOp, lpSearchFilter, dwAdditionalFlags),                                                                                                  \
@@ -75,28 +77,28 @@ MATCHER_P(MatchesRegex, pattern, "") {
 	fn_(1, BOOL, WINAPI, FindClose,                                                                                                                                                                \
 		(HANDLE hFindFile),                                                                                                                                                                        \
 		(hFindFile),                                                                                                                                                                               \
-		testing::Return(TRUE))
+		t::Return(TRUE))
 
 DTGM_DECLARE_API_MOCK(Win32, WIN32_FUNCTIONS);
 
-class LogWriterTest : public testing::Test {
+class LogWriterTest : public t::Test {
 public:
 	LogWriterTest() {
-		ON_CALL(m_mock, CreateFileW(testing::HasSubstr(L"ll_test."), DTGM_ARG6))
+		ON_CALL(m_mock, CreateFileW(t::HasSubstr(L"ll_test."), DTGM_ARG6))
 			.WillByDefault(detours_gmock::SetLastErrorAndReturn(ERROR_FILE_NOT_FOUND, INVALID_HANDLE_VALUE));
-		EXPECT_CALL(m_mock, CreateFileW(testing::HasSubstr(L"ll_test."), DTGM_ARG6))
+		EXPECT_CALL(m_mock, CreateFileW(t::HasSubstr(L"ll_test."), DTGM_ARG6))
 			.Times(0);
 		ON_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
-			.WillByDefault(testing::Invoke([](testing::Unused, testing::Unused, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, testing::Unused) {
+			.WillByDefault(t::Invoke([](t::Unused, t::Unused, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, t::Unused) {
 				*lpNumberOfBytesWritten = nNumberOfBytesToWrite;
 				return TRUE;
 			}));
 		ON_CALL(m_mock, CloseHandle(m_hFile))
-			.WillByDefault(testing::Return(TRUE));
+			.WillByDefault(t::Return(TRUE));
 	}
 
 	~LogWriterTest() {
-		testing::Mock::VerifyAndClearExpectations(&m_mock);
+		t::Mock::VerifyAndClearExpectations(&m_mock);
 		DTGM_DETACH_API_MOCK(Win32);
 	}
 
@@ -148,11 +150,11 @@ private:
 
 TEST_F(LogWriterTest, Log_HourlyNoOldFiles_CreateFileDeleteNone) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]_[0-2][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4));
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????_??.log"), DTGM_ARG5));
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????_??.log"), DTGM_ARG5));
 	EXPECT_CALL(m_mock, FindNextFileW(DTGM_ARG2))
 		.Times(0);
 	EXPECT_CALL(m_mock, FindClose(DTGM_ARG1))
@@ -174,11 +176,11 @@ TEST_F(LogWriterTest, Log_HourlyNoOldFiles_CreateFileDeleteNone) {
 
 TEST_F(LogWriterTest, Log_EverySecondNoOldFiles_CreateFileDeleteNone) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]_[0-2][0-9][0-5][0-9][0-5][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4));
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????_??????.log"), DTGM_ARG5));
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????_??????.log"), DTGM_ARG5));
 	EXPECT_CALL(m_mock, FindNextFileW(DTGM_ARG2))
 		.Times(0);
 	EXPECT_CALL(m_mock, FindClose(DTGM_ARG1))
@@ -200,11 +202,11 @@ TEST_F(LogWriterTest, Log_EverySecondNoOldFiles_CreateFileDeleteNone) {
 
 TEST_F(LogWriterTest, Log_MonthlyNoOldFiles_CreateFileDeleteNone) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4));
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.??????.log"), DTGM_ARG5));
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.??????.log"), DTGM_ARG5));
 	EXPECT_CALL(m_mock, FindNextFileW(DTGM_ARG2))
 		.Times(0);
 	EXPECT_CALL(m_mock, FindClose(DTGM_ARG1))
@@ -226,25 +228,25 @@ TEST_F(LogWriterTest, Log_MonthlyNoOldFiles_CreateFileDeleteNone) {
 
 TEST_F(LogWriterTest, Log_EveryMinuteThreeOldFiles_CreateFileDeleteNone) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]_[0-2][0-9][0-5][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4));
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????_????.log"), DTGM_ARG5))
-		.WillOnce(testing::Invoke([this](testing::Unused, testing::Unused, LPVOID lpFindFileData, testing::Unused, testing::Unused, testing::Unused) {
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????_????.log"), DTGM_ARG5))
+		.WillOnce(t::Invoke([this](t::Unused, t::Unused, LPVOID lpFindFileData, t::Unused, t::Unused, t::Unused) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-01_1903.log");
 			return m_hFind;
 		}));
 	EXPECT_CALL(m_mock, FindNextFileW(m_hFind, DTGM_ARG1))
-		.WillOnce(testing::Invoke([](testing::Unused, LPVOID lpFindFileData) {
+		.WillOnce(t::Invoke([](t::Unused, LPVOID lpFindFileData) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-01_1901.log");
 			return TRUE;
 		}))
-		.WillOnce(testing::Invoke([](testing::Unused, LPVOID lpFindFileData) {
+		.WillOnce(t::Invoke([](t::Unused, LPVOID lpFindFileData) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-01_1902.log");
 			return TRUE;
 		}))
-		.WillOnce(testing::DoDefault());
+		.WillOnce(t::DoDefault());
 	EXPECT_CALL(m_mock, FindClose(m_hFind));
 
 	EXPECT_CALL(m_mock, DeleteFileW(DTGM_ARG1))
@@ -263,37 +265,37 @@ TEST_F(LogWriterTest, Log_EveryMinuteThreeOldFiles_CreateFileDeleteNone) {
 
 TEST_F(LogWriterTest, Log_DailyFiveOldFiles_CreateFileDeleteTwo) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4));
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
-		.WillOnce(testing::Invoke([this](testing::Unused, testing::Unused, LPVOID lpFindFileData, testing::Unused, testing::Unused, testing::Unused) {
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+		.WillOnce(t::Invoke([this](t::Unused, t::Unused, LPVOID lpFindFileData, t::Unused, t::Unused, t::Unused) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-05.log");
 			return m_hFind;
 		}));
 	EXPECT_CALL(m_mock, FindNextFileW(m_hFind, DTGM_ARG1))
-		.WillOnce(testing::Invoke([](testing::Unused, LPVOID lpFindFileData) {
+		.WillOnce(t::Invoke([](t::Unused, LPVOID lpFindFileData) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-03.log");
 			return TRUE;
 		}))
-		.WillOnce(testing::Invoke([](testing::Unused, LPVOID lpFindFileData) {
+		.WillOnce(t::Invoke([](t::Unused, LPVOID lpFindFileData) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-01.log");
 			return TRUE;
 		}))
-		.WillOnce(testing::Invoke([](testing::Unused, LPVOID lpFindFileData) {
+		.WillOnce(t::Invoke([](t::Unused, LPVOID lpFindFileData) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-02.log");
 			return TRUE;
 		}))
-		.WillOnce(testing::Invoke([](testing::Unused, LPVOID lpFindFileData) {
+		.WillOnce(t::Invoke([](t::Unused, LPVOID lpFindFileData) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-04.log");
 			return TRUE;
 		}))
-		.WillOnce(testing::DoDefault());
+		.WillOnce(t::DoDefault());
 	EXPECT_CALL(m_mock, FindClose(m_hFind));
 
-	EXPECT_CALL(m_mock, DeleteFileW(testing::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-01.log")));
-	EXPECT_CALL(m_mock, DeleteFileW(testing::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-02.log")));
+	EXPECT_CALL(m_mock, DeleteFileW(t::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-01.log")));
+	EXPECT_CALL(m_mock, DeleteFileW(t::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-02.log")));
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
@@ -327,12 +329,12 @@ TEST_F(LogWriterTest, FileTimeToSystemTime_Error_LogErrorAndDoNotCreateFile) {
 TEST_F(LogWriterTest, CreateFile_TemporaryErrorDuringRollFile_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_FILE_EXISTS, INVALID_HANDLE_VALUE))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
 		.Times(1);  // one log event is lost when CreateFileW fails
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
 		.Times(2);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -352,7 +354,7 @@ TEST_F(LogWriterTest, CreateFile_PermanentErrorDuringRollFile_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
 		.WillRepeatedly(detours_gmock::SetLastErrorAndReturn(ERROR_FILE_EXISTS, INVALID_HANDLE_VALUE));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
 		.Times(3);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -370,20 +372,20 @@ TEST_F(LogWriterTest, CreateFile_PermanentErrorDuringRollFile_LogError) {
 
 TEST_F(LogWriterTest, WriteFile_WritePartially_WriteChunked) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
-		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, testing::Unused) {
+		.WillOnce(t::Invoke([](t::Unused, t::Unused, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, t::Unused) {
 			*lpNumberOfBytesWritten = nNumberOfBytesToWrite / 2;
 			return TRUE;
 		}))
-		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, testing::Unused) {
+		.WillOnce(t::Invoke([](t::Unused, t::Unused, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, t::Unused) {
 			*lpNumberOfBytesWritten = nNumberOfBytesToWrite / 2;
 			return TRUE;
 		}))
-		.WillOnce(testing::DoDefault());
+		.WillOnce(t::DoDefault());
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
 		.Times(1);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -401,17 +403,17 @@ TEST_F(LogWriterTest, WriteFile_WritePartially_WriteChunked) {
 
 TEST_F(LogWriterTest, WriteFile_TemporaryError_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
-		.WillOnce(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, LPDWORD lpNumberOfBytesWritten, testing::Unused) {
+		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, LPDWORD lpNumberOfBytesWritten, t::Unused) {
 			*lpNumberOfBytesWritten = 0;
 			SetLastError(ERROR_FILE_CORRUPT);
 			return FALSE;
 		}))
-		.WillOnce(testing::DoDefault());
+		.WillOnce(t::DoDefault());
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
 		.Times(1);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -429,17 +431,17 @@ TEST_F(LogWriterTest, WriteFile_TemporaryError_LogError) {
 
 TEST_F(LogWriterTest, WriteFile_PermanentError_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
 		.Times(3)
-		.WillRepeatedly(testing::Invoke([](testing::Unused, testing::Unused, testing::Unused, LPDWORD lpNumberOfBytesWritten, testing::Unused) {
+		.WillRepeatedly(t::Invoke([](t::Unused, t::Unused, t::Unused, LPDWORD lpNumberOfBytesWritten, t::Unused) {
 			*lpNumberOfBytesWritten = 0;
 			SetLastError(ERROR_FILE_CORRUPT);
 			return FALSE;
 		}));
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
 		.Times(1);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -457,12 +459,12 @@ TEST_F(LogWriterTest, WriteFile_PermanentError_LogError) {
 
 TEST_F(LogWriterTest, CloseHandle_ErrorDuringDestruct_KeepSilent) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4));
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_NOT_SUPPORTED, FALSE));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5));
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5));
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 3u);
@@ -480,17 +482,17 @@ TEST_F(LogWriterTest, CloseHandle_ErrorDuringDestruct_KeepSilent) {
 
 TEST_F(LogWriterTest, CloseHandle_ErrorDuringRollFile_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]_[0-2][0-9][0-5][0-9][0-5][0-9]\\.log"), DTGM_ARG6))
-		.Times(testing::Between(2, 3))
-		.WillRepeatedly(testing::Return(m_hFile));
+		.Times(t::Between(2, 3))
+		.WillRepeatedly(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
 		.Times(3);
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile))
-		.Times(testing::Between(2, 3))
+		.Times(t::Between(2, 3))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_NOT_SUPPORTED, FALSE))
-		.WillRepeatedly(testing::DoDefault());
+		.WillRepeatedly(t::DoDefault());
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????_??????.log"), DTGM_ARG5))
-		.Times(testing::Between(2, 3));
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????_??????.log"), DTGM_ARG5))
+		.Times(t::Between(2, 3));
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kEverySecond, 3u);
@@ -509,12 +511,12 @@ TEST_F(LogWriterTest, CloseHandle_ErrorDuringRollFile_LogError) {
 
 TEST_F(LogWriterTest, FindFirstFileEx_ErrorDuringRollFile_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
 		.Times(2);
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_PARAMETER, INVALID_HANDLE_VALUE));
 	EXPECT_CALL(m_mock, FindNextFileW(DTGM_ARG2))
 		.Times(0);
@@ -537,13 +539,13 @@ TEST_F(LogWriterTest, FindFirstFileEx_ErrorDuringRollFile_LogError) {
 
 TEST_F(LogWriterTest, FindNextFileW_ErrorDuringRollFile_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
 		.Times(2);
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
-		.WillOnce(testing::Invoke([this](testing::Unused, testing::Unused, LPVOID lpFindFileData, testing::Unused, testing::Unused, testing::Unused) {
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+		.WillOnce(t::Invoke([this](t::Unused, t::Unused, LPVOID lpFindFileData, t::Unused, t::Unused, t::Unused) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-05.log");
 			return m_hFind;
 		}));
@@ -567,13 +569,13 @@ TEST_F(LogWriterTest, FindNextFileW_ErrorDuringRollFile_LogError) {
 
 TEST_F(LogWriterTest, FindClose_ErrorDuringRollFile_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
 		.Times(2);
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
-		.WillOnce(testing::Invoke([this](testing::Unused, testing::Unused, LPVOID lpFindFileData, testing::Unused, testing::Unused, testing::Unused) {
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+		.WillOnce(t::Invoke([this](t::Unused, t::Unused, LPVOID lpFindFileData, t::Unused, t::Unused, t::Unused) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-05.log");
 			return m_hFind;
 		}));
@@ -581,7 +583,7 @@ TEST_F(LogWriterTest, FindClose_ErrorDuringRollFile_LogError) {
 	EXPECT_CALL(m_mock, FindClose(m_hFind))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_HANDLE, FALSE));
 
-	EXPECT_CALL(m_mock, DeleteFileW(testing::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-05.log")))
+	EXPECT_CALL(m_mock, DeleteFileW(t::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-05.log")))
 		.Times(1);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -597,27 +599,27 @@ TEST_F(LogWriterTest, FindClose_ErrorDuringRollFile_LogError) {
 
 TEST_F(LogWriterTest, DeleteFileW_ErrorDuringRollFile_LogError) {
 	EXPECT_CALL(m_mock, CreateFileW(MatchesRegex(L"X:\\\\testing\\\\logs\\\\ll_test\\.2[0-9]{3}[01][0-9][0-3][0-9]\\.log"), DTGM_ARG6))
-		.WillOnce(testing::Return(m_hFile));
+		.WillOnce(t::Return(m_hFile));
 	EXPECT_CALL(m_mock, WriteFile(m_hFile, DTGM_ARG4))
 		.Times(2);
 	EXPECT_CALL(m_mock, CloseHandle(m_hFile));
 
-	EXPECT_CALL(m_mock, FindFirstFileExW(testing::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
-		.WillOnce(testing::Invoke([this](testing::Unused, testing::Unused, LPVOID lpFindFileData, testing::Unused, testing::Unused, testing::Unused) {
+	EXPECT_CALL(m_mock, FindFirstFileExW(t::StrEq(L"X:\\testing\\logs\\ll_test.????????.log"), DTGM_ARG5))
+		.WillOnce(t::Invoke([this](t::Unused, t::Unused, LPVOID lpFindFileData, t::Unused, t::Unused, t::Unused) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-05.log");
 			return m_hFind;
 		}));
 	EXPECT_CALL(m_mock, FindNextFileW(m_hFind, DTGM_ARG1))
-		.WillOnce(testing::Invoke([](testing::Unused, LPVOID lpFindFileData) {
+		.WillOnce(t::Invoke([](t::Unused, LPVOID lpFindFileData) {
 			wcscpy_s(((WIN32_FIND_DATAW*) lpFindFileData)->cFileName, L"ll_test.2019-01-03.log");
 			return TRUE;
 		}))
-		.WillOnce(testing::DoDefault());
+		.WillOnce(t::DoDefault());
 	EXPECT_CALL(m_mock, FindClose(m_hFind));
 
-	EXPECT_CALL(m_mock, DeleteFileW(testing::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-05.log")))
+	EXPECT_CALL(m_mock, DeleteFileW(t::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-05.log")))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_FILE_NOT_FOUND, FALSE));
-	EXPECT_CALL(m_mock, DeleteFileW(testing::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-03.log")));
+	EXPECT_CALL(m_mock, DeleteFileW(t::StrEq(L"X:\\testing\\logs\\ll_test.2019-01-03.log")));
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	std::unique_ptr<llamalog::RollingFileWriter> fileWriter = std::make_unique<llamalog::RollingFileWriter>(Priority::kDebug, "X:\\testing\\logs\\", "ll_test.log", llamalog::RollingFileWriter::Frequency::kDaily, 0u);

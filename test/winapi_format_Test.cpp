@@ -29,6 +29,8 @@ limitations under the License.
 
 namespace llamalog::test {
 
+namespace t = testing;
+
 //
 // error_code
 //
@@ -40,7 +42,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
 		str = fmt::format("{}", arg);
 	}
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+ \\(5\\)"));
 }
 
 TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
@@ -50,7 +52,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
 		str = fmt::format("{:02d}", arg);
 	}
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(05\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+ \\(05\\)"));
 }
 
 TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
@@ -60,7 +62,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 		str = fmt::format("{:x}", arg);
 	}
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(5\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+ \\(5\\)"));
 }
 
 TEST(winapi_formatTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
@@ -70,7 +72,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
 		str = fmt::format("{:%}", arg);
 	}
 
-	EXPECT_THAT(str, testing::Not(testing::MatchesRegex(".+\\(.*\\)")));
+	EXPECT_THAT(str, t::Not(t::MatchesRegex(".+\\(.*\\)")));
 }
 
 TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
@@ -80,7 +82,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
 		str = fmt::format("{}", arg);
 	}
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(0x80070057\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+ \\(0x80070057\\)"));
 }
 
 TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
@@ -90,7 +92,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
 		str = fmt::format("{:02d}", arg);
 	}
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(2147942487\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+ \\(2147942487\\)"));
 }
 
 TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
@@ -100,7 +102,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
 		str = fmt::format("{:x}", arg);
 	}
 
-	EXPECT_THAT(str, testing::MatchesRegex(".+ \\(80070057\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+ \\(80070057\\)"));
 }
 
 TEST(winapi_formatTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
@@ -110,7 +112,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
 		str = fmt::format("{:%}", arg);
 	}
 
-	EXPECT_THAT(str, testing::Not(testing::MatchesRegex(".+\\(.*\\)")));
+	EXPECT_THAT(str, t::Not(t::MatchesRegex(".+\\(.*\\)")));
 }
 
 

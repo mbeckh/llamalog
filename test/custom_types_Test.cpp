@@ -26,6 +26,8 @@ limitations under the License.
 
 namespace llamalog::test {
 
+namespace t = testing;
+
 namespace {
 
 thread_local int g_instancesCreated;
@@ -33,7 +35,7 @@ thread_local int g_destructorCalled;
 thread_local int g_copyConstructorCalled;
 thread_local int g_moveConstructorCalled;
 
-class custom_typesTest : public testing::Test {
+class custom_typesTest : public t::Test {
 public:
 	custom_typesTest() {
 		g_instancesCreated = 0;
