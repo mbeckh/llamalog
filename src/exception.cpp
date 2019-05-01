@@ -16,9 +16,10 @@ limitations under the License.
 
 /// @file
 
+#include "llamalog/exception.h"
+
 #include "llamalog/LogLine.h"
 #include "llamalog/Logger.h"
-#include "llamalog/exception.h"
 
 #include <fmt/format.h>
 
