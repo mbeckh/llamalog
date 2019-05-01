@@ -142,14 +142,14 @@ TEST(winapi_formatTest, POINT_FormatInline_PrintValue) {
 // RECT
 //
 
-TEST(winapi_formatTest, POINT_Format_PrintValue) {
+TEST(winapi_formatTest, RECT_Format_PrintValue) {
 	std::string str;
 	{
 		const RECT arg = {-10, 20, 30, 40};
 		str = fmt::format("{}", arg);
 	}
 
-	EXPECT_EQ("((-10, 20), (30, 40))", str);
+	EXPECT_EQ("((-10, 20) - (30, 40))", str);
 }
 
 }  // namespace llamalog::test

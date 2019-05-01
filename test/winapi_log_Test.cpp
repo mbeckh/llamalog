@@ -177,7 +177,7 @@ TEST(winapi_logTest, RECT_LogValue_PrintValue) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("((-10, 20), (30, 40))", str);
+	EXPECT_EQ("((-10, 20) - (30, 40))", str);
 }
 
 TEST(winapi_logTest, RECT_LogValuePrintPadded_PrintPadded) {
@@ -188,7 +188,7 @@ TEST(winapi_logTest, RECT_LogValuePrintPadded_PrintPadded) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("((-010,  020), ( 030,  040))", str);
+	EXPECT_EQ("((-010,  020) - ( 030,  040))", str);
 }
 
 }  // namespace llamalog::test

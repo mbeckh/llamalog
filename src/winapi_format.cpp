@@ -146,6 +146,7 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::error_code>::parse(
 		m_format.append(" ({:");
 		m_format.append(it, end);
 		m_format.append("})");
+		assert(m_format.length() == static_cast<std::size_t>(end - it) + 6);
 	} else {
 		// use an empty format
 	}
@@ -180,6 +181,7 @@ fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::form
 	m_format.append("}, {:");
 	m_format.append(it, end);
 	m_format.append("})");
+	assert(m_format.length() == (static_cast<std::size_t>(end - it) + 3) * 2 + 4);
 	return end;
 }
 
@@ -197,16 +199,17 @@ fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::forma
 	while (end != ctx.end() && *end != '}') {
 		++end;
 	}
-	m_format.reserve((end - it + 3) * 4 + 12);  // NOLINT(readability-magic-numbers): length calculated from strings
+	m_format.reserve((end - it + 3) * 4 + 13);  // NOLINT(readability-magic-numbers): length calculated from strings
 	m_format.append("(({:");
 	m_format.append(it, end);
 	m_format.append("}, {:");
 	m_format.append(it, end);
-	m_format.append("}), ({:");
+	m_format.append("}) - ({:");
 	m_format.append(it, end);
 	m_format.append("}, {:");
 	m_format.append(it, end);
 	m_format.append("}))");
+	assert(m_format.length() == (static_cast<std::size_t>(end - it) + 3) * 4 + 13);
 	return end;
 }
 
