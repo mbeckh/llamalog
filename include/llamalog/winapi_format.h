@@ -48,7 +48,7 @@ public:
 	fmt::format_context::iterator format(const llamalog::error_code& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 private:
-	std::string m_format;  ///< The format pattern for the numerical error code.
+	std::string m_format;  ///< @brief The format pattern for the numerical error code.
 };
 
 
@@ -68,7 +68,7 @@ public:
 	fmt::format_context::iterator format(const POINT& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 private:
-	std::string m_format;  ///< The format pattern for all four values.
+	std::string m_format;  ///< @brief The format pattern for both values.
 };
 
 
@@ -88,5 +88,5 @@ public:
 	fmt::format_context::iterator format(const RECT& arg, fmt::format_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 
 private:
-	std::string m_format;  ///< The format pattern for all four values.
+	std::string m_format;  ///< @brief The format pattern for all four values.
 };
