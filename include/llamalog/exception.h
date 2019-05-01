@@ -210,8 +210,6 @@ template <typename E, typename... T>
 		llamalog::Throw(exception_, file_, __LINE__, __func__, __VA_ARGS__);      \
 	} while (0)
 
-/// @brief Throw a new exception with additional logging context (alias for `LLAMALOG_THROW`).
-/// @details The variable arguments MAY provide a literal message string and optional arguments.
-/// @param exception_ The exception to throw.
+/// @brief Alias for LLAMALOG_THROW
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
-#define THROW(exception_, ...) LLAMALOG_THROW(exception_, __VA_ARGS__)
+#define THROW LLAMALOG_THROW
