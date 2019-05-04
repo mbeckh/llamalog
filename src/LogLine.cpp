@@ -94,6 +94,12 @@ namespace {
 /// @brief The number of bytes to add to the argument buffer after it became too small.
 constexpr LogLine::Size kGrowBytes = 512u;
 
+/// @brief Marker type for a `nullptr` value for pointers.
+/// @details Required as a separate type to ignore formatting placeholders.
+struct null final {
+	// empty
+};
+
 /// @brief Basic information of a logged exception inside the buffer.
 struct ExceptionInformation final {
 	FILETIME timestamp;               ///< @brief Same as `LogLine::m_timestamp`.
@@ -174,6 +180,7 @@ struct NonTriviallyCopyable final {
 /// @brief The types supported by the logger as arguments. Use `#kTypeId` to get the `#TypeId`.
 /// @copyright This type is derived from `SupportedTypes` from NanoLog.
 using Types = std::tuple<
+	null,
 	bool,
 	char,
 	signed char,
@@ -229,16 +236,21 @@ struct TypeIndex<T, std::tuple<U, Types...>> {
 
 /// @brief Type of the type marker in the argument buffer.
 using TypeId = std::uint8_t;
-static_assert(std::tuple_size_v<Types> <= std::numeric_limits<TypeId>::max(), "too many types for type of TypeId");
+static_assert(std::tuple_size_v<Types> <= (std::numeric_limits<TypeId>::max() & ~0x80u), "too many types for type of TypeId");
 
 /// @brief A constant to get the `#TypeId` of a type at compile time.
 /// @tparam T The type to get the id for.
-template <typename T>
-constexpr TypeId kTypeId = TypeIndex<T, Types>::kValue;
+template <typename T, bool kPointer = false>
+constexpr TypeId kTypeId = TypeIndex<T, Types>::kValue | (kPointer ? 0x80u : 0);
+
+constexpr bool IsPointer(const TypeId typeId) {
+	return (typeId & 0x80u) != 0;
+}
 
 /// @brief Pre-calculated array of sizes required to store values in the buffer. Use `#kTypeSize` to get the size in code.
 /// @hideinitializer
 constexpr std::uint8_t kTypeSizes[] = {
+	sizeof(TypeId),  // null
 	sizeof(TypeId) + sizeof(bool),
 	sizeof(TypeId) + sizeof(char),
 	sizeof(TypeId) + sizeof(signed char),
@@ -486,6 +498,51 @@ public:
 //
 // Custom Formatters
 //
+
+}  // namespace
+}  // namespace llamalog
+
+/// @brief Specialization of `fmt::formatter` for a `null` pointer value.
+template <>
+struct fmt::formatter<llamalog::null> {
+public:
+	/// @brief Parse the format string.
+	/// @param ctx see `fmt::formatter::parse`.
+	/// @return see `fmt::formatter::parse`.
+	auto parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+		auto it = ctx.begin();
+		while (it != ctx.end() && (*it == ':' || (*it != '?' && *it != '}'))) {
+			++it;
+		}
+		if (it != ctx.end() && *it == '?') {
+			++it;
+		}
+		auto end = it;
+		while (end != ctx.end() && *end != '}') {
+			++end;
+		}
+		if (it == end) {
+			m_value.assign("(null)");
+		} else {
+			m_value.assign(it, end);
+		}
+		return end;
+	}
+
+	/// @brief Format the `null` value.
+	/// @param arg A `null` value.
+	/// @param ctx see `fmt::formatter::format`.
+	/// @return see `fmt::formatter::format`.
+	auto format(const llamalog::null& /* arg */, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+		return std::copy(m_value.cbegin(), m_value.cend(), ctx.out());
+	}
+
+private:
+	std::string m_value;  ///< @brief The format pattern for the null value
+};
+
+namespace llamalog {
+namespace {
 
 /// @brief Helper class to pass a wide character string stored inline in the buffer to the formatter.
 struct InlineWideChar final {
@@ -1297,6 +1354,19 @@ void DecodeArgument(_Inout_ std::vector<fmt::format_context::format_arg>& args, 
 
 /// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
 /// @p args. The value of @p position is advanced after decoding.
+/// This is the specialization used for `null` pointers stored inline.
+/// @param args The vector of format arguments.
+/// @param buffer The argument buffer.
+/// @param position The current read position.
+/// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
+template <>
+void DecodeArgument<null>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict /* buffer */, _Inout_ LogLine::Size& position) {
+	args.push_back(fmt::internal::make_arg<fmt::format_context>(null{}));
+	position += kTypeSize<null>;
+}
+
+/// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
+/// @p args. The value of @p position is advanced after decoding.
 /// This is the specialization used for strings stored inline.
 /// @param args The vector of format arguments.
 /// @param buffer The argument buffer.
@@ -1330,6 +1400,23 @@ void DecodeArgument<const wchar_t*>(_Inout_ std::vector<fmt::format_context::for
 
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const InlineWideChar*>(&buffer[position + sizeof(TypeId)])));
 	position += kTypeSize<const wchar_t*> + padding + length * static_cast<LogLine::Size>(sizeof(wchar_t));
+}
+
+/// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
+/// @p args. The value of @p position is advanced after decoding. This function handles `ptr` pointers stored inline.
+/// @tparam T The type of the argument.
+/// @param args The vector of format arguments.
+/// @param buffer The argument buffer.
+/// @param position The current read position.
+/// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
+template <typename T>
+void DecodePointer(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
+	const LogLine::Size pos = position + sizeof(TypeId);
+	const LogLine::Align padding = GetPadding<T>(&buffer[pos]);
+	const LogLine::Size offset = pos + padding;
+
+	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::ptr<T>*>(&buffer[offset])));
+	position += kTypeSize<T> + padding;
 }
 
 /// @brief Decode a stack based exception from the buffer. @details The value of @p cbPosition is advanced after decoding.
@@ -1478,6 +1565,7 @@ void DecodeArgument<TriviallyCopyable>(_Inout_ std::vector<fmt::format_context::
 	position += kArgSize + padding + size;
 }
 
+
 /// @brief Decode an argument from the buffer. @details The argument is made available for formatting by appending it to
 /// @p args. The value of @p position is advanced after decoding.
 /// This is the specialization used for non-trivially copyable custom types stored inline.
@@ -1507,6 +1595,17 @@ void DecodeArgument<NonTriviallyCopyable>(_Inout_ std::vector<fmt::format_contex
 //
 // Skipping Arguments
 //
+
+/// @brief Skip a log argument for pointer values.
+/// @param buffer The argument buffer.
+/// @param position The current read position. The value is set to the start of the next argument.
+template <typename T>
+__declspec(noalias) void SkipPointer(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
+	const LogLine::Size offset = position + sizeof(TypeId);
+	const LogLine::Align padding = GetPadding<T>(&buffer[offset]);
+
+	position += kTypeSize<T> + padding;
+}
 
 /// @brief Skip a log argument of type inline string (either regular or wide character).
 /// @tparam The character type, i.e. either `char` or `wchar_t`.
@@ -1921,29 +2020,38 @@ void CopyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restric
 
 		/// @cond hide
 #pragma push_macro("DECODE_")
+#pragma push_macro("DECODE_PTR_")
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
 #define DECODE_(type_)                                 \
 	case kTypeId<type_>:                               \
 		DecodeArgument<type_>(args, buffer, position); \
 		break
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+#define DECODE_PTR_(type_)                             \
+	case kTypeId<type_>:                               \
+		DecodeArgument<type_>(args, buffer, position); \
+		break;                                         \
+	case kTypeId<type_, true>:                         \
+		DecodePointer<type_>(args, buffer, position);  \
+		break
 		/// @endcond
-
 		switch (typeId) {
-			DECODE_(bool);
+			DECODE_(null);
+			DECODE_PTR_(bool);
 			DECODE_(char);
-			DECODE_(signed char);
-			DECODE_(unsigned char);
-			DECODE_(signed short);
-			DECODE_(unsigned short);
-			DECODE_(signed int);
-			DECODE_(unsigned int);
-			DECODE_(signed long);
-			DECODE_(unsigned long);
-			DECODE_(signed long long);
-			DECODE_(unsigned long long);
-			DECODE_(float);
-			DECODE_(double);
-			DECODE_(long double);
+			DECODE_PTR_(signed char);
+			DECODE_PTR_(unsigned char);
+			DECODE_PTR_(signed short);
+			DECODE_PTR_(unsigned short);
+			DECODE_PTR_(signed int);
+			DECODE_PTR_(unsigned int);
+			DECODE_PTR_(signed long);
+			DECODE_PTR_(unsigned long);
+			DECODE_PTR_(signed long long);
+			DECODE_PTR_(unsigned long long);
+			DECODE_PTR_(float);
+			DECODE_PTR_(double);
+			DECODE_PTR_(long double);
 			DECODE_(const void*);
 			DECODE_(const char*);
 			DECODE_(const wchar_t*);
@@ -1953,13 +2061,14 @@ void CopyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restric
 			DECODE_(HeapBasedSystemError);
 			DECODE_(PlainException);
 			DECODE_(PlainSystemError);
-			DECODE_(TriviallyCopyable);
-			DECODE_(NonTriviallyCopyable);
+			DECODE_(TriviallyCopyable);     // case for ptr is handled in CreateFormatArg
+			DECODE_(NonTriviallyCopyable);  // case for ptr is handled in CreateFormatArg
 		default:
 			assert(false);
 			__assume(false);
 		}
 #pragma pop_macro("DECODE_")
+#pragma pop_macro("DECODE_PTR_")
 	}
 }
 
@@ -1979,29 +2088,39 @@ void CopyObjects(_In_reads_bytes_(used) const std::byte* __restrict const src, _
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
+#pragma push_macro("SKIP_PTR_")
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
 		break
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+#define SKIP_PTR_(type_)                   \
+	case kTypeId<type_>:                   \
+		position += kTypeSize<type_>;      \
+		break;                             \
+	case kTypeId<type_, true>:             \
+		SkipPointer<type_>(src, position); \
+		break
 		/// @endcond
 
 		switch (typeId) {
-			SKIP_(bool);
+			SKIP_(null);
+			SKIP_PTR_(bool);
 			SKIP_(char);
-			SKIP_(signed char);
-			SKIP_(unsigned char);
-			SKIP_(signed short);
-			SKIP_(unsigned short);
-			SKIP_(signed int);
-			SKIP_(unsigned int);
-			SKIP_(signed long);
-			SKIP_(unsigned long);
-			SKIP_(signed long long);
-			SKIP_(unsigned long long);
-			SKIP_(float);
-			SKIP_(double);
-			SKIP_(long double);
+			SKIP_PTR_(signed char);
+			SKIP_PTR_(unsigned char);
+			SKIP_PTR_(signed short);
+			SKIP_PTR_(unsigned short);
+			SKIP_PTR_(signed int);
+			SKIP_PTR_(unsigned int);
+			SKIP_PTR_(signed long);
+			SKIP_PTR_(unsigned long);
+			SKIP_PTR_(signed long long);
+			SKIP_PTR_(unsigned long long);
+			SKIP_PTR_(float);
+			SKIP_PTR_(double);
+			SKIP_PTR_(long double);
 			SKIP_(const void*);
 		case kTypeId<const char*>:
 			SkipInlineString<char>(src, position);
@@ -2040,9 +2159,11 @@ void CopyObjects(_In_reads_bytes_(used) const std::byte* __restrict const src, _
 			SkipPlainSystemError(src, position);
 			break;
 		case kTypeId<TriviallyCopyable>:
+			// case for ptr is handled in CreateFormatArg
 			SkipTriviallyCopyable(src, position);
 			break;
 		case kTypeId<NonTriviallyCopyable>:
+			// case for ptr is handled in CreateFormatArg
 			// first copy any trivially copyable objects up to here
 			std::memcpy(&dst[start], &src[start], position - start);
 			CopyNonTriviallyCopyable(src, dst, position);
@@ -2053,6 +2174,7 @@ void CopyObjects(_In_reads_bytes_(used) const std::byte* __restrict const src, _
 			__assume(false);
 		}
 #pragma pop_macro("SKIP_")
+#pragma pop_macro("SKIP_PTR_")
 	}
 	// copy any remaining trivially copyable objects
 	std::memcpy(&dst[start], &src[start], used - start);
@@ -2074,29 +2196,39 @@ void MoveObjects(_In_reads_bytes_(used) std::byte* __restrict const src, _Out_wr
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
+#pragma push_macro("SKIP_PTR_")
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
 		break
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+#define SKIP_PTR_(type_)                   \
+	case kTypeId<type_>:                   \
+		position += kTypeSize<type_>;      \
+		break;                             \
+	case kTypeId<type_, true>:             \
+		SkipPointer<type_>(src, position); \
+		break
 		/// @endcond
 
 		switch (typeId) {
-			SKIP_(bool);
+			SKIP_(null);
+			SKIP_PTR_(bool);
 			SKIP_(char);
-			SKIP_(signed char);
-			SKIP_(unsigned char);
-			SKIP_(signed short);
-			SKIP_(unsigned short);
-			SKIP_(signed int);
-			SKIP_(unsigned int);
-			SKIP_(signed long);
-			SKIP_(unsigned long);
-			SKIP_(signed long long);
-			SKIP_(unsigned long long);
-			SKIP_(float);
-			SKIP_(double);
-			SKIP_(long double);
+			SKIP_PTR_(signed char);
+			SKIP_PTR_(unsigned char);
+			SKIP_PTR_(signed short);
+			SKIP_PTR_(unsigned short);
+			SKIP_PTR_(signed int);
+			SKIP_PTR_(unsigned int);
+			SKIP_PTR_(signed long);
+			SKIP_PTR_(unsigned long);
+			SKIP_PTR_(signed long long);
+			SKIP_PTR_(unsigned long long);
+			SKIP_PTR_(float);
+			SKIP_PTR_(double);
+			SKIP_PTR_(long double);
 			SKIP_(const void*);
 		case kTypeId<const char*>:
 			SkipInlineString<char>(src, position);
@@ -2135,9 +2267,11 @@ void MoveObjects(_In_reads_bytes_(used) std::byte* __restrict const src, _Out_wr
 			SkipPlainSystemError(src, position);
 			break;
 		case kTypeId<TriviallyCopyable>:
+			// case for ptr is handled in CreateFormatArg
 			SkipTriviallyCopyable(src, position);
 			break;
 		case kTypeId<NonTriviallyCopyable>:
+			// case for ptr is handled in CreateFormatArg
 			// first copy any trivially copyable objects up to here
 			std::memcpy(&dst[start], &src[start], position - start);
 			MoveNonTriviallyCopyable(src, dst, position);
@@ -2148,6 +2282,7 @@ void MoveObjects(_In_reads_bytes_(used) std::byte* __restrict const src, _Out_wr
 			__assume(false);
 		}
 #pragma pop_macro("SKIP_")
+#pragma pop_macro("SKIP_PTR_")
 	}
 	// copy any remaining trivially copyable objects
 	std::memcpy(&dst[start], &src[start], used - start);
@@ -2163,29 +2298,39 @@ void CallDestructors(_Inout_updates_bytes_(used) std::byte* __restrict buffer, L
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
+#pragma push_macro("SKIP_PTR_")
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
 		break
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+#define SKIP_PTR_(type_)                      \
+	case kTypeId<type_>:                      \
+		position += kTypeSize<type_>;         \
+		break;                                \
+	case kTypeId<type_, true>:                \
+		SkipPointer<type_>(buffer, position); \
+		break
 		/// @endcond
 
 		switch (typeId) {
-			SKIP_(bool);
+			SKIP_(null);
+			SKIP_PTR_(bool);
 			SKIP_(char);
-			SKIP_(signed char);
-			SKIP_(unsigned char);
-			SKIP_(signed short);
-			SKIP_(unsigned short);
-			SKIP_(signed int);
-			SKIP_(unsigned int);
-			SKIP_(signed long);
-			SKIP_(unsigned long);
-			SKIP_(signed long long);
-			SKIP_(unsigned long long);
-			SKIP_(float);
-			SKIP_(double);
-			SKIP_(long double);
+			SKIP_PTR_(signed char);
+			SKIP_PTR_(unsigned char);
+			SKIP_PTR_(signed short);
+			SKIP_PTR_(unsigned short);
+			SKIP_PTR_(signed int);
+			SKIP_PTR_(unsigned int);
+			SKIP_PTR_(signed long);
+			SKIP_PTR_(unsigned long);
+			SKIP_PTR_(signed long long);
+			SKIP_PTR_(unsigned long long);
+			SKIP_PTR_(float);
+			SKIP_PTR_(double);
+			SKIP_PTR_(long double);
 			SKIP_(const void*);
 		case kTypeId<const char*>:
 			SkipInlineString<char>(buffer, position);
@@ -2212,9 +2357,11 @@ void CallDestructors(_Inout_updates_bytes_(used) std::byte* __restrict buffer, L
 			SkipPlainSystemError(buffer, position);
 			break;
 		case kTypeId<TriviallyCopyable>:
+			// case for ptr is handled in CreateFormatArg
 			SkipTriviallyCopyable(buffer, position);
 			break;
 		case kTypeId<NonTriviallyCopyable>:
+			// case for ptr is handled in CreateFormatArg
 			DestructNonTriviallyCopyable(buffer, position);
 			break;
 		default:
@@ -2222,6 +2369,7 @@ void CallDestructors(_Inout_updates_bytes_(used) std::byte* __restrict buffer, L
 			__assume(false);
 		}
 #pragma pop_macro("SKIP_")
+#pragma pop_macro("SKIP_PTR_")
 	}
 }
 
@@ -2414,6 +2562,11 @@ LogLine& LogLine::operator<<(const bool arg) {
 	return *this;
 }
 
+LogLine& LogLine::operator<<(const bool* const arg) {
+	WritePointer(arg);
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(char)` from NanoLog.
 LogLine& LogLine::operator<<(const char arg) {
 	Write(arg);
@@ -2426,9 +2579,19 @@ LogLine& LogLine::operator<<(const signed char arg) {
 	return *this;
 }
 
+LogLine& LogLine::operator<<(const signed char* const arg) {
+	WritePointer(arg);
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(char)` from NanoLog.
 LogLine& LogLine::operator<<(const unsigned char arg) {
 	Write(arg);
+	return *this;
+}
+
+LogLine& LogLine::operator<<(const unsigned char* const arg) {
+	WritePointer(arg);
 	return *this;
 }
 
@@ -2438,9 +2601,19 @@ LogLine& LogLine::operator<<(const signed short arg) {
 	return *this;
 }
 
+LogLine& LogLine::operator<<(const signed short* const arg) {
+	WritePointer(arg);
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(uint32_t)` from NanoLog.
 LogLine& LogLine::operator<<(const unsigned short arg) {
 	Write(arg);
+	return *this;
+}
+
+LogLine& LogLine::operator<<(const unsigned short* const arg) {
+	WritePointer(arg);
 	return *this;
 }
 
@@ -2450,9 +2623,19 @@ LogLine& LogLine::operator<<(const signed int arg) {
 	return *this;
 }
 
+LogLine& LogLine::operator<<(const signed int* const arg) {
+	WritePointer(arg);
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(uint32_t)` from NanoLog.
 LogLine& LogLine::operator<<(const unsigned int arg) {
 	Write(arg);
+	return *this;
+}
+
+LogLine& LogLine::operator<<(const unsigned int* const arg) {
+	WritePointer(arg);
 	return *this;
 }
 
@@ -2462,9 +2645,19 @@ LogLine& LogLine::operator<<(const signed long arg) {
 	return *this;
 }
 
+LogLine& LogLine::operator<<(const signed long* const arg) {
+	WritePointer(arg);
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(uint32_t)` from NanoLog.
 LogLine& LogLine::operator<<(const unsigned long arg) {
 	Write(arg);
+	return *this;
+}
+
+LogLine& LogLine::operator<<(const unsigned long* const arg) {
+	WritePointer(arg);
 	return *this;
 }
 
@@ -2474,9 +2667,19 @@ LogLine& LogLine::operator<<(const signed long long arg) {
 	return *this;
 }
 
+LogLine& LogLine::operator<<(const signed long long* const arg) {
+	WritePointer(arg);
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(uint64_t)` from NanoLog.
 LogLine& LogLine::operator<<(const unsigned long long arg) {
 	Write(arg);
+	return *this;
+}
+
+LogLine& LogLine::operator<<(const unsigned long long* const arg) {
+	WritePointer(arg);
 	return *this;
 }
 
@@ -2486,15 +2689,30 @@ LogLine& LogLine::operator<<(const float arg) {
 	return *this;
 }
 
+LogLine& LogLine::operator<<(const float* const arg) {
+	WritePointer(arg);
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(double)` from NanoLog.
 LogLine& LogLine::operator<<(const double arg) {
 	Write(arg);
 	return *this;
 }
 
+LogLine& LogLine::operator<<(const double* const arg) {
+	WritePointer(arg);
+	return *this;
+}
+
 // Based on `NanoLogLine::operator<<(double)` from NanoLog.
 LogLine& LogLine::operator<<(const long double arg) {
 	Write(arg);
+	return *this;
+}
+
+LogLine& LogLine::operator<<(const long double* const arg) {
+	WritePointer(arg);
 	return *this;
 }
 
@@ -2619,13 +2837,49 @@ _Ret_notnull_ __declspec(restrict) std::byte* LogLine::GetWritePosition(const Lo
 
 // Derived from both methods `NanoLogLine::encode` from NanoLog.
 template <typename T>
-void LogLine::Write(T arg) {
+void LogLine::Write(const T arg) {
 	constexpr TypeId kArgTypeId = kTypeId<T>;
 	constexpr auto kArgSize = kTypeSize<T>;
 	std::byte* __restrict const buffer = GetWritePosition(kArgSize);
 
 	std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
 	std::memcpy(&buffer[sizeof(kArgTypeId)], &arg, sizeof(arg));
+
+	m_used += kArgSize;
+}
+
+template <typename T>
+void LogLine::WritePointer(const T* const arg) {
+	if (arg) {
+		static_assert(sizeof(internal::ptr<T>) == sizeof(T), "size of ptr and type does not match");
+		static_assert(alignof(internal::ptr<T>) == alignof(T), "padding of ptr and type does not match");
+		static_assert(offsetof(internal::ptr<T>, value) == 0, "offset of value is not 0");
+
+		constexpr TypeId kArgTypeId = kTypeId<T, true>;
+		constexpr auto kArgSize = kTypeSize<T>;
+
+		std::byte* __restrict buffer = GetWritePosition(kArgSize);
+		const LogLine::Align padding = GetPadding<T>(&buffer[sizeof(kArgTypeId)]);
+		if (padding) {
+			// check if the buffer has enough space for the type AND the padding
+			buffer = GetWritePosition(kArgSize + padding);
+		}
+
+		std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
+		std::memcpy(&buffer[sizeof(kArgTypeId)] + padding, arg, sizeof(*arg));
+
+		m_used += kArgSize + padding;
+	} else {
+		WriteNullPointer();
+	}
+}
+
+void LogLine::WriteNullPointer() {
+	constexpr TypeId kArgTypeId = kTypeId<null>;
+	constexpr auto kArgSize = kTypeSize<null>;
+	std::byte* __restrict const buffer = GetWritePosition(kArgSize);
+
+	std::memcpy(buffer, &kArgTypeId, sizeof(kArgTypeId));
 
 	m_used += kArgSize;
 }

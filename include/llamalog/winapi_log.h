@@ -96,6 +96,14 @@ inline llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const HINSTANCE
 /// @return @p logLine to allow method chaining.
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT& arg);
 
+/// @brief Log a `POINT` structure as `(<x>, <y>)`.
+/// @details Any formatting specifiers are applied to both values,
+/// e.g. `{:03}` will output `POINT{10, 20}` as `(010, 020)`.
+/// @param logLine The `llamalog::LogLine`.
+/// @param arg The value.
+/// @return @p logLine to allow method chaining.
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT* arg);
+
 /// @brief Log a `RECT` structure as `((<left>, <top>), (<right>, <bottom>))`.
 /// @details Any formatting specifiers are applied to all values,
 /// e.g. `{:02}` will output `RECT{1, 2, 3, 4}` as `((01, 02), (03, 04))`.
@@ -103,6 +111,14 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT& arg);
 /// @param arg The value.
 /// @return @p logLine to allow method chaining.
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT& arg);
+
+/// @brief Log a `RECT` structure as `((<left>, <top>), (<right>, <bottom>))`.
+/// @details Any formatting specifiers are applied to all values,
+/// e.g. `{:02}` will output `RECT{1, 2, 3, 4}` as `((01, 02), (03, 04))`.
+/// @param logLine The `llamalog::LogLine`.
+/// @param arg The value.
+/// @return @p logLine to allow method chaining.
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 
 
 //

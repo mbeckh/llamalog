@@ -32,6 +32,14 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT& arg) {
 	return logLine.AddCustomArgument(arg);
 }
 
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const POINT* const arg) {
+	return logLine.AddCustomArgument(arg);
+}
+
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT& arg) {
+	return logLine.AddCustomArgument(arg);
+}
+
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* const arg) {
 	return logLine.AddCustomArgument(arg);
 }

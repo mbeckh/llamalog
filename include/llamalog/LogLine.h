@@ -122,6 +122,11 @@ public:
 	/// @copyright Based on `NanoLogLine::operator<<(int32_t)` from NanoLog.
 	LogLine& operator<<(bool arg);
 
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	LogLine& operator<<(const bool* arg);
+
 	/// @brief Add a log argument. @note A `char` is distinct from both `signed char` and `unsigned char`.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
@@ -137,8 +142,18 @@ public:
 	/// @brief Add a log argument.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
+	LogLine& operator<<(const signed char* arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(char)` from NanoLog.
 	LogLine& operator<<(unsigned char arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	LogLine& operator<<(const unsigned char* arg);
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
@@ -149,8 +164,18 @@ public:
 	/// @brief Add a log argument.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
+	LogLine& operator<<(const signed short* arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(uint32_t)` from NanoLog.
 	LogLine& operator<<(unsigned short arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	LogLine& operator<<(const unsigned short* arg);
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
@@ -161,8 +186,18 @@ public:
 	/// @brief Add a log argument.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
+	LogLine& operator<<(const signed int* arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(uint32_t)` from NanoLog.
 	LogLine& operator<<(unsigned int arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	LogLine& operator<<(const unsigned int* arg);
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
@@ -173,8 +208,18 @@ public:
 	/// @brief Add a log argument.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
+	LogLine& operator<<(const signed long* arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(uint32_t)` from NanoLog.
 	LogLine& operator<<(unsigned long arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	LogLine& operator<<(const unsigned long* arg);
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
@@ -185,8 +230,18 @@ public:
 	/// @brief Add a log argument.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
+	LogLine& operator<<(const signed long long* arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(uint64_t)` from NanoLog.
 	LogLine& operator<<(unsigned long long arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	LogLine& operator<<(const unsigned long long* arg);
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
@@ -197,14 +252,29 @@ public:
 	/// @brief Add a log argument.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
+	LogLine& operator<<(const float* arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(double)` from NanoLog.
 	LogLine& operator<<(double arg);
 
 	/// @brief Add a log argument.
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
+	LogLine& operator<<(const double* arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(double)` from NanoLog.
 	LogLine& operator<<(long double arg);
+
+	/// @brief Add a log argument.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	LogLine& operator<<(const long double* arg);
 
 	/// @brief Add an address as a log argument. @note Please note that one MUST NOT use this pointer to access	an
 	/// object because at the time of logging, the object might no longer exist.
@@ -243,7 +313,7 @@ public:
 	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
 	LogLine& operator<<(const std::wstring_view& arg);
 
-	/// @brief Add a `std::exception` as a argument.
+	/// @brief Add a `std::exception` as an argument.
 	/// @details If the `std::exception` is of type `std::system_error` the additional details are made available for formatting.
 	/// @note The function MUST be called from within a catch block.
 	/// @param arg The argument.
@@ -321,6 +391,15 @@ public:
 	template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int> = 0>
 	LogLine& AddCustomArgument(const T& arg);
 
+	/// @brief Copy a log argument of a pointer to a custom type to the argument buffer.
+	/// @details This function handles types which are trivially copyable.
+	/// @remark Include `<llamalog/custom_types.h>` in your implementation file before calling this function.
+	/// @tparam T The type of the argument. This type MUST have a copy constructor.
+	/// @param arg The pointer to an object.
+	/// @return The current object for method chaining.
+	template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int> = 0>
+	LogLine& AddCustomArgument(const T* arg);
+
 	/// @brief Copy a log argument of a custom type to the argument buffer.
 	/// @details This function handles types which are not trivially copyable. However, the type MUST support copy construction.
 	/// @note The type @p T MUST be both copy constructible and either nothrow move constructible or nothrow copy constructible.
@@ -330,6 +409,16 @@ public:
 	/// @return The current object for method chaining.
 	template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
 	LogLine& AddCustomArgument(const T& arg);
+
+	/// @brief Copy a log argument of a pointer to a custom type to the argument buffer.
+	/// @details This function handles types which are not trivially copyable. However, the type MUST support copy construction.
+	/// @note The type @p T MUST be both copy constructible and either nothrow move constructible or nothrow copy constructible.
+	/// @remark Include `<llamalog/custom_types.h>` in your implementation file before calling this function.
+	/// @tparam T The type of the argument.
+	/// @param arg The pointer to an object.
+	/// @return The current object for method chaining.
+	template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
+	LogLine& AddCustomArgument(const T* arg);
 
 public:
 	using Size = std::uint32_t;    ///< @brief A data type for indexes in the buffer representing *bytes*.
@@ -359,7 +448,19 @@ private:
 	/// @param arg The value to add.
 	/// @copyright Derived from both methods `NanoLogLine::encode` from NanoLog.
 	template <typename T>
-	void Write(T arg);
+	void Write(const T arg);
+
+	/// @brief Copy a pointer argument to the buffer.
+	/// @details @internal The internal layout is the `TypeId` followed by the bytes of the value.
+	/// If @p arg is the `nullptr`, a special null argument is added.
+	/// @tparam T The type of the argument. The type MUST be copyable using `std::memcpy`.
+	/// @param arg The value to add.
+	template <typename T>
+	void WritePointer(const T* arg);
+
+	/// @brief Copy a nullptr argument to the buffer.
+	/// @remarks This function is used internally by `#WritePointer` and `#AddCustomArgument`.
+	void WriteNullPointer();
 
 	/// @brief Copy a string to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the string in characters (NOT

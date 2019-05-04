@@ -72,6 +72,52 @@ TEST(LogLineTest, bool_IsTrueAsNumber_PrintOne) {
 	EXPECT_EQ("1", str);
 }
 
+TEST(LogLineTest, bool_PointerIsTrue_PrintTrue) {
+	LogLine logLine = GetLogLine();
+	{
+		const bool value = true;
+		const bool* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("true", str);
+}
+
+TEST(LogLineTest, bool_PointerIsTrueWithCustomFormat_PrintTrue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const bool value = true;
+		const bool* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("true", str);
+}
+
+TEST(LogLineTest, bool_PointerIsNullptr_PrintNull) {
+	LogLine logLine = GetLogLine();
+	{
+		const bool* arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(null)", str);
+}
+
+TEST(LogLineTest, bool_PointerIsNullptrWithCustomFormat_PrintNull) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const bool* arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("nullptr", str);
+}
+
 
 //
 // char
@@ -134,6 +180,34 @@ TEST(LogLineTest, char_IsEscapedDoNotEscape_PrintUnescaped) {
 
 
 //
+// signed char
+//
+
+TEST(LogLineTest, signedchar_IsValue_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const signed char arg = 64u;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("64", str);
+}
+
+TEST(LogLineTest, signedchar_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const signed char value = 64u;
+		const signed char* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("64", str);
+}
+
+
+//
 // unsigned char
 //
 
@@ -142,6 +216,19 @@ TEST(LogLineTest, unsignedchar_IsValue_PrintValue) {
 	{
 		const unsigned char arg = 179u;
 		static_assert(arg > SCHAR_MAX);
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("179", str);
+}
+
+TEST(LogLineTest, unsignedchar_PointerIsValue_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const unsigned char value = 179u;
+		static_assert(value > SCHAR_MAX);
+		const unsigned char* arg = &value;
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
@@ -178,6 +265,18 @@ TEST(LogLineTest, short_IsNegative_PrintValue) {
 	EXPECT_EQ("-2790", str);
 }
 
+TEST(LogLineTest, short_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const short value = 2790;
+		const short* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("2790", str);
+}
+
 
 //
 // unsigned short
@@ -188,6 +287,18 @@ TEST(LogLineTest, unsignedshort_IsValue_PrintValue) {
 	{
 		const unsigned short arg = 37900u;
 		static_assert(arg > SHRT_MAX);
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("37900", str);
+}
+
+TEST(LogLineTest, unsignedshort_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const unsigned short value = 37900u;
+		const unsigned short* arg = &value;
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
@@ -224,6 +335,52 @@ TEST(LogLineTest, int_IsNegative_PrintValue) {
 	EXPECT_EQ("-27900", str);
 }
 
+TEST(LogLineTest, int_PointerIsValue_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const int value = -27900;
+		const int* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("-27900", str);
+}
+
+TEST(LogLineTest, int_PointerIsNullptr_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const int* arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(null)", str);
+}
+
+TEST(LogLineTest, int_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const int value = -27900;
+		const int* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("-27900", str);
+}
+
+TEST(LogLineTest, int_PointerIsNullptrWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const int* arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("nullptr", str);
+}
+
 
 //
 // unsigned int
@@ -234,6 +391,18 @@ TEST(LogLineTest, unsignedint_IsValue_PrintValue) {
 	{
 		const unsigned int arg = 37900u;
 		static_assert(arg > INT16_MAX);
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("37900", str);
+}
+
+TEST(LogLineTest, unsignedint_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const unsigned int value = 37900u;
+		const unsigned int* arg = &value;
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
@@ -270,6 +439,18 @@ TEST(LogLineTest, long_IsNegative_PrintValue) {
 	EXPECT_EQ("-379000", str);
 }
 
+TEST(LogLineTest, long_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const long value = -379000L;
+		const long* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("-379000", str);
+}
+
 
 //
 // unsigned long
@@ -278,8 +459,20 @@ TEST(LogLineTest, long_IsNegative_PrintValue) {
 TEST(LogLineTest, unsignedlong_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const unsigned long arg = 3790000000UL;
+		const unsigned long arg = 3790000000ul;
 		static_assert(arg > LONG_MAX);
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("3790000000", str);
+}
+
+TEST(LogLineTest, unsignedlong_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const unsigned long value = 3790000000;
+		const unsigned long* arg = &value;
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
@@ -316,6 +509,18 @@ TEST(LogLineTest, longlong_IsNegative_PrintValue) {
 	EXPECT_EQ("-379000000000", str);
 }
 
+TEST(LogLineTest, longlong_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const long long value = -379000000000LL;
+		const long long* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("-379000000000", str);
+}
+
 
 //
 // unsigned long long
@@ -324,8 +529,20 @@ TEST(LogLineTest, longlong_IsNegative_PrintValue) {
 TEST(LogLineTest, unsignedlonglong_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const unsigned long long arg = 10790000000000000000ULL;
+		const unsigned long long arg = 10790000000000000000ull;
 		static_assert(arg > LLONG_MAX);
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("10790000000000000000", str);
+}
+
+TEST(LogLineTest, unsignedlonglong_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const unsigned long long value = 10790000000000000000ull;
+		const unsigned long long* arg = &value;
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
@@ -375,6 +592,18 @@ TEST(LogLineTest, float_IsFltMax_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
+TEST(LogLineTest, float_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:g?nullptr}");
+	{
+		const float value = 8.8f;
+		const float* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("8.8", str);
+}
+
 
 //
 // double
@@ -417,6 +646,18 @@ TEST(LogLineTest, double_IsDblMax_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
+TEST(LogLineTest, double_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:g?nullptr}");
+	{
+		const double value = 8.8f;
+		const double* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("8.8", str);
+}
+
 
 //
 // long double
@@ -457,6 +698,18 @@ TEST(LogLineTest, longdouble_IsLdblMax_PrintValue) {
 	char sz[1024];
 	sprintf_s(sz, "%g", LDBL_MAX);
 	EXPECT_EQ(sz, str);
+}
+
+TEST(LogLineTest, longdouble_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:g?nullptr}");
+	{
+		const long double value = 8.8f;
+		const long double* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("8.8", str);
 }
 
 

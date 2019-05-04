@@ -19,6 +19,7 @@ limitations under the License.
 #include "llamalog/LogLine.h"
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <gtest/gtest.h>
 
 #include <string>
@@ -169,6 +170,10 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::
 	return logLine.AddCustomArgument(arg);
 }
 
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::TriviallyCopyable* const arg) {
+	return logLine.AddCustomArgument(arg);
+}
+
 
 template <>
 struct fmt::formatter<llamalog::test::MoveConstructible> {
@@ -185,6 +190,10 @@ public:
 };
 
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::MoveConstructible& arg) {
+	return logLine.AddCustomArgument(arg);
+}
+
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::MoveConstructible* const arg) {
 	return logLine.AddCustomArgument(arg);
 }
 
@@ -207,6 +216,10 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::
 	return logLine.AddCustomArgument(arg);
 }
 
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const llamalog::test::CopyConstructible* const arg) {
+	return logLine.AddCustomArgument(arg);
+}
+
 namespace llamalog::test {
 
 namespace {
@@ -216,6 +229,11 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 }
 
 }  // namespace
+
+
+//
+// TriviallyCopyable
+//
 
 TEST_F(custom_typesTest, TriviallyCopyable_IsValue_PrintValue) {
 	{
@@ -237,6 +255,115 @@ TEST_F(custom_typesTest, TriviallyCopyable_IsValue_PrintValue) {
 	}
 	EXPECT_EQ(1, g_instancesCreated);
 }
+
+TEST_F(custom_typesTest, TriviallyCopyable_IsValueWithCustomFormat_ThrowError) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const TriviallyCopyable arg(7);
+			ASSERT_EQ(1, arg.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+
+			logLine << arg;
+			EXPECT_EQ(1, g_instancesCreated);
+		}
+		EXPECT_EQ(1, g_instancesCreated);
+#pragma warning(suppress : 4834)
+		EXPECT_THROW(logLine.GetLogMessage(), fmt::format_error);
+
+		EXPECT_EQ(1, g_instancesCreated);
+	}
+	EXPECT_EQ(1, g_instancesCreated);
+}
+
+TEST_F(custom_typesTest, TriviallyCopyable_IsPointer_PrintValue) {
+	{
+		LogLine logLine = GetLogLine();
+		{
+			const TriviallyCopyable value(7);
+			const TriviallyCopyable* const arg = &value;
+			ASSERT_EQ(1, value.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+
+			logLine << arg;
+			EXPECT_EQ(1, g_instancesCreated);
+		}
+		EXPECT_EQ(1, g_instancesCreated);
+		const std::string str = logLine.GetLogMessage();
+
+		// everything is just copied as raw binary data
+		EXPECT_EQ("T_1_7", str);
+		EXPECT_EQ(1, g_instancesCreated);
+	}
+	EXPECT_EQ(1, g_instancesCreated);
+}
+
+TEST_F(custom_typesTest, TriviallyCopyable_IsPointerWithCustomFormat_PrintValue) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const TriviallyCopyable value(7);
+			const TriviallyCopyable* const arg = &value;
+			ASSERT_EQ(1, value.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+
+			logLine << arg;
+			EXPECT_EQ(1, g_instancesCreated);
+		}
+		EXPECT_EQ(1, g_instancesCreated);
+		const std::string str = logLine.GetLogMessage();
+
+		// everything is just copied as raw binary data
+		EXPECT_EQ("T_1_7", str);
+		EXPECT_EQ(1, g_instancesCreated);
+	}
+	EXPECT_EQ(1, g_instancesCreated);
+}
+
+TEST_F(custom_typesTest, TriviallyCopyable_IsNullptr_PrintNull) {
+	{
+		LogLine logLine = GetLogLine();
+		{
+			const TriviallyCopyable* const arg = nullptr;
+			ASSERT_EQ(0, g_instancesCreated);
+
+			logLine << arg;
+			EXPECT_EQ(0, g_instancesCreated);
+		}
+		EXPECT_EQ(0, g_instancesCreated);
+		const std::string str = logLine.GetLogMessage();
+
+		// everything is just copied as raw binary data
+		EXPECT_EQ("(null)", str);
+		EXPECT_EQ(0, g_instancesCreated);
+	}
+	EXPECT_EQ(0, g_instancesCreated);
+}
+
+TEST_F(custom_typesTest, TriviallyCopyable_IsNullptrWithCustomFormat_PrintNull) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const TriviallyCopyable* const arg = nullptr;
+			ASSERT_EQ(0, g_instancesCreated);
+
+			logLine << arg;
+			EXPECT_EQ(0, g_instancesCreated);
+		}
+		EXPECT_EQ(0, g_instancesCreated);
+		const std::string str = logLine.GetLogMessage();
+
+		// everything is just copied as raw binary data
+		EXPECT_EQ("nullptr", str);
+		EXPECT_EQ(0, g_instancesCreated);
+	}
+	EXPECT_EQ(0, g_instancesCreated);
+}
+
+
+//
+// MoveConstructible
+//
 
 TEST_F(custom_typesTest, MoveConstructible_IsValue_PrintValue) {
 	{
@@ -280,6 +407,221 @@ TEST_F(custom_typesTest, MoveConstructible_IsValue_PrintValue) {
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
+TEST_F(custom_typesTest, MoveConstructible_IsValueWithCustomFormat_ThrowError) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const MoveConstructible arg(7);
+			ASSERT_EQ(1, arg.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(2, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(3, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(1, g_moveConstructorCalled);
+			EXPECT_EQ(1, g_destructorCalled);
+		}
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(1, g_copyConstructorCalled);
+		EXPECT_EQ(1, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+#pragma warning(suppress : 4834)
+		EXPECT_THROW(logLine.GetLogMessage(), fmt::format_error);
+
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(1, g_copyConstructorCalled);
+		EXPECT_EQ(1, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+	}
+	EXPECT_EQ(3, g_instancesCreated);
+	EXPECT_EQ(1, g_copyConstructorCalled);
+	EXPECT_EQ(1, g_moveConstructorCalled);
+	EXPECT_EQ(3, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, MoveConstructible_IsPointer_PrintValue) {
+	{
+		LogLine logLine = GetLogLine();
+		{
+			const MoveConstructible value(7);
+			const MoveConstructible* const arg = &value;
+			ASSERT_EQ(1, value.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(2, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(3, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(1, g_moveConstructorCalled);
+			EXPECT_EQ(1, g_destructorCalled);
+		}
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(1, g_copyConstructorCalled);
+		EXPECT_EQ(1, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+		const std::string str = logLine.GetLogMessage();
+
+		EXPECT_EQ("M_3_7", str);  // no need to print string of x'es
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(1, g_copyConstructorCalled);
+		EXPECT_EQ(1, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+	}
+	EXPECT_EQ(3, g_instancesCreated);
+	EXPECT_EQ(1, g_copyConstructorCalled);
+	EXPECT_EQ(1, g_moveConstructorCalled);
+	EXPECT_EQ(3, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, MoveConstructible_IsPointerWithCustomFormat_PrintValue) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const MoveConstructible value(7);
+			const MoveConstructible* const arg = &value;
+			ASSERT_EQ(1, value.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(2, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(3, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(1, g_moveConstructorCalled);
+			EXPECT_EQ(1, g_destructorCalled);
+		}
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(1, g_copyConstructorCalled);
+		EXPECT_EQ(1, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+		const std::string str = logLine.GetLogMessage();
+
+		EXPECT_EQ("M_3_7", str);  // no need to print string of x'es
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(1, g_copyConstructorCalled);
+		EXPECT_EQ(1, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+	}
+	EXPECT_EQ(3, g_instancesCreated);
+	EXPECT_EQ(1, g_copyConstructorCalled);
+	EXPECT_EQ(1, g_moveConstructorCalled);
+	EXPECT_EQ(3, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, MoveConstructible_IsNullptr_PrintNull) {
+	{
+		LogLine logLine = GetLogLine();
+		{
+			const MoveConstructible* const arg = nullptr;
+			ASSERT_EQ(0, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(0, g_instancesCreated);
+			EXPECT_EQ(0, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(0, g_instancesCreated);
+			EXPECT_EQ(0, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+		}
+		EXPECT_EQ(0, g_instancesCreated);
+		EXPECT_EQ(0, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(0, g_destructorCalled);
+		const std::string str = logLine.GetLogMessage();
+
+		EXPECT_EQ("(null)", str);  // no need to print string of x'es
+		EXPECT_EQ(0, g_instancesCreated);
+		EXPECT_EQ(0, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(0, g_destructorCalled);
+	}
+	EXPECT_EQ(0, g_instancesCreated);
+	EXPECT_EQ(0, g_copyConstructorCalled);
+	EXPECT_EQ(0, g_moveConstructorCalled);
+	EXPECT_EQ(0, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, MoveConstructible_IsNullptrWithCustomFormat_PrintNull) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const MoveConstructible* const arg = nullptr;
+			ASSERT_EQ(0, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(0, g_instancesCreated);
+			EXPECT_EQ(0, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(0, g_instancesCreated);
+			EXPECT_EQ(0, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+		}
+		EXPECT_EQ(0, g_instancesCreated);
+		EXPECT_EQ(0, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(0, g_destructorCalled);
+		const std::string str = logLine.GetLogMessage();
+
+		EXPECT_EQ("nullptr", str);  // no need to print string of x'es
+		EXPECT_EQ(0, g_instancesCreated);
+		EXPECT_EQ(0, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(0, g_destructorCalled);
+	}
+	EXPECT_EQ(0, g_instancesCreated);
+	EXPECT_EQ(0, g_copyConstructorCalled);
+	EXPECT_EQ(0, g_moveConstructorCalled);
+	EXPECT_EQ(0, g_destructorCalled);
+}
+
+
+//
+// CopyConstructible
+//
+
 TEST_F(custom_typesTest, CopyConstructible_IsValue_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
@@ -320,6 +662,216 @@ TEST_F(custom_typesTest, CopyConstructible_IsValue_PrintValue) {
 	EXPECT_EQ(2, g_copyConstructorCalled);
 	EXPECT_EQ(0, g_moveConstructorCalled);
 	EXPECT_EQ(3, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, CopyConstructible_IsValueWithCustomFormat_ThrowError) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const CopyConstructible arg(7);
+			ASSERT_EQ(1, arg.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(2, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(3, g_instancesCreated);
+			EXPECT_EQ(2, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(1, g_destructorCalled);
+		}
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(2, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+#pragma warning(suppress : 4834)
+		EXPECT_THROW(logLine.GetLogMessage(), fmt::format_error);
+
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(2, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+	}
+	EXPECT_EQ(3, g_instancesCreated);
+	EXPECT_EQ(2, g_copyConstructorCalled);
+	EXPECT_EQ(0, g_moveConstructorCalled);
+	EXPECT_EQ(3, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, CopyConstructible_IsPointer_PrintValue) {
+	{
+		LogLine logLine = GetLogLine();
+		{
+			const CopyConstructible value(7);
+			const CopyConstructible* const arg = &value;
+			ASSERT_EQ(1, value.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(2, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(3, g_instancesCreated);
+			EXPECT_EQ(2, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(1, g_destructorCalled);
+		}
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(2, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+		const std::string str = logLine.GetLogMessage();
+
+		EXPECT_EQ("C_3_7", str);  // no need to print string of x'es
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(2, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+	}
+	EXPECT_EQ(3, g_instancesCreated);
+	EXPECT_EQ(2, g_copyConstructorCalled);
+	EXPECT_EQ(0, g_moveConstructorCalled);
+	EXPECT_EQ(3, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, CopyConstructible_IsPointerWithCustomFormat_PrintValue) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const CopyConstructible value(7);
+			const CopyConstructible* const arg = &value;
+			ASSERT_EQ(1, value.GetInstanceNo());
+			ASSERT_EQ(1, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(2, g_instancesCreated);
+			EXPECT_EQ(1, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(3, g_instancesCreated);
+			EXPECT_EQ(2, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(1, g_destructorCalled);
+		}
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(2, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+		const std::string str = logLine.GetLogMessage();
+
+		EXPECT_EQ("C_3_7", str);  // no need to print string of x'es
+		EXPECT_EQ(3, g_instancesCreated);
+		EXPECT_EQ(2, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(2, g_destructorCalled);
+	}
+	EXPECT_EQ(3, g_instancesCreated);
+	EXPECT_EQ(2, g_copyConstructorCalled);
+	EXPECT_EQ(0, g_moveConstructorCalled);
+	EXPECT_EQ(3, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, CopyConstructible_IsNullptr_PrintNull) {
+	{
+		LogLine logLine = GetLogLine();
+		{
+			const CopyConstructible* arg = nullptr;
+			ASSERT_EQ(0, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(0, g_instancesCreated);
+			EXPECT_EQ(0, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(0, g_instancesCreated);
+			EXPECT_EQ(0, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+		}
+		EXPECT_EQ(0, g_instancesCreated);
+		EXPECT_EQ(0, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(0, g_destructorCalled);
+		const std::string str = logLine.GetLogMessage();
+
+		EXPECT_EQ("(null)", str);  // no need to print string of x'es
+		EXPECT_EQ(0, g_instancesCreated);
+		EXPECT_EQ(0, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(0, g_destructorCalled);
+	}
+	EXPECT_EQ(0, g_instancesCreated);
+	EXPECT_EQ(0, g_copyConstructorCalled);
+	EXPECT_EQ(0, g_moveConstructorCalled);
+	EXPECT_EQ(0, g_destructorCalled);
+}
+
+TEST_F(custom_typesTest, CopyConstructible_IsNullptrWithCustomFormat_PrintNull) {
+	{
+		LogLine logLine = GetLogLine("{:?nullptr}");
+		{
+			const CopyConstructible* arg = nullptr;
+			ASSERT_EQ(0, g_instancesCreated);
+			ASSERT_EQ(0, g_copyConstructorCalled);
+			ASSERT_EQ(0, g_moveConstructorCalled);
+			ASSERT_EQ(0, g_destructorCalled);
+
+			logLine << arg;
+			EXPECT_EQ(0, g_instancesCreated);
+			EXPECT_EQ(0, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+
+			// force an internal buffer re-allocation
+			logLine << std::string(256, 'x');
+			EXPECT_EQ(0, g_instancesCreated);
+			EXPECT_EQ(0, g_copyConstructorCalled);
+			EXPECT_EQ(0, g_moveConstructorCalled);
+			EXPECT_EQ(0, g_destructorCalled);
+		}
+		EXPECT_EQ(0, g_instancesCreated);
+		EXPECT_EQ(0, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(0, g_destructorCalled);
+		const std::string str = logLine.GetLogMessage();
+
+		EXPECT_EQ("nullptr", str);  // no need to print string of x'es
+		EXPECT_EQ(0, g_instancesCreated);
+		EXPECT_EQ(0, g_copyConstructorCalled);
+		EXPECT_EQ(0, g_moveConstructorCalled);
+		EXPECT_EQ(0, g_destructorCalled);
+	}
+	EXPECT_EQ(0, g_instancesCreated);
+	EXPECT_EQ(0, g_copyConstructorCalled);
+	EXPECT_EQ(0, g_moveConstructorCalled);
+	EXPECT_EQ(0, g_destructorCalled);
 }
 
 }  // namespace llamalog::test

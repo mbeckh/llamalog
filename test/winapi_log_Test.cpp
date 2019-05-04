@@ -166,6 +166,98 @@ TEST(winapi_logTest, POINT_LogValuePrintPadded_PrintPadded) {
 	EXPECT_EQ("(-010,  020)", str);
 }
 
+TEST(winapi_logTest, POINT_LogPointerValue_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const POINT value = {-10, 20};
+		const POINT* const arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(-10, 20)", str);
+}
+
+TEST(winapi_logTest, POINT_LogPointerNullptr_PrintNull) {
+	LogLine logLine = GetLogLine();
+	{
+		const POINT* const arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(null)", str);
+}
+
+TEST(winapi_logTest, POINT_LogPointerValueWithCustomformat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const POINT value = {-10, 20};
+		const POINT* const arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(-10, 20)", str);
+}
+
+TEST(winapi_logTest, POINT_LogPointerNullptrWithCustomformat_PrintNull) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const POINT* const arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("nullptr", str);
+}
+
+TEST(winapi_logTest, POINT_LogPointerValuePrintPadded_PrintPadded) {
+	LogLine logLine = GetLogLine("{:0= 4}");
+	{
+		const POINT value = {-10, 20};
+		const POINT* const arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(-010,  020)", str);
+}
+
+TEST(winapi_logTest, POINT_LogPointerNullptrPrintPadded_PrintNull) {
+	LogLine logLine = GetLogLine("{:0= 4}");
+	{
+		const POINT* const arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(null)", str);
+}
+
+TEST(winapi_logTest, POINT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded) {
+	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
+	{
+		const POINT value = {-10, 20};
+		const POINT* const arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(-010,  020)", str);
+}
+
+TEST(winapi_logTest, POINT_LogPointerNullptrPrintPaddedWithCustomFormat_PrintNull) {
+	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
+	{
+		const POINT* const arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("nullptr", str);
+}
+
 
 //
 // RECT
@@ -191,6 +283,98 @@ TEST(winapi_logTest, RECT_LogValuePrintPadded_PrintPadded) {
 	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("((-010,  020) - ( 030,  040))", str);
+}
+
+TEST(winapi_logTest, RECT_LogPointerValue_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const RECT value = {-10, 20, 30, 40};
+		const RECT* const arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("((-10, 20) - (30, 40))", str);
+}
+
+TEST(winapi_logTest, RECT_LogPointerNullptr_PrintNull) {
+	LogLine logLine = GetLogLine();
+	{
+		const RECT* const arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(null)", str);
+}
+
+TEST(winapi_logTest, RECT_LogPointerValueWithCustomformat_PrintValue) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const RECT value = {-10, 20, 30, 40};
+		const RECT* const arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("((-10, 20) - (30, 40))", str);
+}
+
+TEST(winapi_logTest, RECT_LogPointerNullptrWithCustomformat_PrintNull) {
+	LogLine logLine = GetLogLine("{:?nullptr}");
+	{
+		const RECT* const arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("nullptr", str);
+}
+
+TEST(winapi_logTest, RECT_LogPointerValuePrintPadded_PrintPadded) {
+	LogLine logLine = GetLogLine("{:0= 4}");
+	{
+		const RECT value = {-10, 20, 30, 40};
+		const RECT* const arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("((-010,  020) - ( 030,  040))", str);
+}
+
+TEST(winapi_logTest, RECT_LogPointerNullptrPrintPadded_PrintNull) {
+	LogLine logLine = GetLogLine("{:0= 4}");
+	{
+		const RECT* const arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("(null)", str);
+}
+
+TEST(winapi_logTest, RECT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded) {
+	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
+	{
+		const RECT value = {-10, 20, 30, 40};
+		const RECT* const arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("((-010,  020) - ( 030,  040))", str);
+}
+
+TEST(winapi_logTest, RECT_LogPointerNullptrPrintPaddedWithCustomFormat_PrintNull) {
+	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
+	{
+		const RECT* const arg = nullptr;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("nullptr", str);
 }
 
 }  // namespace llamalog::test
