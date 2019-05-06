@@ -216,6 +216,42 @@ TEST_F(LoggerTest, Log_1000Lines) {
 
 
 //
+// Log exception safe
+//
+
+TEST_F(LoggerTest, LogNoExcept_OneLineWithNoExcept_NoThrow) {
+	DTGM_DEFINE_API_MOCK(Win32, mock);
+
+	const std::thread::id threadId = std::this_thread::get_id();
+
+	EXPECT_CALL(mock, WakeConditionVariable(DTGM_ARG1))
+		.WillOnce(t::DoDefault())  // initial log call
+		.WillRepeatedly(t::Invoke([threadId](PCONDITION_VARIABLE ConditionVariable) -> void {
+			if (std::this_thread::get_id() == threadId) {
+				// prevent being fired from other threads
+				throw std::exception("Logging exception");
+			}
+			// clang-format off
+			DTGM_REAL(Win32, WakeConditionVariable)(ConditionVariable);
+			// clang-format on
+		}));
+	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")));
+
+	{
+		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+		llamalog::Initialize(std::move(writer));
+
+		EXPECT_NO_THROW(llamalog::LogNoExcept(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", 7));
+		llamalog::Flush();
+
+		DTGM_DETACH_API_MOCK(Win32);
+
+		llamalog::Shutdown();
+	}
+}
+
+
+//
 // Encoding Error
 //
 
@@ -334,7 +370,7 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionHandling_LogPanic) {
 				throw std::exception("Logging exception");
 			}
 			// clang-format off
-		DTGM_REAL(Win32, WakeConditionVariable)(ConditionVariable);
+			DTGM_REAL(Win32, WakeConditionVariable)(ConditionVariable);
 			// clang-format on
 		}));
 	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")));

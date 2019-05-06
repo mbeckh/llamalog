@@ -10,6 +10,7 @@
 - [Feature] Flush function.
 - [Feature] Allow setting log level at compuile time using LLAMALOG_LEVEL_xxx.
 - [Feature] Null-safe logging of values of pointer variables.
+- [Feature] Exception-safe logging by calling SLOG_....
 - [Fix] Fixed wrong calculation of alignment for log arguments.
 - [Fix] Fixed handling of errors during logging.
 

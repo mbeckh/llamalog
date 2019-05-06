@@ -129,6 +129,37 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 #define LLAMALOG_LEVEL_DEBUG
 #endif
 
+/// @brief Log a message at `#llamalog::Priority` @p priority_ for function return values of type `HRESULT`.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LLAMALOG_LOG_HRESULT(priority_, result_, message_, ...)                                                                    \
+	[&](const HRESULT result, const char* const function) -> HRESULT {                                                             \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                                             \
+		llamalog::Log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, llamalog::error_code{result}, __VA_ARGS__); \
+		return result;                                                                                                             \
+	}(result_, __func__)
+
+/// @brief Log a message at `#llamalog::Priority` @p priority_ for function return values of type `HRESULT` without throwing an exception.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LLAMALOG_LOG_HRESULT_NOEXCEPT(priority_, result_, message_, ...)                                                                   \
+	[&](const HRESULT result, const char* const function) noexcept->HRESULT {                                                              \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                                                     \
+		llamalog::LogNoExcept(llamalog::Priority::kTrace, file_, __LINE__, function, message_, llamalog::error_code{result}, __VA_ARGS__); \
+		return result;                                                                                                                     \
+	}                                                                                                                                      \
+	(result_, __func__)
+
+
+//
+// LOG_..._HRESULT
+
 /// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace` for function return values of type `HRESULT`.
 /// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
 /// @param result_ The function return value. The value is available as argument `{0}` when formatting.
@@ -136,13 +167,155 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
-#define LOG_TRACE_HRESULT(result_, message_, ...)                                                                                  \
-	[&](HRESULT result, const char* const function) -> HRESULT {                                                                   \
-		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                                             \
-		llamalog::Log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, llamalog::error_code{result}, __VA_ARGS__); \
-		return result;                                                                                                             \
-	}(result_, __func__)
+#define LOG_TRACE_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kTrace, result_, message_, __VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
 #define LOG_TRACE_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kDebug` for function return values of type `HRESULT`.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_DEBUG_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kDebug, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_DEBUG_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kInfo` for function return values of type `HRESULT`.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_INFO_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kInfo, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_INFO_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn` for function return values of type `HRESULT`.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_WARN_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kWarn, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_WARN_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kError` for function return values of type `HRESULT`.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_ERROR_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kError, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_ERROR_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kFatal` for function return values of type `HRESULT`.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_FATAL) || defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_FATAL_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kFatal, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define LOG_FATAL_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+
+//
+// SLOG_..._HRESULT
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kTrace` for function return values of type `HRESULT` without throwing an exception.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_TRACE_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kTrace, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_TRACE_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kDebug` for function return values of type `HRESULT` without throwing an exception.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_DEBUG_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kDebug, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_DEBUG_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kInfo` for function return values of type `HRESULT` without throwing an exception.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_INFO_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kInfo, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_INFO_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kWarn` for function return values of type `HRESULT` without throwing an exception.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_WARN_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kWarn, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_WARN_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kError` for function return values of type `HRESULT` without throwing an exception.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_ERROR_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kError, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_ERROR_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
+#endif
+
+/// @brief Log a message at `#llamalog::Priority` `#llamalog::Priority::kFatal` for function return values of type `HRESULT` without throwing an exception.
+/// @details This macro returns the value of @p result_ and can be used to log any value by just wrapping it inside this macro.
+/// @param result_ The function return value. The value is available as argument `{0}` when formatting.
+/// @param message_ The message pattern which MAY use the syntax of {fmt}.
+/// @return The value of @p result_.
+#if defined(LLAMALOG_LEVEL_FATAL) || defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_FATAL_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kFatal, result_, message_, __VA_ARGS__)
+#else
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+#define SLOG_FATAL_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
 #endif

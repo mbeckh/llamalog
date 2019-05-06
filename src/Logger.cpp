@@ -542,6 +542,20 @@ Priority GetInternalPriority(const Priority priority) noexcept {
 	return static_cast<Priority>(static_cast<std::uint8_t>(priority) | ((g_currentPriority.load(std::memory_order_acquire) & 3u) + 1));
 }
 
+void CallNoExcept(const char* __restrict const file, const std::uint32_t line, const char* __restrict const function, void (*const thunk)(_In_z_ const char* __restrict, std::uint32_t, _In_z_ const char* __restrict, _In_ void*), _In_ void* const log) noexcept {
+	try {
+		try {
+			thunk(file, line, function, log);
+		} catch (std::exception& e) {
+			llamalog::Log(Priority::kError, file, line, function, "Error logging: {}", e);
+		} catch (...) {
+			llamalog::Log(Priority::kError, file, line, function, "Error logging");
+		}
+	} catch (...) {
+		internal::Panic(file, line, function, "Error logging");
+	}
+}
+
 void Panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
 	// avoid anything that could cause an error
 	char msg[1024];                                                                               // NOLINT(readability-magic-numbers)
