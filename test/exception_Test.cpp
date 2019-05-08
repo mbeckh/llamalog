@@ -1015,6 +1015,18 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorStack_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
+TEST(exceptionTest, Pattern_IscWithstdsystemerrorStackHRESULT_PrintCodeValueHex) {
+	LogLine logLine = GetLogLine("{:%c}");
+	try {
+		llamalog::Throw(std::system_error(E_INVALIDARG, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+	} catch (const std::exception& e) {
+		logLine << e;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(str, "0x80070057");
+}
+
 TEST(exceptionTest, Pattern_IscWithstdsystemerrorHeap_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
@@ -1025,6 +1037,18 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorHeap_PrintCodeValue) {
 	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ(str, "7");
+}
+
+TEST(exceptionTest, Pattern_IscWithstdsystemerrorHeapHRESULT_PrintCodeValueHex) {
+	LogLine logLine = GetLogLine("{:%c}");
+	try {
+		llamalog::Throw(std::system_error(E_INVALIDARG, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+	} catch (const std::exception& e) {
+		logLine << e;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(str, "0x80070057");
 }
 
 TEST(exceptionTest, Pattern_IscWithstdsystemerrorPlain_PrintCodeValue) {
@@ -1039,6 +1063,18 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorPlain_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
+TEST(exceptionTest, Pattern_IscWithstdsystemerrorPlainHRESULT_PrintCodeValueHex) {
+	LogLine logLine = GetLogLine("{:%c}");
+	try {
+		throw std::system_error(E_INVALIDARG, kTestCategory, "testmsg");
+	} catch (const std::exception& e) {
+		logLine << e;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(str, "0x80070057");
+}
+
 TEST(exceptionTest, Pattern_IscWithsystemerrorStack_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
@@ -1049,6 +1085,18 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorStack_PrintCodeValue) {
 	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ(str, "7");
+}
+
+TEST(exceptionTest, Pattern_IscWithsystemerrorStackHRESULT_PrintCodeValueHex) {
+	LogLine logLine = GetLogLine("{:%c}");
+	try {
+		llamalog::Throw(system_error(E_INVALIDARG, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
+	} catch (const std::exception& e) {
+		logLine << e;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(str, "0x80070057");
 }
 
 TEST(exceptionTest, Pattern_IscWithsystemerrorHeap_PrintCodeValue) {
@@ -1063,6 +1111,18 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorHeap_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
+TEST(exceptionTest, Pattern_IscWithsystemerrorHeapHRESULT_PrintCodeValueHex) {
+	LogLine logLine = GetLogLine("{:%c}");
+	try {
+		llamalog::Throw(system_error(E_INVALIDARG, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
+	} catch (const std::exception& e) {
+		logLine << e;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(str, "0x80070057");
+}
+
 TEST(exceptionTest, Pattern_IscWithsystemerrorPlain_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
@@ -1073,6 +1133,18 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorPlain_PrintCodeValue) {
 	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ(str, "7");
+}
+
+TEST(exceptionTest, Pattern_IscWithsystemerrorPlainHRESULT_PrintCodeValueHex) {
+	LogLine logLine = GetLogLine("{:%c}");
+	try {
+		throw system_error(E_INVALIDARG, kTestCategory, "testmsg");
+	} catch (const std::exception& e) {
+		logLine << e;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(str, "0x80070057");
 }
 
 

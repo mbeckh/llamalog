@@ -1102,7 +1102,8 @@ private:
 		int code;
 		std::memcpy(&code, &systemError[offsetof(T, code)], sizeof(code));
 
-		fmt::format_to(out, "{}", code);
+		static_assert(sizeof(code) == sizeof(DWORD));
+		fmt::format_to(out, code & 0xFFFF0000 ? "{:#x}" : "{}", static_cast<DWORD>(code));
 		return true;
 	}
 

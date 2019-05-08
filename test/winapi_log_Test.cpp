@@ -46,7 +46,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 // error_code
 //
 
-TEST(winapi_logTest, errorcode_Log_PrintMessage) {
+TEST(winapi_logTest, errorcode_LogWin32Error_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
 		const error_code arg{ERROR_ACCESS_DENIED};
@@ -54,7 +54,18 @@ TEST(winapi_logTest, errorcode_Log_PrintMessage) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, t::MatchesRegex(".+ \\(5\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(5\\)"));
+}
+
+TEST(winapi_logTest, errorcode_LogHRESULT_PrintMessage) {
+	LogLine logLine = GetLogLine();
+	{
+		const error_code arg{E_INVALIDARG};
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(0x80070057\\)"));
 }
 
 TEST(winapi_logTest, errorcode_LastError_PrintMessage) {
@@ -65,7 +76,7 @@ TEST(winapi_logTest, errorcode_LastError_PrintMessage) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_THAT(str, t::MatchesRegex(".+ \\(5\\)"));
+	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(5\\)"));
 }
 
 

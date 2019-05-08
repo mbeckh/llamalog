@@ -51,7 +51,7 @@ fmt::format_context::iterator PostProcessErrorMessage(_In_reads_(length) wchar_t
 	if (length >= 2) {
 		if (message[length - 2] == L'\r' || message[length - 2] == L'\n') {
 			message[length -= 2] = L'\0';
-		} else if (message[length - 1] == L'\n' || message[length - 1] == L'\r') {
+		} else if (message[length - 1] == L' ' || message[length - 1] == L'\n' || message[length - 1] == L'\r') {
 			message[length -= 1] = L'\0';
 		} else {
 			// leave message as it is
