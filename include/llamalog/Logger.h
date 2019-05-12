@@ -174,11 +174,11 @@ void Log(const Priority priority, _In_z_ const char* __restrict const file, cons
 /// by Joaquín M López Muñoz at http://bannalia.blogspot.com/2016/07/passing-capturing-c-lambda-functions-as.html.
 template <typename... T>
 void LogNoExcept(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) noexcept {
-	auto log = [priority, message, &args...](_In_z_ const char* file, std::uint32_t line, _In_z_ const char* function) {
+	auto log = [priority, message, &args...](_In_z_ const char* const file, const std::uint32_t line, _In_z_ const char* const function) {
 		LogLine logLine(priority, file, line, function, message);
 		Log((logLine << ... << std::forward<T>(args)));
 	};
-	auto thunk = [](_In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, void* const p) {
+	auto thunk = [](_In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_ void* const p) {
 		(*static_cast<decltype(log)*>(p))(file, line, function);
 	};
 
