@@ -568,6 +568,10 @@ void Panic(const char* const file, const std::uint32_t line, const char* const f
 
 }  // namespace internal
 
+bool IsInitialized() noexcept {
+	return !!g_pAtomicLogger.load(std::memory_order_acquire);
+}
+
 void AddWriter(std::unique_ptr<LogWriter>&& writer) {
 	g_pAtomicLogger.load(std::memory_order_acquire)->AddWriter(std::move(writer));
 }

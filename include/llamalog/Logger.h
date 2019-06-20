@@ -115,6 +115,10 @@ void Initialize(std::unique_ptr<LogWriter>&&... writers) {
 	internal::Start();
 }
 
+/// @brief Checks if the logger has been initialized.
+/// @return `true` if the logger is available, `false` if not.
+bool IsInitialized() noexcept;
+
 /// @brief Add a log writer.
 /// @param writer The `LogWriter` to add.
 void AddWriter(std::unique_ptr<LogWriter>&& writer);
