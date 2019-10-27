@@ -591,7 +591,7 @@ void Flush() {
 }
 
 void Shutdown() noexcept {
-	// first delete the logger, the the reference. This allows the logger to log messages during shutdown
+	// first delete the logger, then the reference. This allows the logger to log messages during shutdown
 	g_pLogger.reset();
 	g_pAtomicLogger.store(nullptr);
 }
