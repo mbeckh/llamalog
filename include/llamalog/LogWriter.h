@@ -87,6 +87,18 @@ private:
 };
 
 
+/// @brief A `#LogWriter` sending all output to `stderr`.
+class StdErrWriter : public LogWriter {
+	using LogWriter::LogWriter;
+
+protected:
+	/// @brief Produce output for a `LogLine`.
+	/// @param logLine The data.
+	/// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
+	void Log(const LogLine& logLine) final;
+};
+
+
 /// @brief A `#LogWriter` sending all output to `OutputDebugString`.
 class DebugWriter : public LogWriter {
 	using LogWriter::LogWriter;

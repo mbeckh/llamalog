@@ -141,6 +141,36 @@ inline void Append(Out& out, _In_z_ const char* sz) {
 
 }  // namespace
 
+
+//
+// StdErrWriter
+//
+
+// Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
+void StdErrWriter::Log(const LogLine& logLine) {
+	fmt::basic_memory_buffer<char, 256> buffer;  // NOLINT(readability-magic-numbers): one-time buffer size
+
+	FormatTimestampTo(buffer, logLine.GetTimestamp());
+	buffer.push_back(' ');
+	Append(buffer, FormatPriority(logLine.GetPriority()));
+	fmt::format_to(buffer, " [{}] ", logLine.GetThreadId());
+
+	Append(buffer, logLine.GetFile());
+	fmt::format_to(buffer, ":{} ", logLine.GetLine());
+	Append(buffer, logLine.GetFunction());
+	buffer.push_back(' ');
+
+	std::vector<fmt::format_context::format_arg> args;
+	logLine.CopyArgumentsTo(args);
+	fmt::vformat_to(buffer, fmt::to_string_view(logLine.GetPattern()),
+					fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
+	buffer.push_back('\n');
+	buffer.push_back('\0');
+
+	fprintf(stderr, buffer.data());
+}
+
+
 //
 // DebugWriter
 //
