@@ -119,12 +119,12 @@ DTGM_DECLARE_API_MOCK(Win32, WIN32_FUNCTIONS);
 
 TEST_F(LoggerTest, GetFilename_HasPath_ReturnFilename) {
 	constexpr const char* filename = GetFilename(__FILE__);
-	EXPECT_STREQ("logger_test.cpp", filename);
+	EXPECT_STREQ("Logger_Test.cpp", filename);
 }
 
 TEST_F(LoggerTest, GetFilename_HasNoPath_ReturnFilename) {
-	constexpr const char* filename = GetFilename("logger_test.cpp");
-	EXPECT_STREQ("logger_test.cpp", filename);
+	constexpr const char* filename = GetFilename("Logger_Test.cpp");
+	EXPECT_STREQ("Logger_Test.cpp", filename);
 }
 
 TEST_F(LoggerTest, GetFilename_IsEmpty_ReturnEmpty) {
@@ -196,7 +196,7 @@ TEST_F(LoggerTest, Log_OneLine) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] logger_test.cpp:99 TestBody 7\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] Logger_Test.cpp:99 TestBody 7\n"));
 }
 
 TEST_F(LoggerTest, Log_1000Lines) {
@@ -242,6 +242,7 @@ TEST_F(LoggerTest, LogNoExcept_OneLineWithNoExcept_NoThrow) {
 		llamalog::Initialize(std::move(writer));
 
 		EXPECT_NO_THROW(llamalog::LogNoExcept(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", 7));
+		EXPECT_NO_THROW(llamalog::LogNoExcept(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", 8));
 		llamalog::Flush();
 
 		DTGM_DETACH_API_MOCK(Win32);
@@ -471,7 +472,7 @@ TEST_F(LoggerTest, LOGTRACE_WriterIsTrace_Output) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LoggerTest, LOGTRACE_WithArgs) {
@@ -485,7 +486,7 @@ TEST_F(LoggerTest, LOGTRACE_WithArgs) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test 1\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test 1\n"));
 }
 
 TEST_F(LoggerTest, LOGDEBUG) {
@@ -499,7 +500,7 @@ TEST_F(LoggerTest, LOGDEBUG) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LoggerTest, LOGDEBUG_WitArgs) {
@@ -513,7 +514,7 @@ TEST_F(LoggerTest, LOGDEBUG_WitArgs) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test Test\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test Test\n"));
 }
 
 TEST_F(LoggerTest, LOGINFO) {
@@ -527,7 +528,7 @@ TEST_F(LoggerTest, LOGINFO) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LoggerTest, LOGINFO_WithArgs) {
@@ -542,7 +543,7 @@ TEST_F(LoggerTest, LOGINFO_WithArgs) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test Test\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test Test\n"));
 }
 
 TEST_F(LoggerTest, LOGWARN) {
@@ -556,7 +557,7 @@ TEST_F(LoggerTest, LOGWARN) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LoggerTest, LOGWARN_WithArgs) {
@@ -570,7 +571,7 @@ TEST_F(LoggerTest, LOGWARN_WithArgs) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test 1s\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test 1s\n"));
 }
 
 TEST_F(LoggerTest, LOGERROR) {
@@ -584,7 +585,7 @@ TEST_F(LoggerTest, LOGERROR) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LoggerTest, LOGERROR_WithArgs) {
@@ -598,7 +599,7 @@ TEST_F(LoggerTest, LOGERROR_WithArgs) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test 1Test2\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test 1Test2\n"));
 }
 
 TEST_F(LoggerTest, LOGFATAL) {
@@ -612,7 +613,7 @@ TEST_F(LoggerTest, LOGFATAL) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
 TEST_F(LoggerTest, LOGFATAL_WithArgs) {
@@ -626,7 +627,7 @@ TEST_F(LoggerTest, LOGFATAL_WithArgs) {
 	}
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] logger_test.cpp:\\d+ TestBody Test 1.1\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test 1.1\n"));
 }
 
 TEST_F(LoggerTest, LOGTRACERESULT) {
@@ -643,7 +644,7 @@ TEST_F(LoggerTest, LOGTRACERESULT) {
 
 	EXPECT_EQ(2, result);
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] logger_test.cpp:\\d+ TestBody 2\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody 2\n"));
 }
 
 TEST_F(LoggerTest, LOGTRACERESULT_WithArgs) {
@@ -660,7 +661,7 @@ TEST_F(LoggerTest, LOGTRACERESULT_WithArgs) {
 
 	EXPECT_EQ(2, result);
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] logger_test.cpp:\\d+ TestBody 2 arg\n"));
+	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody 2 arg\n"));
 }
 
 }  // namespace llamalog::test
