@@ -552,3 +552,16 @@ private:
 };
 
 }  // namespace llamalog
+
+
+/// @brief Operator for printing std::align_val_t values.
+/// @param logLine The `llamalog::LogLine`.
+/// @param arg The argument.
+/// @return The @p logLine for method chaining.
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, std::align_val_t arg);
+
+/// @brief Operator for printing pointers to std::align_val_t values.
+/// @param logLine The `llamalog::LogLine`.
+/// @param arg The argument.
+/// @return The @p logLine for method chaining.
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const std::align_val_t* arg);

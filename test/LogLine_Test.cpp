@@ -1029,6 +1029,33 @@ TEST(LogLineTest, wstring_IsReference_PrintValue) {
 
 
 //
+// std::align_val_t
+//
+
+TEST(LogLineTest, stdalignvalt_IsValue_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const std::align_val_t arg = static_cast<std::align_val_t>(4096);
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("4096", str);
+}
+
+TEST(LogLineTest, stdalignvalt_PointerIsValueWithCustomFormat_PrintValue) {
+	LogLine logLine = GetLogLine("{:x?nullptr}");
+	{
+		const std::align_val_t value = static_cast<std::align_val_t>(4096);
+		const std::align_val_t* arg = &value;
+		logLine << arg;
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ("1000", str);
+}
+
+//
 // Multiple arguments
 //
 

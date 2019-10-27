@@ -3130,6 +3130,62 @@ __declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const LogLine
 
 }  // namespace llamalog
 
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const std::align_val_t arg) {
+	static_assert(
+		(std::is_signed_v<std::underlying_type_t<std::align_val_t>> && (sizeof(std::align_val_t) == sizeof(std::int64_t) || sizeof(std::align_val_t) == sizeof(std::int32_t)))
+			|| (!std::is_signed_v<std::underlying_type_t<std::align_val_t>> && (sizeof(std::align_val_t) == sizeof(std::uint64_t) || sizeof(std::align_val_t) == sizeof(std::uint32_t))),
+		"cannot match type of std::align_val_t");
+
+	if constexpr (std::is_signed_v<std::underlying_type_t<std::align_val_t>>) {
+		if constexpr (sizeof(std::align_val_t) == sizeof(std::int64_t)) {
+			return logLine << static_cast<std::int64_t>(arg);
+		} else if constexpr (sizeof(std::align_val_t) == sizeof(std::int32_t)) {
+			return logLine << static_cast<std::int32_t>(arg);
+		} else {
+			assert(false);
+			__assume(false);
+		}
+	} else {
+		if constexpr (sizeof(std::align_val_t) == sizeof(std::uint64_t)) {
+			return logLine << static_cast<std::uint64_t>(arg);
+		} else if constexpr (sizeof(std::align_val_t) == sizeof(std::uint32_t)) {
+			return logLine << static_cast<std::uint32_t>(arg);
+		} else {
+			assert(false);
+			__assume(false);
+		}
+	}
+}
+
+/// @brief Operator for printing pointers to std::align_val_t values.
+/// @param logLine The `llamalog::LogLine`.
+/// @param arg The argument.
+/// @return The @p logLine for method chaining.
+llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const std::align_val_t* const arg) {
+	static_assert(
+		(std::is_signed_v<std::underlying_type_t<std::align_val_t>> && ((sizeof(std::align_val_t) == sizeof(std::int64_t) && alignof(std::align_val_t) == alignof(std::int64_t)) || (sizeof(std::align_val_t) == sizeof(std::int32_t) && alignof(std::align_val_t) == alignof(std::int32_t))))
+			|| (!std::is_signed_v<std::underlying_type_t<std::align_val_t>> && ((sizeof(std::align_val_t) == sizeof(std::uint64_t) && alignof(std::align_val_t) == alignof(std::uint64_t)) || (sizeof(std::align_val_t) == sizeof(std::uint32_t) && alignof(std::align_val_t) == alignof(std::uint32_t)))),
+		"cannot match type of std::align_val_t");
+
+	if constexpr (std::is_signed_v<std::underlying_type_t<std::align_val_t>>) {
+		if constexpr (sizeof(std::align_val_t) == sizeof(std::int64_t)) {
+			return logLine << reinterpret_cast<const std::int64_t*>(arg);
+		} else if constexpr (sizeof(std::align_val_t) == sizeof(std::int32_t)) {
+			return logLine << reinterpret_cast<const std::int32_t*>(arg);
+		}
+		assert(false);
+		__assume(false);
+	} else {
+		if constexpr (sizeof(std::align_val_t) == sizeof(std::uint64_t)) {
+			return logLine << reinterpret_cast<const std::uint64_t*>(arg);
+		} else if constexpr (sizeof(std::align_val_t) == sizeof(std::uint32_t)) {
+			return logLine << reinterpret_cast<const std::uint32_t*>(arg);
+		}
+		assert(false);
+		__assume(false);
+	}
+}
+
 #ifdef __clang_analyzer__
 #pragma pop_macro("offsetof")
 #endif
