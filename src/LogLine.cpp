@@ -437,7 +437,7 @@ std::string EscapeC(const std::string_view& sv) {
 }
 
 /// @brief A type definition for easier reading.
-using ArgFormatter = fmt::arg_formatter<fmt::back_insert_range<fmt::format_context::iterator::container_type>>;
+using ArgFormatter = fmt::arg_formatter<fmt::buffer_range<char>>;
 
 /// @brief A custom argument formatter to support escaping for strings and characters.
 /// @details Any string is escaped according to C escaping rules, except if the type specifier is present.
@@ -451,8 +451,8 @@ public:
 	/// @param value The value to format.
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(const char value) {
-		const fmt::format_specs* const specs = spec();
-		if ((!specs || !specs->type) && (value < 0x20 || value > 0x7f)) {  // NOLINT(readability-magic-numbers): ASCII code
+		const fmt::format_specs* const sp = specs();
+		if ((!sp || !sp->type) && (value < 0x20 || value > 0x7f)) {  // NOLINT(readability-magic-numbers): ASCII code
 			const std::string_view sv(&value, 1);
 			const std::string str = EscapeC(sv);
 			if (!str.empty()) {
@@ -466,8 +466,8 @@ public:
 	/// @param value The value to format.
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(const char* const value) {
-		const fmt::format_specs* const specs = spec();
-		if (!specs || !specs->type) {
+		const fmt::format_specs* const sp = specs();
+		if (!sp || !sp->type) {
 			const std::string_view sv(value);
 			const std::string str = EscapeC(sv);
 			if (!str.empty()) {
@@ -481,8 +481,8 @@ public:
 	/// @param value The value to format.
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(const fmt::string_view value) {
-		const fmt::format_specs* const specs = spec();
-		if (!specs || !specs->type) {
+		const fmt::format_specs* const sp = specs();
+		if (!sp || !sp->type) {
 			const std::string_view sv(value.data(), value.size());
 			const std::string str = EscapeC(sv);
 			if (!str.empty()) {
@@ -578,7 +578,7 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 	/// @param arg A structure providing the address of the wide character string.
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
-	auto format(const llamalog::InlineWideChar& arg, fmt::format_context& ctx) const {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+	auto format(const llamalog::InlineWideChar& arg, fmt::basic_format_context<fmt::buffer_range<char>::iterator, char>& ctx) const {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 		// address of buffer is the address of the lenght field
 		const std::byte* const buffer = &arg.pos;
 
@@ -594,7 +594,10 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 			char sz[kFixedBufferSize];
 			const int sizeInBytes = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(length), sz, sizeof(sz), nullptr, nullptr);
 			if (sizeInBytes) {
-				return fmt::vformat_to<llamalog::EscapingFormatter>(ctx.out(), fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(sz, sizeInBytes / sizeof(char)))));
+				//return fmt::vformat_to<llamalog::EscapingFormatter>(ctx.out(), fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(sz, sizeInBytes / sizeof(char)))));
+				fmt::memory_buffer buf;
+				fmt::vformat_to<llamalog::EscapingFormatter>(buf, fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(sz, sizeInBytes / sizeof(char)))));
+				return std::copy(buf.begin(), buf.end(), ctx.out());
 			}
 			lastError = GetLastError();
 			if (lastError != ERROR_INSUFFICIENT_BUFFER) {
@@ -606,7 +609,10 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 			if (sizeInBytes) {
 				std::unique_ptr<char[]> str = std::make_unique<char[]>(sizeInBytes / sizeof(char));
 				if (WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(length), str.get(), sizeInBytes, nullptr, nullptr)) {
-					return fmt::vformat_to<llamalog::EscapingFormatter>(ctx.out(), fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(str.get(), sizeInBytes / sizeof(char)))));
+					//return fmt::vformat_to<llamalog::EscapingFormatter>(ctx.out(), fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(str.get(), sizeInBytes / sizeof(char)))));
+					fmt::memory_buffer buf;
+					fmt::vformat_to<llamalog::EscapingFormatter>(buf, fmt::to_string_view(m_format), fmt::basic_format_args(fmt::make_format_args(std::string_view(str.get(), sizeInBytes / sizeof(char)))));
+					return std::copy(buf.begin(), buf.end(), ctx.out());
 				}
 			}
 			lastError = GetLastError();
@@ -802,7 +808,10 @@ struct ExceptionFormatter {
 					subArg = ctx.arg(std::string_view(&*it, std::distance(it, endOfArgId)));
 				}
 				const fmt::format_args subArgs(&subArg, 1);
-				fmt::vformat_to<llamalog::EscapingFormatter>(out, fmt::to_string_view("{:" + std::string(startOfPattern, endOfPattern) + "}"), subArgs);
+				//fmt::vformat_to<llamalog::EscapingFormatter>(out, fmt::to_string_view("{:" + std::string(startOfPattern, endOfPattern) + "}"), subArgs);
+				fmt::memory_buffer buf;
+				fmt::vformat_to<llamalog::EscapingFormatter>(buf, fmt::to_string_view("{:" + std::string(startOfPattern, endOfPattern) + "}"), subArgs);
+				std::copy(buf.begin(), buf.end(), out);
 
 				it = endOfPattern;
 				if (it == end) {
@@ -995,8 +1004,11 @@ private:
 				// only copy once
 				llamalog::CopyArgumentsFromBufferTo(GetBuffer(ptr), reinterpret_cast<const ExceptionInformation*>(ptr)->used, args);
 			}
-			fmt::vformat_to<llamalog::EscapingFormatter>(out, fmt::to_string_view(reinterpret_cast<const ExceptionInformation*>(ptr)->message),
+			//fmt::vformat_to<llamalog::EscapingFormatter>(out, fmt::to_string_view(reinterpret_cast<const ExceptionInformation*>(ptr)->message),
+			fmt::memory_buffer buf;
+			fmt::vformat_to<llamalog::EscapingFormatter>(buf, fmt::to_string_view(reinterpret_cast<const ExceptionInformation*>(ptr)->message),
 														 fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
+			std::copy(buf.begin(), buf.end(), out);
 			return true;
 		}
 		return false;
