@@ -306,6 +306,18 @@ public:
 	/// @param arg The argument.
 	/// @return The current object for method chaining.
 	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
+	LogLine& operator<<(const std::string& arg);
+
+	/// @brief Add a log argument. @details The value is copied into the buffer. A maximum of 2^16 characters is printed.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
+	LogLine& operator<<(const std::wstring& arg);
+
+	/// @brief Add a log argument. @details The value is copied into the buffer. A maximum of 2^16 characters is printed.
+	/// @param arg The argument.
+	/// @return The current object for method chaining.
+	/// @copyright Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
 	LogLine& operator<<(const std::string_view& arg);
 
 	/// @brief Add a log argument. @details The value is copied into the buffer. A maximum of 2^16 characters is printed.

@@ -2764,6 +2764,18 @@ LogLine& LogLine::operator<<(_In_opt_z_ const wchar_t* __restrict const arg) {
 }
 
 // Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
+LogLine& LogLine::operator<<(const std::string& arg) {
+	WriteString(arg.c_str(), arg.length());
+	return *this;
+}
+
+// Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
+LogLine& LogLine::operator<<(const std::wstring& arg) {
+	WriteString(arg.c_str(), arg.length());
+	return *this;
+}
+
+// Based on `NanoLogLine::operator<<(const char*)` from NanoLog.
 LogLine& LogLine::operator<<(const std::string_view& arg) {
 	WriteString(arg.data(), arg.length());
 	return *this;
