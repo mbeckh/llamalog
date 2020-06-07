@@ -784,7 +784,7 @@ struct ExceptionFormatter {
 
 				fmt::format_context::format_arg subArg;
 				if (it == endOfArgId) {
-					ctx.on_error("exception specifier must argument identifier");
+					ctx.on_error("exception specifier must have argument identifier");
 				} else if (*it >= '0' && *it <= '9') {
 					int id = 0;
 					for (auto x = it; x != endOfArgId; ++x) {
@@ -3180,16 +3180,18 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const std::align_val_t
 			return logLine << reinterpret_cast<const std::int64_t*>(arg);
 		} else if constexpr (sizeof(std::align_val_t) == sizeof(std::int32_t)) {
 			return logLine << reinterpret_cast<const std::int32_t*>(arg);
+		} else {
+			assert(false);
+			__assume(false);
 		}
-		assert(false);
-		__assume(false);
 	} else {
 		if constexpr (sizeof(std::align_val_t) == sizeof(std::uint64_t)) {
 			return logLine << reinterpret_cast<const std::uint64_t*>(arg);
 		} else if constexpr (sizeof(std::align_val_t) == sizeof(std::uint32_t)) {
 			return logLine << reinterpret_cast<const std::uint32_t*>(arg);
+		} else {
+			assert(false);
+			__assume(false);
 		}
-		assert(false);
-		__assume(false);
 	}
 }

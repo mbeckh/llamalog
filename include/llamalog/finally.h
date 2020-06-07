@@ -32,7 +32,7 @@ public:
 	/// @brief Create a final action.
 	/// @param f The lambda to be called during stack unwinding.
 	explicit FinalAction(F f) noexcept
-		: m_f{std::move(f)} {
+		: m_f(std::move(f)) {
 		static_assert(noexcept(m_f()), "lambda must be noexcept");
 	}
 
@@ -41,8 +41,8 @@ public:
 	/// @brief Transfers control of the lambda to this instance.
 	/// @param oth The previous owner.
 	FinalAction(FinalAction<F>&& that) noexcept
-		: m_f{std::move(that.m_f)}
-		, m_active{that.m_active} {
+		: m_f(std::move(that.m_f))
+		, m_active(that.m_active) {
 		that.m_active = false;
 	}
 

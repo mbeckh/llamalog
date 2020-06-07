@@ -87,7 +87,7 @@ TEST(winapi_logTest, errorcode_LastError_PrintMessage) {
 TEST(winapi_logTest, LARGEINTEGER_Log_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const LARGE_INTEGER arg = {{0xFFu, -1L}};
+		const LARGE_INTEGER arg = {.LowPart = 0xFFu, .HighPart = -1L};
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
@@ -103,7 +103,7 @@ TEST(winapi_logTest, LARGEINTEGER_Log_PrintValue) {
 TEST(winapi_logTest, ULARGEINTEGER_Log_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const ULARGE_INTEGER arg = {{0xFFu, 0xFFu}};
+		const ULARGE_INTEGER arg = {.LowPart = 0xFFu, .HighPart = 0xFFu};
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();

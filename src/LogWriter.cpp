@@ -314,9 +314,7 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 void RollingFileWriter::RollFile(const LogLine& logLine) {
 	const FILETIME timestamp = logLine.GetTimestamp();
 
-	ULARGE_INTEGER nextRollAt;
-	nextRollAt.LowPart = timestamp.dwLowDateTime;
-	nextRollAt.HighPart = timestamp.dwHighDateTime;
+	ULARGE_INTEGER nextRollAt = {.LowPart = timestamp.dwLowDateTime, .HighPart = timestamp.dwHighDateTime};
 
 	const FrequencyInfo& frequencyInfo = kFrequencyInfos[static_cast<std::uint8_t>(m_frequency)];
 	const std::uint64_t breakpoint = frequencyInfo.breakpoint;
