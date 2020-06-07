@@ -10,7 +10,7 @@ BreakInheritanceList: BeforeComma
 ColumnLimit: 0
 IncludeBlocks: Regroup
 IncludeCategories: 
-  - Regex:    '^<llamalog/.*\.h>'
+  - Regex:    '^<(m3c|m4t|llamalog)/.*\.h>'
     Priority: 2
   - Regex:    '^<[[:alnum:]]+/.*\.h[hpx]{0,2}>'
     Priority: 3
