@@ -78,6 +78,7 @@ class Buffer final {
 public:
 	/// @brief Initialize the internal structures.
 	/// @copyright A modified version of `Buffer::Buffer` from NanoLog.
+#pragma warning(suppress : 26495)
 	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): m_buffer needs not initialization, m_writeState is initialized in a loop.
 	Buffer() noexcept
 		: m_remaining(kBufferSize) {
@@ -106,7 +107,7 @@ public:
 	/// @param logLine The `LogLine` to add.
 	/// @return Returns `true` if we need to switch to next buffer after this operation.
 	/// @copyright Same as `Buffer::push` from NanoLog.
-	bool Push(const std::uint_fast32_t writeIndex, LogLine&& logLine) noexcept {
+	[[nodiscard]] bool Push(const std::uint_fast32_t writeIndex, LogLine&& logLine) noexcept {
 		LogLine* pLogLine = new (&reinterpret_cast<LogLine*>(m_buffer)[writeIndex]) LogLine(std::move(logLine));
 		pLogLine->GenerateTimestamp();
 		m_writeState[writeIndex].store(true, std::memory_order_release);
@@ -120,7 +121,7 @@ public:
 	/// @param pLogLine A pointer to the adress where the `LogLine` receiving the next event shall be created.
 	/// @return Returns `true` if a value is available and has been created in @p pLogLine.
 	/// @copyright Same as `Buffer::try_pop` from NanoLog.
-	bool TryPop(const std::uint_fast32_t readIndex, LogLine* const pLogLine) noexcept {
+	[[nodiscard]] bool TryPop(const std::uint_fast32_t readIndex, LogLine* const pLogLine) noexcept {
 		if (m_writeState[readIndex].load(std::memory_order_acquire)) {
 			LogLine& logLine = reinterpret_cast<LogLine*>(m_buffer)[readIndex];
 			new (pLogLine) LogLine(std::move(logLine));
@@ -221,7 +222,7 @@ public:
 	/// @param pLogLine A pointer to the adress where the `LogLine` receiving the next event shall be created.
 	/// @return `true` if data is available and a new `LogLine` has been created.
 	/// @copyright Same as `QueueBuffer::try_pop` from NanoLog.
-	bool TryPop(LogLine* const pLogLine) noexcept {
+	[[nodiscard]] bool TryPop(LogLine* const pLogLine) noexcept {
 		if (!m_currentReadBuffer) {
 			m_currentReadBuffer = GetNextReadBuffer();
 		}
@@ -251,8 +252,8 @@ public:
 	/// @param wait A lambda expression called when waiting is required.
 	template <typename W>
 	void Flush(W&& wait) {
-		const Buffer* writeBuffer;
-		std::uint_fast32_t writeIndex;
+		const Buffer* writeBuffer;      // NOLINT(cppcoreguidelines-init-variables): Flow of control looks somewhat clearer to me when not nesting the blocks.
+		std::uint_fast32_t writeIndex;  // NOLINT(cppcoreguidelines-init-variables): Flow of control looks somewhat clearer to me when not nesting the blocks.
 		while (true) {
 			writeBuffer = m_currentWriteBuffer.load(std::memory_order_acquire);
 			writeIndex = m_writeIndex.load(std::memory_order_acquire);
@@ -269,13 +270,13 @@ public:
 				if (writeIndex <= m_readIndex) {
 					return;
 				}
-				goto wait;  // NOLINT(cppcoreguidelines-avoid-goto): I DO want a goto here!
+				goto wait;  // NOLINT(cppcoreguidelines-avoid-goto, hicpp-avoid-goto): Flow of control looks somewhat clearer to me when using goto.
 			}
 			{
 				SpinLock spinLock(m_flag);
 				for (const std::unique_ptr<Buffer>& ptr : m_buffers) {
 					if (ptr.get() == writeBuffer) {
-						goto wait;  // NOLINT(cppcoreguidelines-avoid-goto): I DO want a goto here!
+						goto wait;  // NOLINT(cppcoreguidelines-avoid-goto, hicpp-avoid-goto): Flow of control looks somewhat clearer to me when using goto.
 					}
 				}
 				// write buffer is no longer queued
@@ -301,7 +302,7 @@ private:
 	/// @brief Get next `Buffer` for reading.
 	/// @return The next `Buffer` or `nullptr` if none is currently available.
 	/// @copyright Same as `QueueBuffer::get_next_read_buffer` from NanoLog.
-	Buffer* GetNextReadBuffer() noexcept {
+	[[nodiscard]] Buffer* GetNextReadBuffer() noexcept {
 		SpinLock spinLock(m_flag);
 		return m_buffers.empty() ? nullptr : m_buffers.front().get();  // might throw, will crash, nothing we could do anyway
 	}
@@ -538,7 +539,7 @@ void Start() {
 	g_pAtomicLogger.load(std::memory_order_acquire)->Start();
 }
 
-Priority GetInternalPriority(const Priority priority) noexcept {
+[[nodiscard]] Priority GetInternalPriority(const Priority priority) noexcept {
 	return static_cast<Priority>(static_cast<std::uint8_t>(priority) | ((g_currentPriority.load(std::memory_order_acquire) & 3u) + 1));
 }
 
@@ -558,8 +559,8 @@ void CallNoExcept(const char* __restrict const file, const std::uint32_t line, c
 
 void Panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
 	// avoid anything that could cause an error
-	char msg[1024];                                                                               // NOLINT(readability-magic-numbers)
-	if (sprintf_s(msg, "PANIC: %s @ %s(%s:%" PRIu32 ")\n", message, function, file, line) < 0) {  // NOLINT(cppcoreguidelines-pro-type-vararg): sprintf_s as a last resort
+	char msg[1024];                                                                               // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Default buffer size for panic log.
+	if (sprintf_s(msg, "PANIC: %s @ %s(%s:%" PRIu32 ")\n", message, function, file, line) < 0) {  // NOLINT(cppcoreguidelines-pro-type-vararg): sprintf_s as a last resort.
 		OutputDebugStringA("PANIC: Error writing log\n");
 	} else {
 		OutputDebugStringA(msg);
@@ -569,7 +570,7 @@ void Panic(const char* const file, const std::uint32_t line, const char* const f
 }  // namespace internal
 
 bool IsInitialized() noexcept {
-	return !!g_pAtomicLogger.load(std::memory_order_acquire);
+	return g_pAtomicLogger.load(std::memory_order_acquire) != nullptr;
 }
 
 void AddWriter(std::unique_ptr<LogWriter>&& writer) {

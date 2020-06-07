@@ -75,13 +75,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 // IWYU pragma: no_include <xutility>
 
 
-#ifdef __clang_analyzer__
-// MSVC does not yet have __builtin_offsetof which gives false errors in clang-tidy
-#pragma push_macro("offsetof")
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): macro for clang
-#define offsetof __builtin_offsetof
-#endif
-
 namespace llamalog {
 
 //
@@ -161,9 +154,12 @@ struct PlainSystemError final {
 #pragma pack(pop)
 
 // assert packing
+// NOLINTNEXTLINE(bugprone-sizeof-expression): Size of the pCategory pointer is intended.
 static_assert(sizeof(StackBasedSystemError) == sizeof(StackBasedSystemError::code) + sizeof(StackBasedSystemError::pCategory));
+// NOLINTNEXTLINE(bugprone-sizeof-expression): Size of the pCategory pointer is intended.
 static_assert(sizeof(HeapBasedSystemError) == sizeof(HeapBasedSystemError::code) + sizeof(HeapBasedSystemError::pCategory));
 static_assert(sizeof(PlainException) == sizeof(PlainException::length));
+// NOLINTNEXTLINE(bugprone-sizeof-expression): Size of the pCategory pointer is intended.
 static_assert(sizeof(PlainSystemError) == sizeof(PlainSystemError::length) + sizeof(PlainSystemError::code) + sizeof(PlainSystemError::pCategory));
 
 /// @brief Marker type for type-based lookup.
@@ -234,16 +230,17 @@ struct TypeIndex<T, std::tuple<U, Types...>> {
 };
 
 /// @brief Type of the type marker in the argument buffer.
+constexpr std::uint8_t kPointerFlag = 0x80u;
 using TypeId = std::uint8_t;
-static_assert(std::tuple_size_v<Types> <= (std::numeric_limits<TypeId>::max() & ~0x80u), "too many types for type of TypeId");
+static_assert(std::tuple_size_v<Types> <= (std::numeric_limits<TypeId>::max() & static_cast<TypeId>(~kPointerFlag)), "too many types for type of TypeId");
 
 /// @brief A constant to get the `#TypeId` of a type at compile time.
 /// @tparam T The type to get the id for.
 template <typename T, bool kPointer = false>
-constexpr TypeId kTypeId = TypeIndex<T, Types>::kValue | (kPointer ? 0x80u : 0);
+constexpr TypeId kTypeId = TypeIndex<T, Types>::kValue | (kPointer ? kPointerFlag : 0);
 
-constexpr bool IsPointer(const TypeId typeId) {
-	return (typeId & 0x80u) != 0;
+[[nodiscard]] constexpr bool IsPointer(const TypeId typeId) {
+	return (typeId & kPointerFlag) != 0;
 }
 
 /// @brief Pre-calculated array of sizes required to store values in the buffer. Use `#kTypeSize` to get the size in code.
@@ -296,7 +293,7 @@ static_assert(__STDCPP_DEFAULT_NEW_ALIGNMENT__ <= std::numeric_limits<LogLine::A
 /// @param ptr The target address.
 /// @return The padding to account for a properly aligned type.
 template <typename T>
-__declspec(noalias) LogLine::Align GetPadding(_In_ const std::byte* __restrict const ptr) noexcept {
+[[nodiscard]] __declspec(noalias) LogLine::Align GetPadding(_In_ const std::byte* __restrict const ptr) noexcept {
 	static_assert(alignof(T) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of type is too large");
 	constexpr LogLine::Align kMask = alignof(T) - 1u;
 	return static_cast<LogLine::Align>(alignof(T) - (reinterpret_cast<std::uintptr_t>(ptr) & kMask)) & kMask;
@@ -306,7 +303,7 @@ __declspec(noalias) LogLine::Align GetPadding(_In_ const std::byte* __restrict c
 /// @param ptr The target address.
 /// @param align The required alignment in number of bytes.
 /// @return The padding to account for a properly aligned type.
-__declspec(noalias) LogLine::Align GetPadding(_In_ const std::byte* __restrict const ptr, const LogLine::Align align) noexcept {
+[[nodiscard]] __declspec(noalias) LogLine::Align GetPadding(_In_ const std::byte* __restrict const ptr, const LogLine::Align align) noexcept {
 	assert(align <= __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 	const LogLine::Align mask = align - 1u;
 	return static_cast<LogLine::Align>(align - (reinterpret_cast<std::uintptr_t>(ptr) & mask)) & mask;
@@ -316,7 +313,7 @@ __declspec(noalias) LogLine::Align GetPadding(_In_ const std::byte* __restrict c
 /// @brief Get the next allocation chunk, i.e. the next block which is a multiple of `#kGrowBytes`.
 /// @param value The required size.
 /// @return The value rounded up to multiples of `#kGrowBytes`.
-constexpr __declspec(noalias) LogLine::Size GetNextChunk(const LogLine::Size value) noexcept {
+[[nodiscard]] constexpr __declspec(noalias) LogLine::Size GetNextChunk(const LogLine::Size value) noexcept {
 	constexpr LogLine::Size kMask = kGrowBytes - 1u;
 	static_assert((kGrowBytes & kMask) == 0, "kGrowBytes must be a multiple of 2");
 	return value + ((kGrowBytes - (kGrowBytes & kMask)) & kMask);
@@ -326,7 +323,7 @@ constexpr __declspec(noalias) LogLine::Size GetNextChunk(const LogLine::Size val
 /// @brief Get the id of the current thread.
 /// @return The id of the current thread.
 /// @copyright The function is based on `this_thread_id` from NanoLog.
-DWORD GetCurrentThreadId() noexcept {
+[[nodiscard]] DWORD GetCurrentThreadId() noexcept {
 	static const thread_local DWORD kId = ::GetCurrentThreadId();
 	return kId;
 }
@@ -336,7 +333,7 @@ DWORD GetCurrentThreadId() noexcept {
 /// @note The function MUST be called from within a catch block to get the object, elso `nullptr` is returned for both values.
 /// @param pCode A pointer which is set if the exception is of type `std::system_error` or `system_error`, else the parameter is set to `nullptr`.
 /// @return The logging context if it exists, else `nullptr`.
-_Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException(_Out_ const std::error_code*& pCode) noexcept {
+[[nodiscard]] _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException(_Out_ const std::error_code*& pCode) noexcept {
 	try {
 		throw;
 	} catch (const system_error& e) {
@@ -379,7 +376,7 @@ constexpr bool is_any_v = is_any<T, A...>::value;  // NOLINT(readability-identif
 /// @warning If no escaping is needed, an empty string is returned for performance reasons.
 /// @param sv The input value.
 /// @return The escaped result or an empty string.
-std::string EscapeC(const std::string_view& sv) {
+[[nodiscard]] std::string EscapeC(const std::string_view& sv) {
 	constexpr const char kHexDigits[] = "0123456789ABCDEF";
 
 	std::string result;
@@ -388,7 +385,7 @@ std::string EscapeC(const std::string_view& sv) {
 
 	for (auto it = begin; it != end; ++it) {
 		const std::uint8_t c = *it;                           // MUST be std::uint8_t, NOT char
-		if (c == '"' || c == '\\' || c < 0x20 || c > 0x7f) {  // NOLINT(readability-magic-numbers): ASCII code
+		if (c == '"' || c == '\\' || c < 0x20 || c > 0x7f) {  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): 7-Bit-ASCII.
 			if (result.empty()) {
 				const LogLine::Length len = static_cast<LogLine::Length>(sv.length());
 				const LogLine::Length extra = static_cast<LogLine::Length>(std::distance(it, end)) >> 2u;
@@ -424,8 +421,8 @@ std::string EscapeC(const std::string_view& sv) {
 				break;
 			default:
 				result.push_back('x');
-				result.push_back(kHexDigits[c / 16]);  // NOLINT(readability-magic-numbers): HEX digits
-				result.push_back(kHexDigits[c % 16]);  // NOLINT(readability-magic-numbers): HEX digits
+				result.push_back(kHexDigits[c / 16]);  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Hex digits.
+				result.push_back(kHexDigits[c % 16]);  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Hex digits.
 			}
 			begin = it + 1;
 		}
@@ -452,7 +449,7 @@ public:
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(const char value) {
 		const fmt::format_specs* const sp = specs();
-		if ((!sp || !sp->type) && (value < 0x20 || value > 0x7f)) {  // NOLINT(readability-magic-numbers): ASCII code
+		if ((!sp || !sp->type) && (value < 0x20 || value > 0x7f)) {  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): 7-Bit-ASCII.
 			const std::string_view sv(&value, 1);
 			const std::string str = EscapeC(sv);
 			if (!str.empty()) {
@@ -582,13 +579,13 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 		// address of buffer is the address of the lenght field
 		const std::byte* const buffer = &arg.pos;
 
-		llamalog::LogLine::Length length;
+		llamalog::LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&length, buffer, sizeof(length));
 
 		const llamalog::LogLine::Align padding = llamalog::GetPadding<wchar_t>(&buffer[sizeof(length)]);
 		const wchar_t* const wstr = reinterpret_cast<const wchar_t*>(&buffer[sizeof(length) + padding]);
 
-		DWORD lastError;
+		DWORD lastError;  // NOLINT(cppcoreguidelines-init-variables): Guaranteed to be initialized before first read.
 		if (constexpr std::uint_fast16_t kFixedBufferSize = 256; length <= kFixedBufferSize) {
 			// try with a fixed size buffer
 			char sz[kFixedBufferSize];
@@ -601,7 +598,7 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 			}
 			lastError = GetLastError();
 			if (lastError != ERROR_INSUFFICIENT_BUFFER) {
-				goto error;  // NOLINT(cppcoreguidelines-avoid-goto): yes, I DO want a goto here
+				goto error;  // NOLINT(cppcoreguidelines-avoid-goto, hicpp-avoid-goto): Yes, I DO want a goto here
 			}
 		}
 		{
@@ -683,7 +680,7 @@ struct ExceptionFormatter {
 	auto format(const T& arg, fmt::format_context& ctx) const {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 		std::vector<fmt::format_context::format_arg> args;
 
-		fmt::basic_memory_buffer<char, 128> buf;  // NOLINT(readability-magic-numbers): one-time buffer size
+		fmt::basic_memory_buffer<char, 128> buf;  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Default buffer size for inline data.
 		std::back_insert_iterator<fmt::format_context::iterator::container_type> out(buf);
 		Format(arg, m_format.cbegin(), m_format.cend(), ctx, out, args);
 		return std::copy(buf.begin(), buf.end(), ctx.out());
@@ -700,7 +697,7 @@ struct ExceptionFormatter {
 	/// @param args The current formatting arguments.
 	/// @param formatted Set to `true` if any output was produced.
 	/// @return The iterator pointing at the last character of the sub pattern, i.e. the `]`. If not `]` exists, the result is @p end.
-	std::string::const_iterator ProcessSubformat(const T& arg, const std::string::const_iterator& start, const std::string::const_iterator& end, fmt::format_context& ctx, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args, bool& formatted) const {
+	[[nodiscard]] std::string::const_iterator ProcessSubformat(const T& arg, const std::string::const_iterator& start, const std::string::const_iterator& end, fmt::format_context& ctx, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args, bool& formatted) const {
 		std::uint_fast16_t open = 1;
 		for (auto it = start; it != end; ++it) {
 			if (*it == '\\') {
@@ -718,7 +715,7 @@ struct ExceptionFormatter {
 				}
 			} else if (*it == ']') {
 				if (--open == 0) {
-					fmt::basic_memory_buffer<char, 128> buf;  // NOLINT(readability-magic-numbers): one-time buffer size
+					fmt::basic_memory_buffer<char, 128> buf;  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): One-time buffer size
 					std::back_insert_iterator<fmt::format_context::iterator::container_type> subOut(buf);
 					if (Format(arg, start, it, ctx, subOut, args)) {
 						std::copy(buf.begin(), buf.end(), out);
@@ -789,18 +786,18 @@ struct ExceptionFormatter {
 				if (it == endOfArgId) {
 					ctx.on_error("exception specifier must argument identifier");
 				} else if (*it >= '0' && *it <= '9') {
-					unsigned id = 0;
+					int id = 0;
 					for (auto x = it; x != endOfArgId; ++x) {
 						if (*it < '0' || *it > '9') {
 							ctx.on_error("invalid argument id in exception specifier");
 							break;
 						}
 						// check overflow
-						if (id > std::numeric_limits<unsigned>::max() / 10) {  // NOLINT(readability-magic-numbers): multiply by ten
+						if (id > std::numeric_limits<int>::max() / 10) {  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Divide by ten.
 							ctx.on_error("argument id in exception specifier is too big");
 							break;
 						}
-						id *= 10;  // NOLINT(readability-magic-numbers): multiply by ten
+						id *= 10;  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Multiply by ten.
 						id += *x - '0';
 					}
 					subArg = ctx.arg(id);
@@ -898,7 +895,7 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static bool FormatTimestamp(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	[[nodiscard]] static bool FormatTimestamp(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		std::string str = LogWriter::FormatTimestamp(reinterpret_cast<const ExceptionInformation*>(ptr)->timestamp);
 		std::copy(str.cbegin(), str.cend(), out);
 		return true;
@@ -908,7 +905,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static bool FormatTimestamp(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	[[nodiscard]] static bool FormatTimestamp(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
 		return false;
 	}
 
@@ -918,7 +915,7 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static bool FormatThread(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	[[nodiscard]] static bool FormatThread(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		fmt::format_to(out, "{}", reinterpret_cast<const ExceptionInformation*>(ptr)->threadId);
 		return true;
 	}
@@ -927,7 +924,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static bool FormatThread(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	[[nodiscard]] static bool FormatThread(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
 		return false;
 	}
 
@@ -937,7 +934,7 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static bool FormatFile(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	[[nodiscard]] static bool FormatFile(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::string_view sv(reinterpret_cast<const ExceptionInformation*>(ptr)->file);
 		std::copy(sv.cbegin(), sv.cend(), out);
 		return true;
@@ -947,7 +944,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static bool FormatFile(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	[[nodiscard]] static bool FormatFile(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
 		return false;
 	}
 
@@ -957,7 +954,7 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static bool FormatLine(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	[[nodiscard]] static bool FormatLine(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		fmt::format_to(out, "{}", reinterpret_cast<const ExceptionInformation*>(ptr)->line);
 		return true;
 	}
@@ -966,7 +963,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static bool FormatLine(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	[[nodiscard]] static bool FormatLine(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
 		return false;
 	}
 
@@ -976,7 +973,7 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static bool FormatFunction(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	[[nodiscard]] static bool FormatFunction(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::string_view sv(reinterpret_cast<const ExceptionInformation*>(ptr)->function);
 		std::copy(sv.cbegin(), sv.cend(), out);
 		return true;
@@ -986,7 +983,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static bool FormatFunction(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	[[nodiscard]] static bool FormatFunction(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
 		return false;
 	}
 
@@ -997,7 +994,7 @@ private:
 	/// @param args The formatter arguments. The vector is populated on the first call.
 	/// @return `true` if the exception has a log message.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static bool FormatLogMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
+	[[nodiscard]] static bool FormatLogMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
 		if (!reinterpret_cast<const ExceptionInformation*>(ptr)->length) {
 			// custom log message exists
 			if (args.empty()) {
@@ -1018,7 +1015,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static bool FormatLogMessage(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */, std::vector<fmt::format_context::format_arg>& /* args */) noexcept {
+	[[nodiscard]] static bool FormatLogMessage(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */, std::vector<fmt::format_context::format_arg>& /* args */) noexcept {
 		return false;
 	}
 
@@ -1029,7 +1026,7 @@ private:
 	/// @param args The formatter arguments. The vector is populated on the first call.
 	/// @return `true` if there is a message.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, HeapBasedException>, int> = 0>
-	static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
+	[[nodiscard]] static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
 		if (!reinterpret_cast<const ExceptionInformation*>(ptr)->length) {
 			// custom log message exists
 			return FormatLogMessage(ptr, out, args);
@@ -1052,7 +1049,7 @@ private:
 	/// @param args The formatter arguments. The vector is populated on the first call.
 	/// @return `true` if there is a message.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedSystemError, HeapBasedSystemError>, int> = 0>
-	static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
+	[[nodiscard]] static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
 		if (!reinterpret_cast<const ExceptionInformation*>(ptr)->length) {
 			// custom log message exists
 			const bool hasMessage = FormatLogMessage(ptr, out, args);
@@ -1079,8 +1076,8 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& /* args */) {
-		LogLine::Length length;
+	[[nodiscard]] static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& /* args */) {
+		LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&length, &ptr[offsetof(T, length)], sizeof(length));
 
 		const std::string_view sv(reinterpret_cast<const char*>(&ptr[sizeof(T)]), length);
@@ -1097,7 +1094,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, HeapBasedException, PlainException>, int> = 0>
-	static bool FormatErrorCode(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	[[nodiscard]] static bool FormatErrorCode(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
 		return false;
 	}
 
@@ -1107,14 +1104,15 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedSystemError, HeapBasedSystemError, PlainSystemError>, int> = 0>
-	static bool FormatErrorCode(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	[[nodiscard]] static bool FormatErrorCode(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::byte* const systemError = GetSystemError(ptr);
 
-		int code;
+		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&code, &systemError[offsetof(T, code)], sizeof(code));
 
 		static_assert(sizeof(code) == sizeof(DWORD));
-		fmt::format_to(out, code & 0xFFFF0000 ? "{:#x}" : "{}", static_cast<DWORD>(code));
+		// NOLINTNEXTLINE(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Limit to represent numbers using > 16 bit IS arbitrary.
+		fmt::format_to(out, static_cast<DWORD>(code) & 0xFFFF0000u ? "{:#x}" : "{}", static_cast<DWORD>(code));
 		return true;
 	}
 
@@ -1122,7 +1120,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, HeapBasedException, PlainException>, int> = 0>
-	static bool FormatCategoryName(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	[[nodiscard]] static bool FormatCategoryName(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
 		return false;
 	}
 
@@ -1132,11 +1130,11 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedSystemError, HeapBasedSystemError>, int> = 0>
-	static bool FormatCategoryName(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	[[nodiscard]] static bool FormatCategoryName(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::byte* const systemError = GetSystemError(ptr);
 
-		const std::error_category* pCategory;
-		std::memcpy(&pCategory, &systemError[offsetof(T, pCategory)], sizeof(pCategory));
+		const std::error_category* pCategory;                                              // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		std::memcpy(&pCategory, &systemError[offsetof(T, pCategory)], sizeof(pCategory));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 		const std::string_view sv(pCategory->name());
 		const std::string escaped = EscapeC(sv);
@@ -1154,9 +1152,9 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainSystemError>, int> = 0>
-	static bool FormatCategoryName(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
-		const std::error_category* pCategory;
-		std::memcpy(&pCategory, &ptr[offsetof(T, pCategory)], sizeof(pCategory));
+	[[nodiscard]] static bool FormatCategoryName(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+		const std::error_category* pCategory;                                      // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		std::memcpy(&pCategory, &ptr[offsetof(T, pCategory)], sizeof(pCategory));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 		const std::string_view sv(pCategory->name());
 		const std::string escaped = EscapeC(sv);
@@ -1172,7 +1170,7 @@ private:
 	/// @tparam A local bound @p T for SFINAE expression.
 	/// @return Always `false`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, HeapBasedException, PlainException>, int> = 0>
-	static bool FormatErrorMessage(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
 		return false;
 	}
 
@@ -1182,13 +1180,13 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedSystemError, HeapBasedSystemError>, int> = 0>
-	static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::byte* const systemError = GetSystemError(ptr);
 
-		int code;
+		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&code, &systemError[offsetof(T, code)], sizeof(code));
-		const std::error_category* pCategory;
-		std::memcpy(&pCategory, &systemError[offsetof(T, pCategory)], sizeof(pCategory));
+		const std::error_category* pCategory;                                              // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		std::memcpy(&pCategory, &systemError[offsetof(T, pCategory)], sizeof(pCategory));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 		const std::string s = pCategory->message(code);
 		const std::string escaped = EscapeC(s);
@@ -1206,11 +1204,11 @@ private:
 	/// @param out The output target.
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainSystemError>, int> = 0>
-	static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
-		int code;
+	[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&code, &ptr[offsetof(T, code)], sizeof(code));
-		const std::error_category* pCategory;
-		std::memcpy(&pCategory, &ptr[offsetof(T, pCategory)], sizeof(pCategory));
+		const std::error_category* pCategory;                                      // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		std::memcpy(&pCategory, &ptr[offsetof(T, pCategory)], sizeof(pCategory));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 		const std::string s = pCategory->message(code);
 		const std::string escaped = EscapeC(s);
@@ -1226,7 +1224,7 @@ private:
 	/// @param ptr The address of the current exception argument.
 	/// @return The address of the argument buffer.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError>, int> = 0>
-	static __declspec(restrict, noalias) const std::byte* GetBuffer(const std::byte* __restrict const ptr) noexcept {
+	[[nodiscard]] static __declspec(restrict, noalias) const std::byte* GetBuffer(const std::byte* __restrict const ptr) noexcept {
 		const std::byte* const buffer = reinterpret_cast<const std::byte*>(&reinterpret_cast<const ExceptionInformation*>(ptr)->padding);
 		const LogLine::Size pos = reinterpret_cast<const ExceptionInformation*>(ptr)->length * sizeof(char);
 		const LogLine::Align padding = GetPadding(&buffer[pos], __STDCPP_DEFAULT_NEW_ALIGNMENT__);
@@ -1237,7 +1235,7 @@ private:
 	/// @param ptr The address of the current exception argument.
 	/// @return The address of the argment buffer.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static __declspec(restrict, noalias) const std::byte* GetBuffer(const std::byte* __restrict const ptr) noexcept {
+	[[nodiscard]] static __declspec(restrict, noalias) const std::byte* GetBuffer(const std::byte* __restrict const ptr) noexcept {
 		return reinterpret_cast<const HeapBasedException*>(ptr)->pHeapBuffer;
 	}
 
@@ -1245,7 +1243,7 @@ private:
 	/// @param ptr The address of the current exception argument.
 	/// @return The address of the exception message.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, StackBasedException, StackBasedSystemError>, int> = 0>
-	static __declspec(restrict, noalias) const char* GetExceptionMessage(const std::byte* __restrict const ptr) noexcept {
+	[[nodiscard]] static __declspec(restrict, noalias) const char* GetExceptionMessage(const std::byte* __restrict const ptr) noexcept {
 		return reinterpret_cast<const char*>(&reinterpret_cast<const ExceptionInformation*>(ptr)->padding);
 	}
 
@@ -1253,7 +1251,7 @@ private:
 	/// @param ptr The address of the current exception argument.
 	/// @return The address of the exception message.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, HeapBasedException, HeapBasedSystemError>, int> = 0>
-	static __declspec(restrict, noalias) const char* GetExceptionMessage(const std::byte* __restrict const ptr) noexcept {
+	[[nodiscard]] static __declspec(restrict, noalias) const char* GetExceptionMessage(const std::byte* __restrict const ptr) noexcept {
 		return reinterpret_cast<const char*>(&ptr[sizeof(HeapBasedException)]);
 	}
 
@@ -1261,7 +1259,7 @@ private:
 	/// @param ptr The address of the current exception argument.
 	/// @return The address of the exception message.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
-	static __declspec(restrict, noalias) const char* GetExceptionMessage(const std::byte* __restrict const ptr) noexcept {
+	[[nodiscard]] static __declspec(restrict, noalias) const char* GetExceptionMessage(const std::byte* __restrict const ptr) noexcept {
 		return reinterpret_cast<const char*>(&ptr[sizeof(T)]);
 	}
 
@@ -1269,7 +1267,7 @@ private:
 	/// @param ptr The address of the current exception argument.
 	/// @return The address of the information block.
 	template <typename A = T, typename std::enable_if_t<std::is_same_v<A, StackBasedSystemError>, int> = 0>
-	static __declspec(restrict, noalias) const std::byte* GetSystemError(const std::byte* __restrict const ptr) noexcept {
+	[[nodiscard]] static __declspec(restrict, noalias) const std::byte* GetSystemError(const std::byte* __restrict const ptr) noexcept {
 		const std::byte* const buffer = GetBuffer(ptr);
 		return &buffer[reinterpret_cast<const ExceptionInformation*>(ptr)->used];
 	}
@@ -1278,7 +1276,7 @@ private:
 	/// @param ptr The address of the current exception argument.
 	/// @return The address of the information block.
 	template <typename A = T, typename std::enable_if_t<std::is_same_v<A, HeapBasedSystemError>, int> = 0>
-	static __declspec(restrict, noalias) const std::byte* GetSystemError(const std::byte* __restrict const ptr) noexcept {
+	[[nodiscard]] static __declspec(restrict, noalias) const std::byte* GetSystemError(const std::byte* __restrict const ptr) noexcept {
 		const char* const msg = GetExceptionMessage(ptr);
 		return reinterpret_cast<const std::byte*>(&msg[reinterpret_cast<const ExceptionInformation*>(ptr)->length]);
 	}
@@ -1287,7 +1285,7 @@ private:
 	/// @param ptr The address of the current exception argument.
 	/// @return The address of the information block.
 	template <typename A = T, typename std::enable_if_t<std::is_same_v<A, PlainSystemError>, int> = 0>
-	static __declspec(restrict, noalias) const std::byte* GetSystemError(const std::byte* __restrict const ptr) noexcept {
+	[[nodiscard]] static __declspec(restrict, noalias) const std::byte* GetSystemError(const std::byte* __restrict const ptr) noexcept {
 		return ptr;
 	}
 
@@ -1386,7 +1384,7 @@ void DecodeArgument<null>(_Inout_ std::vector<fmt::format_context::format_arg>& 
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
 void DecodeArgument<const char*>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
-	LogLine::Length length;
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
 	// no padding required
@@ -1405,7 +1403,7 @@ void DecodeArgument<const char*>(_Inout_ std::vector<fmt::format_context::format
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
 void DecodeArgument<const wchar_t*>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
-	LogLine::Length length;
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
 	const LogLine::Align padding = GetPadding<wchar_t>(&buffer[position + kTypeSize<const wchar_t*>]);
@@ -1436,7 +1434,7 @@ void DecodePointer(_Inout_ std::vector<fmt::format_context::format_arg>& args, _
 /// @param position The current read position.
 /// @return The address of the exception object.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
-_Ret_notnull_ const StackBasedException* DecodeStackBasedException(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
+[[nodiscard]] _Ret_notnull_ const StackBasedException* DecodeStackBasedException(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
 	const LogLine::Size pos = position + sizeof(TypeId);
 	const LogLine::Align padding = GetPadding<StackBasedException>(&buffer[pos]);
 	const LogLine::Size offset = pos + padding;
@@ -1454,7 +1452,7 @@ _Ret_notnull_ const StackBasedException* DecodeStackBasedException(_In_ const st
 /// @param position The current read position.
 /// @return The address of the exception object.
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
-_Ret_notnull_ const HeapBasedException* DecodeHeapBasedException(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
+[[nodiscard]] _Ret_notnull_ const HeapBasedException* DecodeHeapBasedException(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
 	const LogLine::Size pos = position + sizeof(TypeId);
 	const LogLine::Align padding = GetPadding<HeapBasedException>(&buffer[pos]);
 	const LogLine::Size offset = pos + padding;
@@ -1529,7 +1527,7 @@ void DecodeArgument<HeapBasedSystemError>(_Inout_ std::vector<fmt::format_contex
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
 void DecodeArgument<PlainException>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
-	LogLine::Length length;
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainException, length)], sizeof(length));
 
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PlainException*>(&buffer[position + sizeof(TypeId)])));
@@ -1545,7 +1543,7 @@ void DecodeArgument<PlainException>(_Inout_ std::vector<fmt::format_context::for
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
 void DecodeArgument<PlainSystemError>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
-	LogLine::Length length;
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, length)], sizeof(length));
 
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PlainSystemError*>(&buffer[position + sizeof(TypeId)])));
@@ -1563,13 +1561,13 @@ template <>
 void DecodeArgument<TriviallyCopyable>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	constexpr auto kArgSize = kTypeSize<TriviallyCopyable>;
 
-	LogLine::Align padding;
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable::CreateFormatArg createFormatArg;
+	internal::FunctionTable::CreateFormatArg createFormatArg;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&createFormatArg, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(createFormatArg));
 
-	LogLine::Size size;
+	LogLine::Size size;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(createFormatArg)], sizeof(size));
 
 	args.push_back(createFormatArg(&buffer[position + kArgSize + padding]));
@@ -1589,14 +1587,14 @@ template <>
 void DecodeArgument<NonTriviallyCopyable>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
-	LogLine::Align padding;
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable* pFunctionTable;
-	std::memcpy(&pFunctionTable, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));
+	internal::FunctionTable* pFunctionTable;                                                                     // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	std::memcpy(&pFunctionTable, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
-	LogLine::Size size;
-	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));
+	LogLine::Size size;                                                                                               // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 	args.push_back(pFunctionTable->createFormatArg(&buffer[position + kArgSize + padding]));
 
@@ -1632,7 +1630,7 @@ void SkipInlineString(_In_ const std::byte* __restrict buffer, _Inout_ LogLine::
 /// @param position The current read position. The value is set to the start of the next argument.
 template <>
 __declspec(noalias) void SkipInlineString<char>(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
-	LogLine::Length length;
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
 	// no padding required
@@ -1647,7 +1645,7 @@ __declspec(noalias) void SkipInlineString<char>(_In_ const std::byte* __restrict
 /// @param position The current read position. The value is set to the start of the next argument.
 template <>
 __declspec(noalias) void SkipInlineString<wchar_t>(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
-	LogLine::Length length;
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
 	const LogLine::Size offset = position + kTypeSize<const wchar_t*>;
@@ -1660,7 +1658,7 @@ __declspec(noalias) void SkipInlineString<wchar_t>(_In_ const std::byte* __restr
 /// @param buffer The argument buffer.
 /// @param position The current read position. The value is set to the start of the next argument.
 __declspec(noalias) void SkipPlainException(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
-	LogLine::Length length;
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainException, length)], sizeof(length));
 
 	position += kTypeSize<PlainException> + length * sizeof(char);
@@ -1670,7 +1668,7 @@ __declspec(noalias) void SkipPlainException(_In_ const std::byte* __restrict con
 /// @param buffer The argument buffer.
 /// @param position The current read position. The value is set to the start of the next argument.
 __declspec(noalias) void SkipPlainSystemError(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
-	LogLine::Length length;
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, length)], sizeof(length));
 
 	position += kTypeSize<PlainSystemError> + length * sizeof(char);
@@ -1682,10 +1680,10 @@ __declspec(noalias) void SkipPlainSystemError(_In_ const std::byte* __restrict c
 __declspec(noalias) void SkipTriviallyCopyable(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
 	constexpr auto kArgSize = kTypeSize<TriviallyCopyable>;
 
-	LogLine::Align padding;
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	LogLine::Size size;
+	LogLine::Size size;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(internal::FunctionTable::CreateFormatArg)], sizeof(size));
 
 	position += kArgSize + padding + size;
@@ -1797,14 +1795,14 @@ void CopyHeapBasedSystemError(_In_ const std::byte* __restrict const src, _Out_ 
 void CopyNonTriviallyCopyable(_In_ const std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ LogLine::Size& position) noexcept {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
-	LogLine::Align padding;
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&padding, &src[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable* pFunctionTable;
-	std::memcpy(&pFunctionTable, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));
+	internal::FunctionTable* pFunctionTable;                                                                  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	std::memcpy(&pFunctionTable, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
-	LogLine::Size size;
-	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));
+	LogLine::Size size;                                                                                            // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 	// copy management data
 	std::memcpy(&dst[position], &src[position], kArgSize);
@@ -1909,14 +1907,14 @@ __declspec(noalias) void MoveHeapBasedSystemError(_In_ const std::byte* __restri
 void MoveNonTriviallyCopyable(_Inout_ std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ LogLine::Size& position) noexcept {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
-	LogLine::Align padding;
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&padding, &src[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable* pFunctionTable;
-	std::memcpy(&pFunctionTable, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));
+	internal::FunctionTable* pFunctionTable;                                                                  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	std::memcpy(&pFunctionTable, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
-	LogLine::Size size;
-	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));
+	LogLine::Size size;                                                                                            // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 	// copy management data
 	std::memcpy(&dst[position], &src[position], kArgSize);
@@ -2000,14 +1998,14 @@ void DestructHeapBasedSystemError(_In_ const std::byte* __restrict const buffer,
 void DestructNonTriviallyCopyable(_In_ std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
-	LogLine::Align padding;
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable* pFunctionTable;
-	std::memcpy(&pFunctionTable, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));
+	internal::FunctionTable* pFunctionTable;                                                                     // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	std::memcpy(&pFunctionTable, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
-	LogLine::Size size;
-	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));
+	LogLine::Size size;                                                                                               // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 	const LogLine::Size offset = position + kArgSize + padding;
 	pFunctionTable->destruct(&buffer[offset]);
@@ -2027,18 +2025,18 @@ void DestructNonTriviallyCopyable(_In_ std::byte* __restrict const buffer, _Inou
 /// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 void CopyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restrict const buffer, const LogLine::Size used, std::vector<fmt::format_context::format_arg>& args) {
 	for (LogLine::Size position = 0; position < used;) {
-		TypeId typeId;
+		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&typeId, &buffer[position], sizeof(typeId));
 
 		/// @cond hide
 #pragma push_macro("DECODE_")
 #pragma push_macro("DECODE_PTR_")
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Not possible without macro.
 #define DECODE_(type_)                                 \
 	case kTypeId<type_>:                               \
 		DecodeArgument<type_>(args, buffer, position); \
 		break
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Not possible without macro.
 #define DECODE_PTR_(type_)                             \
 	case kTypeId<type_>:                               \
 		DecodeArgument<type_>(args, buffer, position); \
@@ -2093,20 +2091,20 @@ void CopyObjects(_In_reads_bytes_(used) const std::byte* __restrict const src, _
 	// assert that both buffers are equally aligned so that any offsets and padding values can be simply copied
 	assert(reinterpret_cast<std::uintptr_t>(src) % __STDCPP_DEFAULT_NEW_ALIGNMENT__ == reinterpret_cast<std::uintptr_t>(dst) % __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 
-	LogLine::Size start;
-	for (LogLine::Size position = start = 0; position < used;) {
-		TypeId typeId;
+	LogLine::Size start = 0;
+	for (LogLine::Size position = 0; position < used;) {
+		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&typeId, &src[position], sizeof(typeId));
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
 #pragma push_macro("SKIP_PTR_")
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Not possible without macro.
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
 		break
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Not possible without macro.
 #define SKIP_PTR_(type_)                   \
 	case kTypeId<type_>:                   \
 		position += kTypeSize<type_>;      \
@@ -2201,20 +2199,20 @@ void MoveObjects(_In_reads_bytes_(used) std::byte* __restrict const src, _Out_wr
 	// assert that both buffers are equally aligned so that any offsets and padding values can be simply copied
 	assert(reinterpret_cast<std::uintptr_t>(src) % __STDCPP_DEFAULT_NEW_ALIGNMENT__ == reinterpret_cast<std::uintptr_t>(dst) % __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 
-	LogLine::Size start;
-	for (LogLine::Size position = start = 0; position < used;) {
-		TypeId typeId;
+	LogLine::Size start = 0;
+	for (LogLine::Size position = 0; position < used;) {
+		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&typeId, &src[position], sizeof(typeId));
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
 #pragma push_macro("SKIP_PTR_")
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Not possible without macro.
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
 		break
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Not possible without macro.
 #define SKIP_PTR_(type_)                   \
 	case kTypeId<type_>:                   \
 		position += kTypeSize<type_>;      \
@@ -2305,18 +2303,18 @@ void MoveObjects(_In_reads_bytes_(used) std::byte* __restrict const src, _Out_wr
 /// @param used The number of bytes used in the buffer.
 void CallDestructors(_Inout_updates_bytes_(used) std::byte* __restrict buffer, LogLine::Size used) noexcept {
 	for (LogLine::Size position = 0; position < used;) {
-		TypeId typeId;
+		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
 		std::memcpy(&typeId, &buffer[position], sizeof(typeId));
 
 		/// @cond hide
 #pragma push_macro("SKIP_")
 #pragma push_macro("SKIP_PTR_")
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Not possible without macro.
 #define SKIP_(type_)                  \
 	case kTypeId<type_>:              \
 		position += kTypeSize<type_>; \
 		break
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): not supported without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Not possible without macro.
 #define SKIP_PTR_(type_)                      \
 	case kTypeId<type_>:                      \
 		position += kTypeSize<type_>;         \
@@ -2388,6 +2386,7 @@ void CallDestructors(_Inout_updates_bytes_(used) std::byte* __restrict buffer, L
 }  // namespace
 
 
+#pragma warning(suppress : 26495)
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): m_timestamp and m_stackBuffer need no initialization.
 LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict file, std::uint32_t line, _In_z_ const char* __restrict function, _In_opt_z_ const char* __restrict message) noexcept
 	: m_priority(priority)
@@ -2402,41 +2401,41 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict file, st
 
 	static_assert(offsetof(LogLine, m_stackBuffer) == 0, "offset of m_stackBuffer");
 #if UINTPTR_MAX == UINT64_MAX
-	static_assert(offsetof(LogLine, m_priority) == LLAMALOG_LOGLINE_SIZE - 58, "offset of m_priority");                                // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == LLAMALOG_LOGLINE_SIZE - 57, "offset of m_hasNonTriviallyCopyable");  // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_timestamp) == LLAMALOG_LOGLINE_SIZE - 56, "offset of m_timestamp");                              // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_file) == LLAMALOG_LOGLINE_SIZE - 48, "offset of m_file");                                        // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_function) == LLAMALOG_LOGLINE_SIZE - 40, "offset of m_function");                                // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_message) == LLAMALOG_LOGLINE_SIZE - 32, "offset of m_message");                                  // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_threadId) == LLAMALOG_LOGLINE_SIZE - 24, "offset of m_threadId");                                // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_line) == LLAMALOG_LOGLINE_SIZE - 20, "offset of m_line");                                        // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_used) == LLAMALOG_LOGLINE_SIZE - 16, "offset of m_used");                                        // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_size) == LLAMALOG_LOGLINE_SIZE - 12, "offset of m_size");                                        // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_heapBuffer");                             // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_priority) == LLAMALOG_LOGLINE_SIZE - 58, "offset of m_priority");                                // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == LLAMALOG_LOGLINE_SIZE - 57, "offset of m_hasNonTriviallyCopyable");  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_timestamp) == LLAMALOG_LOGLINE_SIZE - 56, "offset of m_timestamp");                              // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_file) == LLAMALOG_LOGLINE_SIZE - 48, "offset of m_file");                                        // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_function) == LLAMALOG_LOGLINE_SIZE - 40, "offset of m_function");                                // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_message) == LLAMALOG_LOGLINE_SIZE - 32, "offset of m_message");                                  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_threadId) == LLAMALOG_LOGLINE_SIZE - 24, "offset of m_threadId");                                // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_line) == LLAMALOG_LOGLINE_SIZE - 20, "offset of m_line");                                        // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_used) == LLAMALOG_LOGLINE_SIZE - 16, "offset of m_used");                                        // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_size) == LLAMALOG_LOGLINE_SIZE - 12, "offset of m_size");                                        // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_heapBuffer");                             // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
 
-	static_assert(sizeof(ExceptionInformation) == 48);                                                                  // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 46, "offset of hasNonTriviallyCopyable");  // NOLINT(readability-magic-numbers)
-	static_assert(sizeof(StackBasedException) == 48);                                                                   // NOLINT(readability-magic-numbers)
-	static_assert(sizeof(HeapBasedException) == 56);                                                                    // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 48, "offset of pHeapBuffer");                            // NOLINT(readability-magic-numbers)
+	static_assert(sizeof(ExceptionInformation) == 48);                                                                  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 46, "offset of hasNonTriviallyCopyable");  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(sizeof(StackBasedException) == 48);                                                                   // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(sizeof(HeapBasedException) == 56);                                                                    // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 48, "offset of pHeapBuffer");                            // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
 #elif UINTPTR_MAX == UINT32_MAX
-	static_assert(offsetof(LogLine, m_priority) == LLAMALOG_LOGLINE_SIZE - 42, "offset of m_priority");                                // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == LLAMALOG_LOGLINE_SIZE - 41, "offset of m_hasNonTriviallyCopyable");  // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_timestamp) == LLAMALOG_LOGLINE_SIZE - 40, "offset of m_timestamp");                              // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_file) == LLAMALOG_LOGLINE_SIZE - 32, "offset of m_file");                                        // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_function) == LLAMALOG_LOGLINE_SIZE - 28, "offset of m_function");                                // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_message) == LLAMALOG_LOGLINE_SIZE - 24, "offset of m_message");                                  // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_threadId) == LLAMALOG_LOGLINE_SIZE - 20, "offset of m_threadId");                                // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_line) == LLAMALOG_LOGLINE_SIZE - 16, "offset of m_line");                                        // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_used) == LLAMALOG_LOGLINE_SIZE - 12, "offset of m_used");                                        // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_size) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_size");                                         // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 4, "offset of m_heapBuffer");                             // NOLINT(readability-magic-numbers)
+	static_assert(offsetof(LogLine, m_priority) == LLAMALOG_LOGLINE_SIZE - 42, "offset of m_priority");                                // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_hasNonTriviallyCopyable) == LLAMALOG_LOGLINE_SIZE - 41, "offset of m_hasNonTriviallyCopyable");  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_timestamp) == LLAMALOG_LOGLINE_SIZE - 40, "offset of m_timestamp");                              // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_file) == LLAMALOG_LOGLINE_SIZE - 32, "offset of m_file");                                        // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_function) == LLAMALOG_LOGLINE_SIZE - 28, "offset of m_function");                                // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_message) == LLAMALOG_LOGLINE_SIZE - 24, "offset of m_message");                                  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_threadId) == LLAMALOG_LOGLINE_SIZE - 20, "offset of m_threadId");                                // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_line) == LLAMALOG_LOGLINE_SIZE - 16, "offset of m_line");                                        // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_used) == LLAMALOG_LOGLINE_SIZE - 12, "offset of m_used");                                        // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_size) == LLAMALOG_LOGLINE_SIZE - 8, "offset of m_size");                                         // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(LogLine, m_heapBuffer) == LLAMALOG_LOGLINE_SIZE - 4, "offset of m_heapBuffer");                             // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
 
-	static_assert(sizeof(ExceptionInformation) == 36);                                                                  // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 34, "offset of hasNonTriviallyCopyable");  // NOLINT(readability-magic-numbers)
-	static_assert(sizeof(StackBasedException) == 36);                                                                   // NOLINT(readability-magic-numbers)
-	static_assert(sizeof(HeapBasedException) == 40);                                                                    // NOLINT(readability-magic-numbers)
-	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 36, "offset of pHeapBuffer");                            // NOLINT(readability-magic-numbers)
+	static_assert(sizeof(ExceptionInformation) == 36);                                                                  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(ExceptionInformation, hasNonTriviallyCopyable) == 34, "offset of hasNonTriviallyCopyable");  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(sizeof(StackBasedException) == 36);                                                                   // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(sizeof(HeapBasedException) == 40);                                                                    // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
+	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 36, "offset of pHeapBuffer");                            // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
 #elif
 	static_assert(false, "layout assertions not defined");
 #endif
@@ -2456,7 +2455,7 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict file, st
 	static_assert(sizeof(HeapBasedException) == sizeof(ExceptionInformation) + sizeof(HeapBasedException::pHeapBuffer), "size of HeapBasedException");
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): m_stackBuffer does not need initialization in every case
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): Initialization of m_stackBuffer depends on data.
 LogLine::LogLine(const LogLine& logLine)
 	: m_priority(logLine.m_priority)
 	, m_hasNonTriviallyCopyable(logLine.m_hasNonTriviallyCopyable)
@@ -2484,7 +2483,8 @@ LogLine::LogLine(const LogLine& logLine)
 	}
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): initialization of m_stackBuffer depends on data.
+#pragma warning(suppress : 26495)
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): Initialization of m_stackBuffer depends on data.
 LogLine::LogLine(LogLine&& logLine) noexcept
 	: m_priority(logLine.m_priority)
 	, m_hasNonTriviallyCopyable(logLine.m_hasNonTriviallyCopyable)
@@ -2515,7 +2515,10 @@ LogLine::~LogLine() noexcept {
 	}
 }
 
+// NOLINTNEXTLINE(bugprone-unhandled-self-assignment, cert-oop54-cpp): Assert that type is never assigned to itself.
 LogLine& LogLine::operator=(const LogLine& logLine) {
+	assert(&logLine != this);
+
 	m_priority = logLine.m_priority;
 	m_hasNonTriviallyCopyable = logLine.m_hasNonTriviallyCopyable;
 	m_timestamp = logLine.m_timestamp;
@@ -2773,7 +2776,7 @@ LogLine& LogLine::operator<<(const std::wstring_view& arg) {
 }
 
 LogLine& LogLine::operator<<(const std::exception& arg) {
-	const std::error_code* pErrorCode;
+	const std::error_code* pErrorCode;  // NOLINT(cppcoreguidelines-init-variables): Value is set as out parameter.
 	const BaseException* const pBaseException = GetCurrentExceptionAsBaseException(pErrorCode);
 
 	// do not evaluate arg.what() when a BaseException exists
@@ -2792,7 +2795,7 @@ std::string LogLine::GetLogMessage() const {
 	std::vector<fmt::format_context::format_arg> args;
 	CopyArgumentsFromBufferTo(GetBuffer(), m_used, args);
 
-	fmt::basic_memory_buffer<char, 256> buf;  // NOLINT(readability-magic-numbers): one-time buffer size
+	fmt::basic_memory_buffer<char, 256> buf;  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Default buffer size for log message.
 	fmt::vformat_to<EscapingFormatter>(buf, fmt::to_string_view(GetPattern()),
 									   fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 	return fmt::to_string(buf);
@@ -2970,6 +2973,7 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 			const int code = pCode->value();
 			std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainSystemError, code)], &code, sizeof(code));
 			const std::error_category* const pCategory = &pCode->category();
+			// NOLINTNEXTLINE(bugprone-sizeof-expression): Size of pointer is intended.
 			std::memcpy(&buffer[sizeof(kArgTypeId) + offsetof(PlainSystemError, pCategory)], &pCategory, sizeof(pCategory));
 		}
 
@@ -3023,6 +3027,7 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 			const int code = pCode->value();
 			std::memcpy(&buffer[nextOffset + offsetof(StackBasedSystemError, code)], &code, sizeof(code));
 			const std::error_category* const pCategory = &pCode->category();
+			// NOLINTNEXTLINE(bugprone-sizeof-expression): Size of pointer is intended.
 			std::memcpy(&buffer[nextOffset + offsetof(StackBasedSystemError, pCategory)], &pCategory, sizeof(pCategory));
 			m_used += nextOffset + sizeof(StackBasedSystemError);
 		} else {
@@ -3068,6 +3073,7 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 			const int code = pCode->value();
 			std::memcpy(&buffer[nextOffset + offsetof(HeapBasedSystemError, code)], &code, sizeof(code));
 			const std::error_category* const pCategory = &pCode->category();
+			// NOLINTNEXTLINE(bugprone-sizeof-expression): Size of pointer is intended.
 			std::memcpy(&buffer[nextOffset + offsetof(HeapBasedSystemError, pCategory)], &pCategory, sizeof(pCategory));
 			m_used += nextOffset + sizeof(HeapBasedSystemError);
 		} else {
@@ -3163,8 +3169,10 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const std::align_val_t
 /// @return The @p logLine for method chaining.
 llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const std::align_val_t* const arg) {
 	static_assert(
-		(std::is_signed_v<std::underlying_type_t<std::align_val_t>> && ((sizeof(std::align_val_t) == sizeof(std::int64_t) && alignof(std::align_val_t) == alignof(std::int64_t)) || (sizeof(std::align_val_t) == sizeof(std::int32_t) && alignof(std::align_val_t) == alignof(std::int32_t))))
-			|| (!std::is_signed_v<std::underlying_type_t<std::align_val_t>> && ((sizeof(std::align_val_t) == sizeof(std::uint64_t) && alignof(std::align_val_t) == alignof(std::uint64_t)) || (sizeof(std::align_val_t) == sizeof(std::uint32_t) && alignof(std::align_val_t) == alignof(std::uint32_t)))),
+		(std::is_signed_v<std::underlying_type_t<std::align_val_t>> && ((sizeof(std::align_val_t) == sizeof(std::int64_t) && alignof(std::align_val_t) == alignof(std::int64_t))                 // NOLINT(misc-redundant-expression): Paranoid static-assert.
+																		|| (sizeof(std::align_val_t) == sizeof(std::int32_t) && alignof(std::align_val_t) == alignof(std::int32_t)))             // NOLINT(misc-redundant-expression): Paranoid static-assert.
+		 ) || (!std::is_signed_v<std::underlying_type_t<std::align_val_t>> && ((sizeof(std::align_val_t) == sizeof(std::uint64_t) && alignof(std::align_val_t) == alignof(std::uint64_t))        // NOLINT(misc-redundant-expression): Paranoid static-assert.
+																			   || (sizeof(std::align_val_t) == sizeof(std::uint32_t) && alignof(std::align_val_t) == alignof(std::uint32_t)))),  // NOLINT(misc-redundant-expression): Paranoid static-assert.
 		"cannot match type of std::align_val_t");
 
 	if constexpr (std::is_signed_v<std::underlying_type_t<std::align_val_t>>) {
@@ -3185,7 +3193,3 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const std::align_val_t
 		__assume(false);
 	}
 }
-
-#ifdef __clang_analyzer__
-#pragma pop_macro("offsetof")
-#endif

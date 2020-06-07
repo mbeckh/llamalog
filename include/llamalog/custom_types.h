@@ -32,13 +32,6 @@ limitations under the License.
 #include <string>
 #include <type_traits>
 
-#ifdef __clang_analyzer__
-// MSVC does not yet have __builtin_offsetof which gives false errors in clang-tidy
-#pragma push_macro("offsetof")
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): macro for clang
-#define offsetof __builtin_offsetof
-#endif
-
 namespace llamalog {
 
 namespace internal {
@@ -46,7 +39,8 @@ namespace internal {
 /// @brief Marker type for a value for pointers.
 /// @details Required as a separate type to ignore formatting placeholders for `null` value.
 template <typename T>
-struct ptr final {
+struct ptr final {  // NOLINT(readability-identifier-naming): Looks better as a 'simple type'.
+	// NOLINTNEXTLINE(readability-identifier-naming): clang-tidy can't properly decide between public member and constant member.
 	const T value;  ///< @brief The actual value.
 };
 
@@ -146,6 +140,8 @@ struct FunctionTableInstance {
 	FunctionTable::CreateFormatArg createFormatArg = CreateFormatArg<T, kPointer>;
 };
 
+constexpr std::size_t kMaxCustomTypeSize = 0xFFFFFFFu;  // allow max. 255 MB
+
 }  // namespace internal
 
 template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
@@ -153,7 +149,7 @@ LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 
 	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
-	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression, readability-magic-numbers): comparison with constant is intended
+	static_assert(sizeof(X) <= internal::kMaxCustomTypeSize, "custom type is too large");
 	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::CreateFormatArg<X, false>));
 	return *this;
 }
@@ -164,7 +160,7 @@ LogLine& LogLine::AddCustomArgument(const T* const arg) {
 		using X = std::remove_pointer_t<std::remove_cv_t<T>>;
 
 		static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
-		static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression, readability-magic-numbers): comparison with constant is intended
+		static_assert(sizeof(X) <= internal::kMaxCustomTypeSize, "custom type is too large");
 		WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(arg), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::CreateFormatArg<X, true>));
 	} else {
 		WriteNullPointer();
@@ -177,7 +173,7 @@ LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 
 	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
-	static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression): comparison with constant is intended
+	static_assert(sizeof(X) <= internal::kMaxCustomTypeSize, "custom type is too large");
 	static_assert(std::is_copy_constructible_v<X>, "type MUST be copy constructible");
 
 	using FunctionTable = internal::FunctionTableInstance<X, false>;  // offsetof does not support , in type
@@ -199,7 +195,7 @@ LogLine& LogLine::AddCustomArgument(const T* const arg) {
 		using X = std::remove_pointer_t<std::remove_cv_t<T>>;
 
 		static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
-		static_assert(sizeof(X) <= 0xFFFFFFFu, "custom type is too large");  // allow max. 255 MB, NOLINT(bugprone-sizeof-expression): comparison with constant is intended
+		static_assert(sizeof(X) <= internal::kMaxCustomTypeSize, "custom type is too large");
 		static_assert(std::is_copy_constructible_v<X>, "type MUST be copy constructible");
 
 		using FunctionTable = internal::FunctionTableInstance<X, true>;  // offsetof does not support , in type
@@ -258,7 +254,3 @@ public:
 private:
 	std::string m_format;  ///< @brief The format pattern for the null value
 };
-
-#ifdef __clang_analyzer__
-#pragma pop_macro("offsetof")
-#endif

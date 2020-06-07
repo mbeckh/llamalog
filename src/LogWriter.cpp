@@ -112,9 +112,19 @@ __declspec(noalias) _Ret_z_ char const* LogWriter::FormatPriority(const Priority
 	__assume(false);
 }
 
+namespace {
+
+/// @brief The pattern for formatting a timestamp.
+constexpr const char kTimestampPattern[] = "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}";
+
+/// @brief The size of the output buffer for a formatted timestamp.
+constexpr const std::size_t kTimestampOutputBufferSize = 24;
+
+}  // namespace
+
 // Derived from `format_timestamp` from NanoLog.
 std::string LogWriter::FormatTimestamp(const FILETIME& timestamp) {
-	fmt::basic_memory_buffer<char, 23> buffer;  // NOLINT(readability-magic-numbers): pattern has 23 characters
+	fmt::basic_memory_buffer<char, kTimestampOutputBufferSize> buffer;
 	FormatTimestampTo(buffer, timestamp);
 	return fmt::to_string(buffer);
 }
@@ -125,7 +135,7 @@ void LogWriter::FormatTimestampTo(Out& out, const FILETIME& timestamp) {
 	if (!FileTimeToSystemTime(&timestamp, &st)) {
 		st = {0};
 	}
-	fmt::format_to(out, "{:04}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+	fmt::format_to(out, kTimestampPattern, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 }
 
 namespace {
@@ -139,6 +149,9 @@ inline void Append(Out& out, _In_z_ const char* sz) {
 	out.append(sz, sz + std::strlen(sz));
 }
 
+/// @brief Default buffer size for log lines.
+constexpr std::size_t kDefaultBufferSize = 256;
+
 }  // namespace
 
 
@@ -148,7 +161,7 @@ inline void Append(Out& out, _In_z_ const char* sz) {
 
 // Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 void StdErrWriter::Log(const LogLine& logLine) {
-	fmt::basic_memory_buffer<char, 256> buffer;  // NOLINT(readability-magic-numbers): one-time buffer size
+	fmt::basic_memory_buffer<char, kDefaultBufferSize> buffer;
 
 	FormatTimestampTo(buffer, logLine.GetTimestamp());
 	buffer.push_back(' ');
@@ -167,7 +180,7 @@ void StdErrWriter::Log(const LogLine& logLine) {
 	buffer.push_back('\n');
 	buffer.push_back('\0');
 
-	fprintf(stderr, buffer.data());
+	fputs(buffer.data(), stderr);
 }
 
 
@@ -177,7 +190,7 @@ void StdErrWriter::Log(const LogLine& logLine) {
 
 // Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 void DebugWriter::Log(const LogLine& logLine) {
-	fmt::basic_memory_buffer<char, 256> buffer;  // NOLINT(readability-magic-numbers): one-time buffer size
+	fmt::basic_memory_buffer<char, kDefaultBufferSize> buffer;
 
 	FormatTimestampTo(buffer, logLine.GetTimestamp());
 	buffer.push_back(' ');
@@ -225,6 +238,9 @@ constexpr FrequencyInfo kFrequencyInfos[] = {
 };
 static_assert(sizeof(kFrequencyInfos) / sizeof(kFrequencyInfos[0]) == static_cast<std::uint8_t>(RollingFileWriter::Frequency::kCount));
 
+/// @brief Maximum size of output buffer for the kFrequenceInfos patterns.
+constexpr std::size_t kFrequencyOutputBufferSize = 16;
+
 }  // namespace
 
 RollingFileWriter::RollingFileWriter(const Priority priority, std::string directory, std::string fileName, const Frequency frequency, const std::uint32_t maxFiles) noexcept
@@ -257,7 +273,7 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 		RollFile(logLine);
 	}
 
-	fmt::basic_memory_buffer<char, 256> buffer;  // NOLINT(readability-magic-numbers): one-time buffer size
+	fmt::basic_memory_buffer<char, kDefaultBufferSize> buffer;
 	FormatTimestampTo(buffer, timestamp);
 	buffer.push_back(' ');
 	Append(buffer, FormatPriority(logLine.GetPriority()));
@@ -274,7 +290,7 @@ void RollingFileWriter::Log(const LogLine& logLine) {
 					fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 	buffer.push_back('\n');
 
-	DWORD written;
+	DWORD written;  // NOLINT(cppcoreguidelines-init-variables): Initialized before first use.
 	const char* const __restrict data = buffer.data();
 	const std::size_t length = buffer.size();
 	for (std::size_t position = 0; position < length; position += written) {
@@ -323,7 +339,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 	path += '.';
 	std::filesystem::path pattern(path);
 
-	fmt::basic_memory_buffer<char, 16> buffer;  // NOLINT(readability-magic-numbers): one-time buffer size
+	fmt::basic_memory_buffer<char, kFrequencyOutputBufferSize> buffer;
 	fmt::format_to(buffer, frequencyInfo.pattern, time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
 	path += std::string_view(buffer.data(), buffer.size());
 	path += fileName.extension();

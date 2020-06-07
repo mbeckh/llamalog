@@ -58,7 +58,7 @@ fmt::format_context::iterator PostProcessErrorMessage(_In_reads_(length) wchar_t
 		}
 	}
 
-	DWORD lastError;
+	DWORD lastError;  // NOLINT(cppcoreguidelines-init-variables): Guaranteed to be initialized before first read.
 	if (constexpr std::uint_fast16_t kFixedBufferSize = 256; length <= kFixedBufferSize) {
 		// try with a fixed size buffer
 		char sz[kFixedBufferSize];
@@ -68,7 +68,7 @@ fmt::format_context::iterator PostProcessErrorMessage(_In_reads_(length) wchar_t
 		}
 		lastError = GetLastError();
 		if (lastError != ERROR_INSUFFICIENT_BUFFER) {
-			goto error;  // NOLINT(cppcoreguidelines-avoid-goto): yes, I DO want a goto here
+			goto error;  // NOLINT(cppcoreguidelines-avoid-goto, hicpp-avoid-goto): Yes, I DO want a goto here.
 		}
 	}
 	{
@@ -93,8 +93,8 @@ error:
 /// @param ctx The output target.
 /// @result The output iterator.
 fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorCode, fmt::format_context& ctx) {
-	wchar_t buffer[256];  // NOLINT(readability-magic-numbers): one-time buffer size
-	// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API
+	wchar_t buffer[256];  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Default on-stack buffer size for windows error messages.
+	// NOLINTNEXTLINE(hicpp-signed-bitwise): Required by Windows API.
 	DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, errorCode, 0, buffer, sizeof(buffer) / sizeof(*buffer), nullptr);
 	if (length) {
 		return PostProcessErrorMessage(buffer, length, ctx);
@@ -107,7 +107,7 @@ fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorC
 		auto finally = llamalog::finally([&pBuffer]() noexcept {
 			LocalFree(pBuffer);
 		});
-		// NOLINTNEXTLINE(hicpp-signed-bitwise): required by Windows API
+		// NOLINTNEXTLINE(hicpp-signed-bitwise): Required by Windows API.
 		length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, errorCode, 0, reinterpret_cast<wchar_t*>(&pBuffer), 0, nullptr);
 		if (length) {
 			return PostProcessErrorMessage(pBuffer, length, ctx);
@@ -142,7 +142,7 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::error_code>::parse(
 		// a pattern consisting of only a percent is used to suppress the error code
 		m_format.push_back(llamalog::kSuppressErrorCode);
 	} else if (end != it) {
-		m_format.reserve(end - it + 6);  // NOLINT(readability-magic-numbers): counted from number of characters
+		m_format.reserve(end - it + 6);  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Counted from number of characters.
 		m_format.append(" ({:");
 		m_format.append(it, end);
 		m_format.append("})");
@@ -199,7 +199,7 @@ fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::forma
 	while (end != ctx.end() && *end != '}') {
 		++end;
 	}
-	m_format.reserve((end - it + 3) * 4 + 13);  // NOLINT(readability-magic-numbers): length calculated from strings
+	m_format.reserve((end - it + 3) * 4 + 13);  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Length calculated from strings.
 	m_format.append("(({:");
 	m_format.append(it, end);
 	m_format.append("}, {:");

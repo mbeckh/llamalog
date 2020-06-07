@@ -136,7 +136,7 @@ public:
 	/// @param fileName File name for the log files.
 	/// @param frequency The interval at which a new the writer starts a new file.
 	/// @param maxFiles The maximum number of old log files which should be kept in @p directory.
-	RollingFileWriter(Priority priority, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = 60) noexcept;  // NOLINT(readability-magic-numbers)
+	RollingFileWriter(Priority priority, std::string directory, std::string fileName, Frequency frequency = Frequency::kDaily, std::uint32_t maxFiles = kMaxFilesDefault) noexcept;
 
 	RollingFileWriter(const RollingFileWriter&) = delete;  ///< @nocopyconstructor
 	RollingFileWriter(RollingFileWriter&&) = delete;       ///< @nomoveconstructor
@@ -156,6 +156,9 @@ private:
 	/// @brief Start the next file.
 	/// @param logLine The `LogLine` which triggered the roll over.
 	void RollFile(const LogLine& logLine);
+
+private:
+	static constexpr std::uint32_t kMaxFilesDefault = 60;
 
 private:
 	const std::string m_directory;   ///< @brief The directory.

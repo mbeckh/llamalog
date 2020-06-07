@@ -50,6 +50,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <cstdint>
 #include <exception>
 #include <memory>
+#include <new>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -59,7 +60,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 /// @brief The size of a log line in bytes.
 /// @details Defined as a macro to allow redefinition for different use cases.
 /// @note The value MUST be a power of 2, elso compilation will fail.
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Use a macro to allow override in build settings.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Use macro to allow override in build settings.
 #define LLAMALOG_LOGLINE_SIZE 256
 #endif
 
@@ -448,7 +449,7 @@ private:
 	/// @param arg The value to add.
 	/// @copyright Derived from both methods `NanoLogLine::encode` from NanoLog.
 	template <typename T>
-	void Write(const T arg);
+	void Write(T arg);
 
 	/// @brief Copy a pointer argument to the buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the bytes of the value.

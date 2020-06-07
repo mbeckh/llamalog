@@ -52,7 +52,7 @@ protected:
 	/// @brief Create the formatted error message with placeholder replacement.
 	/// @param pCode An optional error code used to add an error message to the result.
 	/// @return The formatted error mesasge.
-	_Ret_z_ const char* What(_In_opt_ const std::error_code* pCode) const noexcept;
+	[[nodiscard]] _Ret_z_ const char* What(_In_opt_ const std::error_code* pCode) const noexcept;
 
 	/// @brief Allow access to the `LogLine` by base classes.
 	/// @return The log line.
@@ -76,7 +76,7 @@ private:
 
 /// @brief A helper class to transfer system errros.
 /// @details Other than `std::system_error` the message is not formatted until the time the `LogLine` is written or `#system_error::what()` is called.
-class system_error : public std::runtime_error {  // NOLINT(readability-identifier-naming): looks better when named similar to std::system_error.
+class system_error : public std::runtime_error {  // NOLINT(readability-identifier-naming): Looks better when named like std::system_error.
 public:
 	/// @brief Creates a new instance for the provided error code and category.
 	/// @param code The error code.
@@ -94,7 +94,7 @@ public:
 public:
 	/// @brief Get the system error code (as in `std::system_error::code()`).
 	/// @result The error code.
-	[[nodiscard]] const std::error_code& code() const noexcept {  // NOLINT(readability-identifier-naming): like code() from std::system_error.
+	[[nodiscard]] const std::error_code& code() const noexcept {  // NOLINT(readability-identifier-naming): Like code() from std::system_error.
 		return m_code;
 	}
 
@@ -148,7 +148,7 @@ public:
 #pragma warning(suppress : 4702)
 	[[nodiscard]] _Ret_z_ const char* what() const noexcept override {  // NOLINT(readability-identifier-naming): override must use same name.
 		if (GetLogLine().GetPattern()) {
-			if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<system_error, E>) {  // NOLINT(readability-braces-around-statements, bugprone-suspicious-semicolon): clang-tidy chokes on if constexpr.
+			if constexpr (std::is_base_of_v<std::system_error, E> || std::is_base_of_v<system_error, E>) {
 				return BaseException::What(&E::code());
 			}
 			return BaseException::What(nullptr);
@@ -203,7 +203,7 @@ template <typename E, typename... T>
 /// @brief Throw a new exception with additional logging context.
 /// @details The variable arguments MAY provide a literal message string and optional arguments.
 /// @param exception_ The exception to throw.
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define LLAMALOG_THROW(exception_, ...)                                           \
 	do {                                                                          \
 		constexpr const char* __restrict file_ = llamalog::GetFilename(__FILE__); \
@@ -211,5 +211,5 @@ template <typename E, typename... T>
 	} while (0)
 
 /// @brief Alias for LLAMALOG_THROW
-// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): require access to __FILE__, __LINE__ and __func__.
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define THROW LLAMALOG_THROW

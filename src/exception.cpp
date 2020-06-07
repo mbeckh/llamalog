@@ -33,7 +33,7 @@ limitations under the License.
 namespace llamalog {
 
 BaseException::BaseException(_In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_opt_z_ const char* __restrict const message) noexcept
-	: m_logLine(Priority::kNone /* unused */, file, line, function, message) {
+	: m_logLine(Priority::kNone /* not used */, file, line, function, message) {
 	m_logLine.GenerateTimestamp();
 }
 
@@ -45,7 +45,7 @@ _Ret_z_ const char* BaseException::What(_In_opt_ const std::error_code* const pC
 		std::vector<fmt::format_context::format_arg> args;
 		m_logLine.CopyArgumentsTo(args);
 
-		fmt::basic_memory_buffer<char, 256> buf;  // NOLINT(readability-magic-numbers)
+		fmt::basic_memory_buffer<char, 256> buf;  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Default exception message buffer size.
 		fmt::vformat_to(buf, fmt::to_string_view(m_logLine.GetPattern()),
 						fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 
