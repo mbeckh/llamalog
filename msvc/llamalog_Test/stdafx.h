@@ -31,6 +31,7 @@ limitations under the License.
 #include <windows.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cfloat>
 #include <cinttypes>
 #include <climits>
@@ -39,7 +40,7 @@ limitations under the License.
 #include <cstdio>
 #include <exception>
 #include <memory>
-#include <ostream>
+#include <new>
 #include <regex>
 #include <sstream>
 #include <stdexcept>

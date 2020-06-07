@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "llamalog/LogLine.h"
 
-#include <fmt/core.h>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 

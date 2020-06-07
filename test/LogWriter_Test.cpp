@@ -27,7 +27,6 @@ limitations under the License.
 #include <windows.h>
 
 #include <memory>
-#include <ostream>
 #include <regex>
 #include <sstream>
 #include <string>

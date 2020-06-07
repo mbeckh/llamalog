@@ -23,7 +23,7 @@ limitations under the License.
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include <sal.h>
+#include <windows.h>
 
 #include <algorithm>
 #include <exception>

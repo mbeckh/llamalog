@@ -29,7 +29,6 @@ limitations under the License.
 
 #include <exception>
 #include <memory>
-#include <ostream>
 #include <regex>
 #include <sstream>
 #include <string>
