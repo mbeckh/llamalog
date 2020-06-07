@@ -383,8 +383,8 @@ constexpr bool is_any_v = is_any<T, A...>::value;  // NOLINT(readability-identif
 	const auto end = sv.cend();
 
 	for (auto it = begin; it != end; ++it) {
-		const std::uint8_t c = *it;                           // MUST be std::uint8_t, NOT char
-		if (c == '"' || c == '\\' || c < 0x20 || c > 0x7f) {  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): 7-Bit-ASCII.
+		const std::uint8_t c = *it;   // MUST be std::uint8_t, NOT char
+		if (c == '\\' || c < 0x20) {  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): 7-Bit-ASCII.
 			if (result.empty()) {
 				const LogLine::Length len = static_cast<LogLine::Length>(sv.length());
 				const LogLine::Length extra = static_cast<LogLine::Length>(std::distance(it, end)) >> 2u;
@@ -393,7 +393,6 @@ constexpr bool is_any_v = is_any<T, A...>::value;  // NOLINT(readability-identif
 			result.append(begin, it);
 			result.push_back('\\');
 			switch (c) {
-			case '"':
 			case '\\':
 				result.push_back(c);
 				break;
@@ -448,7 +447,7 @@ public:
 	/// @return see `fmt::arg_formatter::operator()`.
 	auto operator()(const char value) {
 		const fmt::format_specs* const sp = specs();
-		if ((!sp || !sp->type) && (value < 0x20 || value > 0x7f)) {  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): 7-Bit-ASCII.
+		if ((!sp || !sp->type) && (value == '\\' || value < 0x20)) {  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): 7-Bit-ASCII.
 			const std::string_view sv(&value, 1);
 			const std::string str = EscapeC(sv);
 			if (!str.empty()) {

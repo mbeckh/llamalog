@@ -111,9 +111,9 @@ public:
 
 	std::string message(const int code) const final {
 		if (code == 7) {
-			return "This is an error message\xE1";
+			return "This is an error message\r\xE1";
 		}
-		return "This is a different error message\xE1";
+		return "This is a different error message\r\xE1";
 	}
 };
 
@@ -1486,52 +1486,56 @@ TEST(exceptionTest, DefaultPattern_systemerrorPlain_PrintDefault) {
 // Encoding
 //
 
-TEST(exceptionTest, Encoding_exceptionHasHexChar_PrintEscaped) {
+TEST(exceptionTest, Encoding_exceptionHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg\xE2"), "myfile.cpp", 15, "exfunc", "Exception\xE5 {} - {}", 1.8, L"test\xE3");
+		llamalog::Throw(std::invalid_argument("testmsg\xE2\t"), "myfile.cpp", 15, "exfunc", "Exception\xE5 {} - {}", 1.8, L"test\xE3\t");
 	} catch (const std::exception& e) {
-		logLine << "Error\xE4" << e << "";
+		logLine << "Error\xE4\n"
+				<< e << "";
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Error\\xE4 caused by Exception\xE5 1.8 - test\\xC3\\xA3\n@ myfile.cpp:15", str);
+	EXPECT_EQ("Error\xE4\\n caused by Exception\xE5 1.8 - test\xC3\xA3\\t\n@ myfile.cpp:15", str);
 }
 
-TEST(exceptionTest, Encoding_exceptionPlainHasHexChar_PrintEscaped) {
+TEST(exceptionTest, Encoding_exceptionPlainHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
-		throw std::invalid_argument("testmsg\xE2");
+		throw std::invalid_argument("testmsg\xE2\t");
 	} catch (const std::exception& e) {
-		logLine << "Error\xE4" << e << "";
+		logLine << "Error\xE4\n"
+				<< e << "";
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Error\\xE4 caused by testmsg\\xE2", str);
+	EXPECT_EQ("Error\xE4\\n caused by testmsg\xE2\\t", str);
 }
 
-TEST(exceptionTest, Encoding_stdsystemerrorPlainHasHexChar_PrintEscaped) {
+TEST(exceptionTest, Encoding_stdsystemerrorPlainHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
-		throw std::system_error(7, kTestCategoryEscape, "testmsg\xE2");
+		throw std::system_error(7, kTestCategoryEscape, "testmsg\xE2\t");
 	} catch (const std::exception& e) {
-		logLine << "Error\xE4" << e << "";
+		logLine << "Error\xE4\n"
+				<< e << "";
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Error\\xE4 TestError\\xE0 (7=Error\\xE4\xE6) caused by testmsg\\xE2: This is an error message\\xE1", str);
+	EXPECT_EQ("Error\xE4\\n TestError\xE0 (7=Error\xE4\\n\xE6) caused by testmsg\xE2\\t: This is an error message\\r\xE1", str);
 }
 
-TEST(exceptionTest, Encoding_systemerrorPlainHasHexChar_PrintEscaped) {
+TEST(exceptionTest, Encoding_systemerrorPlainHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
-		throw system_error(7, kTestCategoryEscape, "testmsg\xE2");
+		throw system_error(7, kTestCategoryEscape, "testmsg\xE2\t");
 	} catch (const std::exception& e) {
-		logLine << "Error\xE4" << e << "";
+		logLine << "Error\xE4\n"
+				<< e << "";
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Error\\xE4 TestError\\xE0 (7=Error\\xE4\xE6) caused by testmsg\\xE2: This is an error message\\xE1", str);
+	EXPECT_EQ("Error\xE4\\n TestError\xE0 (7=Error\xE4\\n\xE6) caused by testmsg\xE2\\t: This is an error message\\r\xE1", str);
 }
 
 //

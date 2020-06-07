@@ -797,26 +797,26 @@ TEST(LogLineTest, charptr_IsLongValue_PrintValue) {
 TEST(LogLineTest, charptr_HasEscapedChar_PrintEscapeChar) {
 	LogLine logLine = GetLogLine();
 	{
-		const char* const arg = "Test\nNext Line";
+		const char* const arg = "Test\nNext Line\\";
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test\\nNext Line", str);
+	EXPECT_EQ("Test\\nNext Line\\\\", str);
 }
 
 TEST(LogLineTest, charptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
 	LogLine logLine = GetLogLine("{:s}");
 	{
-		const char* const arg = "Test\nNext Line";
+		const char* const arg = "Test\nNext Line\\";
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test\nNext Line", str);
+	EXPECT_EQ("Test\nNext Line\\", str);
 }
 
-TEST(LogLineTest, charptr_HasHexChar_PrintEscapedValue) {
+TEST(LogLineTest, charptr_HasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const char* const arg = "Te\xE4st";
@@ -824,10 +824,10 @@ TEST(LogLineTest, charptr_HasHexChar_PrintEscapedValue) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Te\\xE4st", str);
+	EXPECT_EQ("Te\xE4st", str);
 }
 
-TEST(LogLineTest, charptr_HasHexCharDoNotEscape_PrintUnescaped) {
+TEST(LogLineTest, charptr_HasHexCharDoNotEscape_PrintUtf8) {
 	LogLine logLine = GetLogLine("{:s}");
 	{
 		const char* const arg = "Te\xE4st";
@@ -886,8 +886,8 @@ TEST(LogLineTest, wcharptr_IsLongValue_PrintValue) {
 	EXPECT_EQ("xxx", str);
 }
 
-TEST(LogLineTest, wcharptr_IsLongValueAfterConversion_PrintValue) {
-	LogLine logLine = GetLogLine("{:.11}");
+TEST(LogLineTest, wcharptr_IsLongValueAfterConversion_PrintUtf8) {
+	LogLine logLine = GetLogLine("{:.5}");
 	{
 		std::wstring arg(256, L'x');
 		arg[0] = L'\xE4';
@@ -895,32 +895,32 @@ TEST(LogLineTest, wcharptr_IsLongValueAfterConversion_PrintValue) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("\\xC3\\xA4xxx", str);
+	EXPECT_EQ("\xC3\xA4xxx", str);
 }
 
 TEST(LogLineTest, wcharptr_HasEscapedChar_PrintEscapedValue) {
 	LogLine logLine = GetLogLine();
 	{
-		const wchar_t* const arg = L"Test\nNext Line";
+		const wchar_t* const arg = L"Test\nNext Line\\";
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test\\nNext Line", str);
+	EXPECT_EQ("Test\\nNext Line\\\\", str);
 }
 
 TEST(LogLineTest, wcharptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
 	LogLine logLine = GetLogLine("{:s}");
 	{
-		const wchar_t* const arg = L"Test\nNext Line";
+		const wchar_t* const arg = L"Test\nNext Line\\";
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test\nNext Line", str);
+	EXPECT_EQ("Test\nNext Line\\", str);
 }
 
-TEST(LogLineTest, wcharptr_HasSpecialCharAtEnd_PrintUtf8Value) {
+TEST(LogLineTest, wcharptr_HasSpecialCharAtEnd_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"Test\xE4";
@@ -928,10 +928,10 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtEnd_PrintUtf8Value) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test\\xC3\\xA4", str);
+	EXPECT_EQ("Test\xC3\xA4", str);
 }
 
-TEST(LogLineTest, wcharptr_HasSpecialCharAtEndDoNotEscape_PrintUtf8Unescaped) {
+TEST(LogLineTest, wcharptr_HasSpecialCharAtEndDoNotEscape_PrintUtf8) {
 	LogLine logLine = GetLogLine("{:s}");
 	{
 		const wchar_t* const arg = L"Test\xE4";
@@ -942,7 +942,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtEndDoNotEscape_PrintUtf8Unescaped) {
 	EXPECT_EQ("Test\xC3\xA4", str);
 }
 
-TEST(LogLineTest, wcharptr_HasSpecialCharAtStart_PrintUtf8Value) {
+TEST(LogLineTest, wcharptr_HasSpecialCharAtStart_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"\xE4Test";
@@ -950,10 +950,10 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtStart_PrintUtf8Value) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("\\xC3\\xA4Test", str);
+	EXPECT_EQ("\xC3\xA4Test", str);
 }
 
-TEST(LogLineTest, wcharptr_HasSpecialCharInMiddle_PrintUtf8Value) {
+TEST(LogLineTest, wcharptr_HasSpecialCharInMiddle_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"Te\xE4st";
@@ -961,7 +961,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharInMiddle_PrintUtf8Value) {
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Te\\xC3\\xA4st", str);
+	EXPECT_EQ("Te\xC3\xA4st", str);
 }
 
 TEST(LogLineTest, wcharptr_IsNullptr_PrintNull) {
@@ -1006,25 +1006,25 @@ TEST(LogLineTest, string_IsReference_PrintValue) {
 // wstring
 //
 
-TEST(LogLineTest, wstring_IsValue_PrintValue) {
+TEST(LogLineTest, wstring_IsValue_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
-		logLine << std::wstring(L"Test\xE4");
+		logLine << std::wstring(L"Test\xE4\n");
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test\\xC3\\xA4", str);
+	EXPECT_EQ("Test\xC3\xA4\\n", str);
 }
 
-TEST(LogLineTest, wstring_IsReference_PrintValue) {
+TEST(LogLineTest, wstring_IsReference_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
-		const std::wstring arg(L"Test\xE4");
+		const std::wstring arg(L"Test\xE4\n");
 		logLine << arg;
 	}
 	const std::string str = logLine.GetLogMessage();
 
-	EXPECT_EQ("Test\\xC3\\xA4", str);
+	EXPECT_EQ("Test\xC3\xA4\\n", str);
 }
 
 
