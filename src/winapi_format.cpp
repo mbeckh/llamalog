@@ -27,6 +27,7 @@ limitations under the License.
 #include <windows.h>
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>

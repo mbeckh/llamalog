@@ -72,7 +72,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <type_traits>
 #include <utility>
 #include <vector>
-// IWYU pragma: no_include <xutility>
 
 
 namespace llamalog {
