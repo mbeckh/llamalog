@@ -22,7 +22,7 @@ In the course of all the rewriting, I also made some performance improvements, e
 ## Performance
 The following benchmarks were compiled using Microsoft Visual Studio 15.9.8 (Microsoft C/C++ Compiler version 19.16.27027.1) as x64 binaries and executed using Windows 10 on Intel(R) Core(TM) i7-3770 CPU @ 3.40GHz/3.90 GHz. Data was written to a HDD.
 
-The benchmark compares llamalog to its ancester [NanoLog](https://github.com/Iyengar111/NanoLog), to [spdlog](https://github.com/gabime/spdlog) which claims to be very fast and also uses {fmt} and to [g3log](https://github.com/KjellKod/g3log) which has also been very thoroughly tested for performance.
+The benchmark compares llamalog to its ancestor [NanoLog](https://github.com/Iyengar111/NanoLog), to [spdlog](https://github.com/gabime/spdlog) which claims to be very fast and also uses {fmt} and to [g3log](https://github.com/KjellKod/g3log) which has also been very thoroughly tested for performance.
 
 The following versions were used for the benchmark.
 
@@ -35,7 +35,7 @@ The following versions were used for the benchmark.
 |spdlog|bdfc7d2a5a4ad9cc1cebe1feb7e6fcc703840d71|
 |msvc-common|12bcbf336e284294498298b0e7214d9ae28b58aa|
 
-The following tables show the average of three runs for each logger at each setting. Lower numbers are always better. Precentiles, worst and average duration for a logger call are given in microseconds. The total duration, which also includes writing all data to the log file, is stated as seconds.
+The following tables show the average of three runs for each logger at each setting. Lower numbers are always better. Percentiles, worst and average duration for a logger call are given in microseconds. The total duration, which also includes writing all data to the log file, is stated as seconds.
 
 ### 1 Thread - 1,000,000 Messages
 llamalog is slightly faster than NanoLog when logging and more than twice as fast when writing which can be accounted to replacing the C++ stream API with native Windows `WriteFile` calls.
@@ -62,7 +62,7 @@ spdlog is still writing very fast, but the worst case latency does not keep up w
 |g3log|2.9|3.1|4.4|7.5|11.8|558.1|3.17071|12.60405|
 
 ### 4 Threads - 250,000 Messages Each (= 1,000,000 Messages in Total)
-The trend continues with llamalog and NanoLog again nearly doubling the latency. The same holds true for spdlog and even g3log now takes a little performance hit but still a lot lower than the other three on average. However, worst case latency severly suffers for g3log.
+The trend continues with llamalog and NanoLog again nearly doubling the latency. The same holds true for spdlog and even g3log now takes a little performance hit but still a lot lower than the other three on average. However, worst case latency severely suffers for g3log.
 
 |Logger|50th|75th|90th|99th|99.9th|Worst|Average|Total|
 |:---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -72,7 +72,7 @@ The trend continues with llamalog and NanoLog again nearly doubling the latency.
 |g3log|4.7|5.0|6.0|10.5|87.1|2,368.7|4.75029|12.55430|
 
 ### 10 Threads - 100,000 Messages Each (= 1,000,000 Messages in Total)
-At ten threads logging in parallel, timings for all loggers skyrocket. g3log and spdlog still lead the pack when relative numbers are compared. Both have average latencies of twice the results for 4 threds whereas timings for llamalog and NanoLog rise by a factor of five. spdlog shines with a worst case latency in a league of its own. This is also the first test where NanoLog clearly outperforms llamalog.
+At ten threads logging in parallel, timings for all loggers skyrocket. g3log and spdlog still lead the pack when relative numbers are compared. Both have average latencies of twice the results for 4 threads whereas timings for llamalog and NanoLog rise by a factor of five. spdlog shines with a worst case latency in a league of its own. This is also the first test where NanoLog clearly outperforms llamalog.
 
 |Logger|50th|75th|90th|99th|99.9th|Worst|Average|Total|
 |:---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -106,7 +106,7 @@ Longer messages with 4 threads show the expected results. Average latency for ll
 ### Conclusion
 The various loggers are obviously optimized for different use cases. Logging using spdlog and g3log takes longer but does not change that much with number of parallel threads or message size. On the other hand, both NanoLog and llamalog generally show the best results up to the 90th percentile.
 
-My aim was not to build the fastest logger but something that is easily useable and fast enough. Based on the data above, I think llamalog is mature enough to get in the ring. And I can use it for my programming without worrying too much.
+My aim was not to build the fastest logger but something that is easily usable and fast enough. Based on the data above, I think llamalog is mature enough to get in the ring. And I can use it for my programming without worrying too much.
 
 
 ## Usage
@@ -147,7 +147,7 @@ The patterns use the standard {fmt} syntax with the following enhancements:
 - Exceptions are supported as formatter arguments.
 
 ### Escaping
-Any character and string arguments are escaped. To prevent escaping, add the type specifier in the format string, i.e. `{0}` prints escaped, while `{0:s}` prints the raw string.
+Non-printable characters (i.e. ASCII < 0x20 and the backslash-character are escaped for arguments passed to the logger. Please note that the logger pattern itself is never modified. To prevent escaping of parameters, add the type specifier in the format string, i.e. `{0}` prints escaped, while `{0:s}` prints the raw string.
 
 ### Exception Formatting
 Exceptions can be formatted as first-class arguments, though adding the exception as a logger argument MUST happen inside the catch clause. If an exception is thrown using llamalog::Throw (and the macro LLAMALOG_THROW respectively) the result of `what()` is ignored and replaced by the logging message.
@@ -214,6 +214,10 @@ Run doxygen on `doc/public.doxy` for a user documentation and on `doc/developer.
 
 
 ## History
+2020-06-08: v2.0.0 - Support for logging exceptions, see [list of changes](CHANGES.md) for details
+2019-03-15: v1.0.0 - Initial Release
+
+## Motivation
 While writing a Windows desktop application I wanted to do some logging from a COM DLL. Experimenting with the usual logging macros which write to a file etc. did just not feel right. Also doing a lot of work in Java, I was used to highly configurable and fast loggers. There are many logging frameworks for C++, but either they required a config file (which I did not want to ship with just a small DLL), they were code-heavy or they required including tons of headers adding to the time needed for compilation. I also wanted to have a text-based log file which I could use for debugging right away without having to resort to some tool for decrypting or unpacking a log file.
 
 After a little research I found the marvelous [NanoLog](https://github.com/Iyengar111/NanoLog) written by Karthik Iyengar. The library is small, fast and did nearly everything I wanted. Benchmarks are well documented. So - perfect? Not quite, especially the formatting part did not make me really happy. Using the << operator for adding log arguments and having to interleave arguments and message text (e.g. `LOG_INFO("There are ") << count << " items."`) just felt awkward.
@@ -223,3 +227,6 @@ So I started to add some features, change a little bit here, add a little bit th
 
 ## Where Does the Name Come From?
 llamalog stands for (l)ightweight (l)ean (a)nd (m)ean (a)synchronous (log)ger for C++. As a plus, there are not yet so many hits in Google. And of course because llamas are cute and everybody likes them. :wink:
+
+## License
+The code is released under the Apache License Version 2.0. Please see [LICENSE](LICENSE) for details and [NOTICE](NOTICE) for the required information when using llamalog in your own work.
