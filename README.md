@@ -1,6 +1,10 @@
 # llamalog
 ![llamalog Logo](/img/logo_150x150.png) A **l**ightweight **l**ean **a**nd **m**ean **a**synchronous **log**ger for C++.
 
+![build](https://github.com/mbeckh/llamalog/workflows/build/badge.svg)
+[![GitHub release](https://img.shields.io/github/v/tag/mbeckh/llamalog)](https://github.com/mbeckh/llamalog/releases/)
+[![GitHub license](https://img.shields.io/github/license/mbeckh/llamalog)](https://github.com/mbeckh/llamalog/blob/master/LICENSE)
+
 ## Feature Highlights
 llamalog is basically [NanoLog](https://github.com/Iyengar111/NanoLog) reloaded. It **keeps** the following highlights:
 - All formatting (including any number or object to string conversions) is done in an asynchronous background thread.
