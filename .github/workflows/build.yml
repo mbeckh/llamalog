@@ -14,15 +14,18 @@ jobs:
     # Setting the path based on the specs saves around 50 seconds during execution
     env:
       Configuration: Debug
+      Suffix: d
       msbuildPath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin
       #devenvPath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE
       vstestconsolePath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow
       googletestadapterPath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\Extensions\ked32bft.vu0
 
     steps:
-    - name: Set configuration
+    - name: Set release configuration
       if: ${{ github.ref == 'master' || (github.event_name == 'pull_request' && github.base_ref == 'master') }}
-      run: echo "::set-env name=Configuration::Release"
+      run: |
+        echo "::set-env name=Configuration::Release"
+        echo "::set-env name=Suffix::"
 
 #    - name: Set  MSBuild environment
 #      run: |
@@ -50,10 +53,6 @@ jobs:
       # MSBuild always rebuilds for no known reason, and devenv.com seems painfully slow
       run: . '${{ env.msbuildPath }}\MSBuild.exe' llamalog.sln /p:Configuration=${{ env.Configuration }}
       #run: . '${{ env.devenvPath }}\devenv.com' llamalog.sln /Build "${{ env.Configuration }}|x64"
-
-    - name: Set variables
-      if: env.Configuration == 'Debug'
-      run: echo "::set-env name=Suffix::d"
 
     - name: Execute unit tests
       run: . '${{ env.vstestconsolePath }}\VSTest.Console.exe' bin/llamalog_Test_x64$env:Suffix.exe /TestAdapterPath:"${{ env.googletestadapterPath }}"
