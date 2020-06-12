@@ -127,7 +127,7 @@ void AddWriter(std::unique_ptr<LogWriter>&& writer);
 /// @param path A start of the path to shorten.
 /// @param check The next character to check.
 /// @return Filename and extension after the last path separator.
-[[nodiscard]] constexpr __declspec(noalias) _Ret_z_ const char* GetFilename(_In_z_ const char* const path, _In_opt_z_ const char* const check = nullptr) noexcept {
+constexpr __declspec(noalias) _Ret_z_ const char* GetFilename(_In_z_ const char* const path, _In_opt_z_ const char* const check = nullptr) noexcept {
 	if (!check) {
 		// first call
 		return GetFilename(path, path);

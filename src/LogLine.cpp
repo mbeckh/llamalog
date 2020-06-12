@@ -238,7 +238,7 @@ static_assert(std::tuple_size_v<Types> <= (std::numeric_limits<TypeId>::max() & 
 template <typename T, bool kPointer = false>
 constexpr TypeId kTypeId = TypeIndex<T, Types>::kValue | (kPointer ? kPointerFlag : 0);
 
-[[nodiscard]] constexpr bool IsPointer(const TypeId typeId) {
+constexpr bool IsPointer(const TypeId typeId) {
 	return (typeId & kPointerFlag) != 0;
 }
 
@@ -312,7 +312,7 @@ template <typename T>
 /// @brief Get the next allocation chunk, i.e. the next block which is a multiple of `#kGrowBytes`.
 /// @param value The required size.
 /// @return The value rounded up to multiples of `#kGrowBytes`.
-[[nodiscard]] constexpr __declspec(noalias) LogLine::Size GetNextChunk(const LogLine::Size value) noexcept {
+constexpr __declspec(noalias) LogLine::Size GetNextChunk(const LogLine::Size value) noexcept {
 	constexpr LogLine::Size kMask = kGrowBytes - 1u;
 	static_assert((kGrowBytes & kMask) == 0, "kGrowBytes must be a multiple of 2");
 	return value + ((kGrowBytes - (kGrowBytes & kMask)) & kMask);
