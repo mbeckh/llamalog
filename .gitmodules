@@ -15,3 +15,7 @@
 	url = https://github.com/mbeckh/msvc-common.git
 	update = rebase
 	branch = master
+[submodule "Detours"]
+	path = lib/Detours
+	url = https://github.com/Microsoft/Detours.git
+	branch = master

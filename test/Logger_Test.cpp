@@ -41,6 +41,31 @@ namespace llamalog::test {
 
 namespace t = testing;
 
+#define WIN32_FUNCTIONS(fn_)                                                                                                                                         \
+	fn_(2, BOOL, WINAPI, SetThreadPriority,                                                                                                                          \
+		(HANDLE hThread, int nPriority),                                                                                                                             \
+		(hThread, nPriority),                                                                                                                                        \
+		nullptr);                                                                                                                                                    \
+	fn_(4, BOOL, WINAPI, SetThreadInformation,                                                                                                                       \
+		(HANDLE hThread, THREAD_INFORMATION_CLASS ThreadInformationClass, LPVOID ThreadInformation, DWORD ThreadInformationSize),                                    \
+		(hThread, ThreadInformationClass, ThreadInformation, ThreadInformationSize),                                                                                 \
+		nullptr);                                                                                                                                                    \
+	fn_(8, int, WINAPI, WideCharToMultiByte,                                                                                                                         \
+		(UINT codePage, DWORD dwFlags, LPCWCH lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar), \
+		(codePage, dwFlags, lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpDefaultChar, lpUsedDefaultChar),                                              \
+		nullptr);                                                                                                                                                    \
+	fn_(1, void, WINAPI, WakeConditionVariable,                                                                                                                      \
+		(PCONDITION_VARIABLE ConditionVariable),                                                                                                                     \
+		(ConditionVariable),                                                                                                                                         \
+		nullptr);                                                                                                                                                    \
+	fn_(1, void, WINAPI, OutputDebugStringA,                                                                                                                         \
+		(LPCSTR lpOutputString),                                                                                                                                     \
+		(lpOutputString),                                                                                                                                            \
+		nullptr)
+
+DTGM_DECLARE_API_MOCK(Win32, WIN32_FUNCTIONS);
+
+
 namespace {
 
 #pragma warning(suppress : 4100)
@@ -50,6 +75,12 @@ MATCHER_P(MatchesRegex, pattern, "") {
 
 class LoggerTest : public t::Test {
 protected:
+	void TearDown() override {
+		DTGM_DETACH_API_MOCK(Win32);
+	}
+
+protected:
+	DTGM_DEFINE_API_MOCK(Win32, m_win32);
 	std::ostringstream m_out;
 	int m_lines = 0;
 };
@@ -86,32 +117,6 @@ private:
 
 }  // namespace
 
-#define WIN32_FUNCTIONS(fn_)                                                                                                                                         \
-	fn_(2, BOOL, WINAPI, SetThreadPriority,                                                                                                                          \
-		(HANDLE hThread, int nPriority),                                                                                                                             \
-		(hThread, nPriority),                                                                                                                                        \
-		nullptr);                                                                                                                                                    \
-	fn_(4, BOOL, WINAPI, SetThreadInformation,                                                                                                                       \
-		(HANDLE hThread, THREAD_INFORMATION_CLASS ThreadInformationClass, LPVOID ThreadInformation, DWORD ThreadInformationSize),                                    \
-		(hThread, ThreadInformationClass, ThreadInformation, ThreadInformationSize),                                                                                 \
-		nullptr);                                                                                                                                                    \
-	fn_(8, int, WINAPI, WideCharToMultiByte,                                                                                                                         \
-		(UINT codePage, DWORD dwFlags, LPCWCH lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCCH lpDefaultChar, LPBOOL lpUsedDefaultChar), \
-		(codePage, dwFlags, lpWideCharStr, cchWideChar, lpMultiByteStr, cbMultiByte, lpDefaultChar, lpUsedDefaultChar),                                              \
-		nullptr);                                                                                                                                                    \
-	fn_(1, void, WINAPI, WakeConditionVariable,                                                                                                                      \
-		(PCONDITION_VARIABLE ConditionVariable),                                                                                                                     \
-		(ConditionVariable),                                                                                                                                         \
-		nullptr);                                                                                                                                                    \
-	fn_(1, void, WINAPI, OutputDebugStringA,                                                                                                                         \
-		(LPCSTR lpOutputString),                                                                                                                                     \
-		(lpOutputString),                                                                                                                                            \
-		nullptr)
-
-
-DTGM_DECLARE_API_MOCK(Win32, WIN32_FUNCTIONS);
-
-
 //
 // GetFilename
 //
@@ -137,11 +142,9 @@ TEST_F(LoggerTest, GetFilename_IsEmpty_ReturnEmpty) {
 //
 
 TEST_F(LoggerTest, Initialize_SetThreadPriorityError_LogError) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
-	EXPECT_CALL(mock, SetThreadPriority(DTGM_ARG2))
+	EXPECT_CALL(m_win32, SetThreadPriority(DTGM_ARG2))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_HANDLE, FALSE));
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")))
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
 		.Times(0);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -149,8 +152,6 @@ TEST_F(LoggerTest, Initialize_SetThreadPriorityError_LogError) {
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
 	llamalog::Flush();
-
-	DTGM_DETACH_API_MOCK(Win32);
 
 	llamalog::Shutdown();
 
@@ -159,11 +160,9 @@ TEST_F(LoggerTest, Initialize_SetThreadPriorityError_LogError) {
 }
 
 TEST_F(LoggerTest, Initialize_SetThreadInformationError_LogError) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
-	EXPECT_CALL(mock, SetThreadInformation(DTGM_ARG4))
+	EXPECT_CALL(m_win32, SetThreadInformation(DTGM_ARG4))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_HANDLE, FALSE));
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")))
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
 		.Times(0);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -171,8 +170,6 @@ TEST_F(LoggerTest, Initialize_SetThreadInformationError_LogError) {
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
 	llamalog::Flush();
-
-	DTGM_DETACH_API_MOCK(Win32);
 
 	llamalog::Shutdown();
 
@@ -219,11 +216,9 @@ TEST_F(LoggerTest, Log_1000Lines) {
 //
 
 TEST_F(LoggerTest, LogNoExcept_OneLineWithNoExcept_NoThrow) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
 	const std::thread::id threadId = std::this_thread::get_id();
 
-	EXPECT_CALL(mock, WakeConditionVariable(DTGM_ARG1))
+	EXPECT_CALL(m_win32, WakeConditionVariable(DTGM_ARG1))
 		.WillOnce(t::DoDefault())  // initial log call
 		.WillRepeatedly(t::Invoke([threadId](PCONDITION_VARIABLE ConditionVariable) -> void {
 			if (std::this_thread::get_id() == threadId) {
@@ -234,7 +229,7 @@ TEST_F(LoggerTest, LogNoExcept_OneLineWithNoExcept_NoThrow) {
 			DTGM_REAL(Win32, WakeConditionVariable)(ConditionVariable);
 			// clang-format on
 		}));
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")));
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")));
 
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -244,7 +239,9 @@ TEST_F(LoggerTest, LogNoExcept_OneLineWithNoExcept_NoThrow) {
 		EXPECT_NO_THROW(llamalog::LogNoExcept(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", 8));
 		llamalog::Flush();
 
-		DTGM_DETACH_API_MOCK(Win32);
+		// reset default behavior
+		EXPECT_CALL(m_win32, WakeConditionVariable(DTGM_ARG1))
+			.WillOnce(t::DoDefault());
 
 		llamalog::Shutdown();
 	}
@@ -256,11 +253,9 @@ TEST_F(LoggerTest, LogNoExcept_OneLineWithNoExcept_NoThrow) {
 //
 
 TEST_F(LoggerTest, Encoding_WideCharToMultiByteError_LogError) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
-	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.WillRepeatedly(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_FLAGS, 0));
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")))
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
 		.Times(1);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -269,8 +264,6 @@ TEST_F(LoggerTest, Encoding_WideCharToMultiByteError_LogError) {
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
 	llamalog::Flush();
 
-	DTGM_DETACH_API_MOCK(Win32);
-
 	llamalog::Shutdown();
 
 	EXPECT_EQ(3, m_lines);
@@ -278,11 +271,9 @@ TEST_F(LoggerTest, Encoding_WideCharToMultiByteError_LogError) {
 }
 
 TEST_F(LoggerTest, Encoding_WideCharToMultiByteErrorWithoutFlush_LogError) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
-	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.WillRepeatedly(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_FLAGS, 0));
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")))
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
 		.Times(1);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -290,8 +281,6 @@ TEST_F(LoggerTest, Encoding_WideCharToMultiByteErrorWithoutFlush_LogError) {
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
 	llamalog::Shutdown();  // shutdown instead of flush before detach
-
-	DTGM_DETACH_API_MOCK(Win32);
 
 	EXPECT_EQ(3, m_lines);
 	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]*<ERROR>\\n[0-9:. -]{23} ERROR [^\\n]*WideCharToMultiByte for length 4: <ERROR> \\(1004\\)\\n[0-9:. -]{23} ERROR [^\\n]*WideCharToMultiByte for length \\d+: <ERROR> \\(1004\\)\\n"));
@@ -303,15 +292,13 @@ TEST_F(LoggerTest, Encoding_WideCharToMultiByteErrorWithoutFlush_LogError) {
 //
 
 TEST_F(LoggerTest, Exception_ExceptionDuringLogging_LogError) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
-	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.Times(2)
 		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
 			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test");
 		}))
 		.WillRepeatedly(t::DoDefault());
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")))
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
 		.Times(0);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -319,8 +306,6 @@ TEST_F(LoggerTest, Exception_ExceptionDuringLogging_LogError) {
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
 	llamalog::Flush();
-
-	DTGM_DETACH_API_MOCK(Win32);
 
 	llamalog::Shutdown();
 
@@ -329,13 +314,11 @@ TEST_F(LoggerTest, Exception_ExceptionDuringLogging_LogError) {
 }
 
 TEST_F(LoggerTest, Exception_ThrowObjectDuringLogging_LogError) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
-	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
 			throw "test error";
 		}));
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")))
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
 		.Times(0);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -344,8 +327,6 @@ TEST_F(LoggerTest, Exception_ThrowObjectDuringLogging_LogError) {
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
 	llamalog::Flush();
 
-	DTGM_DETACH_API_MOCK(Win32);
-
 	llamalog::Shutdown();
 
 	EXPECT_EQ(1, m_lines);
@@ -353,16 +334,14 @@ TEST_F(LoggerTest, Exception_ThrowObjectDuringLogging_LogError) {
 }
 
 TEST_F(LoggerTest, Exception_ExceptionDuringExceptionHandling_LogPanic) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
 	const std::thread::id threadId = std::this_thread::get_id();
 
-	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
 			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test");
 		}))
 		.WillRepeatedly(t::DoDefault());
-	EXPECT_CALL(mock, WakeConditionVariable(DTGM_ARG1))
+	EXPECT_CALL(m_win32, WakeConditionVariable(DTGM_ARG1))
 		.WillOnce(t::DoDefault())  // initial log call
 		.WillRepeatedly(t::Invoke([threadId](PCONDITION_VARIABLE ConditionVariable) -> void {
 			if (std::this_thread::get_id() != threadId) {
@@ -373,15 +352,13 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionHandling_LogPanic) {
 			DTGM_REAL(Win32, WakeConditionVariable)(ConditionVariable);
 			// clang-format on
 		}));
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")));
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")));
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
 	llamalog::Flush();
-
-	DTGM_DETACH_API_MOCK(Win32);
 
 	llamalog::Shutdown();
 
@@ -391,9 +368,7 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionHandling_LogPanic) {
 }
 
 TEST_F(LoggerTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
-	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.Times(3)
 		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
 			LLAMALOG_THROW(std::exception("Testing exception 1"), "arg={}", L"Test 1");
@@ -402,7 +377,7 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
 			LLAMALOG_THROW(std::exception("Testing exception 2"), "arg={}", L"Test 2");
 		}))
 		.WillRepeatedly(t::DoDefault());
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")))
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
 		.Times(0);
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
@@ -411,8 +386,6 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
 	llamalog::Flush();
 
-	DTGM_DETACH_API_MOCK(Win32);
-
 	llamalog::Shutdown();
 
 	EXPECT_EQ(1, m_lines);
@@ -420,22 +393,18 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
 }
 
 TEST_F(LoggerTest, Exception_PermamentExceptionDuringExceptionLogging_LogPanic) {
-	DTGM_DEFINE_API_MOCK(Win32, mock);
-
-	EXPECT_CALL(mock, WideCharToMultiByte(DTGM_ARG8))
+	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.Times(3)
 		.WillRepeatedly(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
 			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test", "foo");
 		}));
-	EXPECT_CALL(mock, OutputDebugStringA(t::StartsWith("PANIC: ")));
+	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")));
 
 	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
 	llamalog::Flush();
-
-	DTGM_DETACH_API_MOCK(Win32);
 
 	llamalog::Shutdown();
 
