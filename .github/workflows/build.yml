@@ -2,27 +2,28 @@ name: build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, develop ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, develop ]
 
 jobs:
   build:
     name: Build
-    strategy:
-      matrix:
-        configuration: [ Release ]
     runs-on: windows-latest
     
     # Setting the path based on the specs saves around 50 seconds during execution
     env:
-      Configuration: ${{ matrix.configuration }}
+      Configuration: Debug
       msbuildPath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin
       #devenvPath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE
       vstestconsolePath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow
       googletestadapterPath: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\Extensions\ked32bft.vu0
 
     steps:
+    - name: Set configuration
+      if: ${{ github.ref == 'master' || (github.event_name == 'pull_request' && github.base_ref == 'master') }}
+      run: echo "::set-env name=Configuration::Release"
+
 #    - name: Set  MSBuild environment
 #      run: |
 #      $path = vswhere.exe -latest -property installationPath
