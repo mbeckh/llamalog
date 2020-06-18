@@ -1,9 +1,11 @@
 # llamalog
 ![llamalog Logo](/img/logo_150x150.png) A **l**ightweight **l**ean **a**nd **m**ean **a**synchronous **log**ger for C++.
 
-![build](https://github.com/mbeckh/llamalog/workflows/build/badge.svg)
-[![GitHub release](https://img.shields.io/github/v/tag/mbeckh/llamalog)](https://github.com/mbeckh/llamalog/releases/)
-[![GitHub license](https://img.shields.io/github/license/mbeckh/llamalog)](https://github.com/mbeckh/llamalog/blob/master/LICENSE)
+[![Release](https://img.shields.io/github/v/tag/mbeckh/llamalog?label=Release&style=flat-square)](https://github.com/mbeckh/llamalog/releases/)
+[![Tests](https://img.shields.io/github/workflow/status/mbeckh/llamalog/build/master?label=Tests&logo=GitHub&style=flat-square)](https://github.com/mbeckh/llamalog/actions)
+![Coverage](https://img.shields.io/codecov/c/gh/mbeckh/llamalog/develop?label=Coverage&logo=codecov&style=flat-square)
+![Codacy Grade](https://img.shields.io/codacy/grade/5118cc5d34954c4fa1253f03b3980811?label=Code%20Quality&logo=codacy&style=flat-square)
+[![License](https://img.shields.io/github/license/mbeckh/llamalog?label=License&style=flat-square)](https://github.com/mbeckh/llamalog/blob/master/LICENSE)
 
 ## Feature Highlights
 llamalog is basically [NanoLog](https://github.com/Iyengar111/NanoLog) reloaded. It **keeps** the following highlights:

@@ -1,0 +1,4 @@
+codecov:
+  # Coverage is more meaningful when analyzed in non-optimized builds
+  branch: develop
+ 
