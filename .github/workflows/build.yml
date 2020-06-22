@@ -2,7 +2,7 @@ name: build
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ master, develop, 'feature**' ]
   pull_request:
     branches: [ master, develop ]
 
@@ -20,6 +20,25 @@ jobs:
     - name: Build  
       uses: mbeckh/build-action@v1
       with:
+        modes: build
+        projects: llamalog
+        tests: llamalog_Test
+        codacy-token: ${{ secrets.CODACY_PROJECT_API_TOKEN }}
+
+  analyze:
+    name: Analyze code
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Build  
+      uses: mbeckh/build-action@v1
+      with:
+        modes: analyze
         projects: llamalog
         tests: llamalog_Test
         codacy-token: ${{ secrets.CODACY_PROJECT_API_TOKEN }}

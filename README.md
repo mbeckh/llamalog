@@ -57,7 +57,6 @@ spdlog is slower on average but gives a very consistent behavior with a very low
 
 ### 2 Threads - 500,000 Messages Each (= 1,000,000 Messages in Total)
 The performance hit for both llamalog and NanoLog is higher (nearly twice the latency of the single threaded test) than for spdlog and g3log. However, llamalog and NanoLog deliver a better overall performance.
-
 spdlog is still writing very fast, but the worst case latency does not keep up with the single threaded test. g3log - as advertised - keeps a very consistent timing and hardly suffers any latency hit at all.
 
 |Logger  |50th|75th|90th|99th|99.9th|Worst|Average|   Total|
@@ -92,12 +91,12 @@ The following two benchmarks used data for log message longer than 500 bytes to 
 
 Compared with the single thread test all loggers take a performance hit, yet g3log again showing the smallest relative change. The total time for NanoLog nearly doubles which shows why the C++ stream API is not well suited for performance critical applications. spdlog handles this test remarkably well when the 99th and 99.9th percentiles are considered.
 
-|Logger|50th|75th|90th|99th|99.9th|Worst|Average|Total|
-|:---    |---:|---:|---:|---:|  ---:|    ---:|   ---:|    ---:|
-|llamalog|0.5|0.6|0.7|2.8|100.8|253.9|0.97674|9.16119|
-|NanoLog|0.6|0.7|0.8|3.2|103.9|541.3|1.18773|36.64014|
-|spdlog|1.0|1.1|1.2|3.8|92.7|447.8|1.27233|2.66903|
-|g3log|3.7|3.8|4.1|11.3|17.1|267.6|3.95533|13.51272|
+|Logger  |50th|75th|90th|99th|99.9th|Worst|Average|   Total|
+|:---    |---:|---:|---:|---:|  ---:| ---:|   ---:|    ---:|
+|llamalog| 0.5| 0.6| 0.7| 2.8| 100.8|253.9|0.97674| 9.16119|
+|NanoLog | 0.6| 0.7| 0.8| 3.2| 103.9|541.3|1.18773|36.64014|
+|spdlog  | 1.0| 1.1| 1.2| 3.8|  92.7|447.8|1.27233| 2.66903|
+|g3log   | 3.7| 3.8| 4.1|11.3|  17.1|267.6|3.95533|13.51272|
 
 ### 4 Threads - 250,000 Messages Each - Log Message Longer than 500 Bytes
 Longer messages with 4 threads show the expected results. Average latency for llamalog nearly doubles. This time, even g3log shows measurable differences. Again, the results for spdlog are very good and the 99th and 99.9th percentiles.
@@ -113,7 +112,6 @@ Longer messages with 4 threads show the expected results. Average latency for ll
 The various loggers are obviously optimized for different use cases. Logging using spdlog and g3log takes longer but does not change that much with number of parallel threads or message size. On the other hand, both NanoLog and llamalog generally show the best results up to the 90th percentile.
 
 My aim was not to build the fastest logger but something that is easily usable and fast enough. Based on the data above, I think llamalog is mature enough to get in the ring. And I can use it for my programming without worrying too much.
-
 
 ## Usage
 ### Configuration
@@ -184,18 +182,16 @@ try {
 ```
 More than one argument specifier MAY be used, e.g. `{:%F:%L}` will print the file name and line number where the exception happened. The following specifiers are supported. If an exception does not have the information an empty string is used in the output.
 
-|Specifier|Output                                                                                              |
-|:---     |:---                                                                                                |
-|`%l`     |The log message. If the log message is `nullptr`, `%w` is logged.                                   |
-|`%C`     |The name of the error category for `std::system_error`, `llamalog::SystemError` and derived classes.|
-|`%c`     |The error code for `std::system_error`, `llamalog::SystemError` and derived classes.                |
-|`%m`     |The error message for `std::system_error`, `llamalog::SystemError` and derived classes.             |
-|`%w`     |The exception message, i.e. the result of `std::exception` `what()`. If the exception was thrown using `llamalog::Throw` (and `LLAMALOG_THROW` respectively) the log message is returned and - in case of `std::system_error` and `llamalog::system_error` - includes the error message `%m` (i.e. the output matches `std::system_error` except for the exception argument replaced by the log message).|
-|`%T`     |The timestamp as `yyyy-MM-dd HH:mm:ss.SSS`.                                                         |
-|`%t`     |The thread id of the thread which has thrown the exception.                                         |
-|`%F`     |The file name where the exception was thrown.                                                       |
-|`%L`     |The line number where the exception was thrown.                                                     |
-|`%f`     |The function name where the exception was thrown.                                                   |
+-   `%l` - The log message. If the log message is `nullptr`, `%w` is logged.
+-   `%C` - The name of the error category for `std::system_error`, `llamalog::SystemError` and derived classes.
+-   `%c` - The error code for `std::system_error`, `llamalog::SystemError` and derived classes.
+-   `%m` - The error message for `std::system_error`, `llamalog::SystemError` and derived classes.
+-   `%w` - The exception message, i.e. the result of `std::exception` `what()`. If the exception was thrown using `llamalog::Throw` (and `LLAMALOG_THROW` respectively) the log message is returned and - in case of `std::system_error` and `llamalog::system_error` - includes the error message `%m` (i.e. the output matches `std::system_error` except for the exception argument replaced by the log message).
+-   `%T` - The timestamp as `yyyy-MM-dd HH:mm:ss.SSS`.
+-   `%t` - The thread id of the thread which has thrown the exception.
+-   `%F` - The file name where the exception was thrown.
+-   `%L` - The line number where the exception was thrown.
+-   `%f` - The function name where the exception was thrown.
 
 Exceptions are often caught using a base class. Therefore it is not known which data is actually available for logging. Using the pattern syntax above could either lead to ugly output (like in `An error with code {0:%c} has happened: {0:%m}` when the exception is not a `std::system_error` or overly complex catch clauses just to log the right data.
 
@@ -213,10 +209,8 @@ Using this syntax, the default exception pattern is `%w%[ (%C %c)]%[ @\{%T \[%t\
 
 By the way: Was I carried away by the formatting syntax? Maybe. Is it useful? Indeed. Does it hurt, if anyone does not want to use it? Not really. So I keep the feature although the default formatting will probably be sufficient for most purposes. :sunglasses:
 
-
 ## Documentation
 Run doxygen on `doc/public.doxy` for a user documentation and on `doc/developer.doxy` for a documentation also including all internals.
-
 
 ## History
 2020-06-08: v2.0.0 - Support for logging exceptions, see [list of changes](CHANGES.md) for details
@@ -229,8 +223,7 @@ After a little research I found the marvelous [NanoLog](https://github.com/Iyeng
 
 So I started to add some features, change a little bit here, add a little bit there, refactor just slightly... And after some time coding, here we are now.
 
-
-## Where Does the Name Come From?
+## The Meaning of the Name
 llamalog stands for (l)ightweight (l)ean (a)nd (m)ean (a)synchronous (log)ger for C++. As a plus, there are not yet so many hits in Google. And of course because llamas are cute and everybody likes them. :wink:
 
 ## License
