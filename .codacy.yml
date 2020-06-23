@@ -1,2 +1,12 @@
+engines:
+  duplication:
+    exclude_paths:
+      - test/**
+  metric:
+    exclude_paths:
+      - test/**
+  coverage:
+    exclude_paths:
+      - test/**
 exclude_paths:
   - lib/**

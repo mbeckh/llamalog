@@ -2434,7 +2434,7 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict file, st
 	static_assert(sizeof(StackBasedException) == 36);                                                                   // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
 	static_assert(sizeof(HeapBasedException) == 40);                                                                    // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
 	static_assert(offsetof(HeapBasedException, pHeapBuffer) == 36, "offset of pHeapBuffer");                            // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Assert exact layout.
-#elif
+#else
 	static_assert(false, "layout assertions not defined");
 #endif
 
@@ -3008,7 +3008,6 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 		}
 
 		const LogLine::Size messageOffset = offset + offsetof(ExceptionInformation /* StackBasedException */, padding);
-
 		const LogLine::Size bufferPos = messageOffset + messageLength * sizeof(char);
 		const LogLine::Align bufferPadding = GetPadding(&buffer[bufferPos], __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 		if (bufferPadding != 0) {
