@@ -1,12 +1,15 @@
 engines:
   duplication:
     exclude_paths:
-      - test/**
+      - 'test/**'
+      - 'msvc/llamalog_Test/**'
   metric:
     exclude_paths:
-      - test/**
+      - 'test/**'
+      - 'msvc/llamalog_Test/**'
   coverage:
     exclude_paths:
-      - test/**
+      - 'test/**'
+      - 'msvc/llamalog_Test/**'
 exclude_paths:
-  - lib/**
+  - 'lib/**'
