@@ -1,5 +1,8 @@
 # llamalog Changes
 
+## Upcoming Release
+-   \[Feature\] Use automated CI workflow.
+
 ## v2.0.0 - 2020-06-08
 -   \[Breaking\] Renamed LogLevel to Priority.
 -   \[Breaking\] Renamed CustomTypes.h to custom_types.h.

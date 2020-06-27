@@ -2,6 +2,7 @@ Checks: '
   bugprone-*,
   cert-*,
   clang-analyzer-*,
+  clang-diagnostic-*,
   cppcoreguidelines-*,
     -cppcoreguidelines-avoid-c-arrays,
     -cppcoreguidelines-owning-memory,

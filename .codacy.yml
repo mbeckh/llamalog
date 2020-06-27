@@ -11,5 +11,13 @@ engines:
     exclude_paths:
       - 'test/**'
       - 'msvc/llamalog_Test/**'
+  clang-tidy:
+    exclude_paths:
+      - '**/test/**'
+      - 'msvc/llamalog_Test/**'
+languages:
+  cpp:
+    extensions:
+      - '.h'
 exclude_paths:
   - 'lib/**'
