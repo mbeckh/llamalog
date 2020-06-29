@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http ://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,7 @@ limitations under the License.
 
 /// @file
 /// @copyright Code marked with "from NanoLog" is based on NanoLog (https://github.com/Iyengar111/NanoLog, commit
-/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed unter the MIT License.
+/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed under the MIT License.
 
 /*
 
@@ -118,7 +118,7 @@ public:
 	/// @remarks The function uses a placement `new` for creating the `LogLine`.
 	/// @warning This function MUST NOT be called more than once for each index because the data is moved internally.
 	/// @param readIndex The index to read.
-	/// @param pLogLine A pointer to the adress where the `LogLine` receiving the next event shall be created.
+	/// @param pLogLine A pointer to the address where the `LogLine` receiving the next event shall be created.
 	/// @return Returns `true` if a value is available and has been created in @p pLogLine.
 	/// @copyright Same as `Buffer::try_pop` from NanoLog.
 	[[nodiscard]] bool TryPop(const std::uint_fast32_t readIndex, LogLine* const pLogLine) noexcept {
@@ -219,7 +219,7 @@ public:
 	}
 
 	/// @brief Read the next available `LogLine` from this queue.
-	/// @param pLogLine A pointer to the adress where the `LogLine` receiving the next event shall be created.
+	/// @param pLogLine A pointer to the address where the `LogLine` receiving the next event shall be created.
 	/// @return `true` if data is available and a new `LogLine` has been created.
 	/// @copyright Same as `QueueBuffer::try_pop` from NanoLog.
 	[[nodiscard]] bool TryPop(LogLine* const pLogLine) noexcept {
@@ -415,7 +415,7 @@ private:
 			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, kConditionInterval, 0);
 		}
 
-		// the place where the logline is copied to
+		// the place where the log line is copied to
 		std::byte buffer[sizeof(LogLine)];
 		LogLine* const pLogLine = reinterpret_cast<LogLine*>(buffer);
 
@@ -503,7 +503,7 @@ private:
 	/// @copyright Same as `NanoLogger::m_state` from NanoLog.
 	std::atomic<State> m_state = State::kInit;  ///< @brief The current state of the logger.
 
-	/// @copyright Same as `NanoLogger::m_buffer_base` from NanoLog but on stack insteaf of heap.
+	/// @copyright Same as `NanoLogger::m_buffer_base` from NanoLog but on stack instead of heap.
 	QueueBuffer m_buffer;  ///< @brief The buffer.
 
 	/// @brief A condition to trigger the worker thread. @hideinitializer

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http ://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,7 @@ limitations under the License.
 
 /// @file
 /// @copyright Code marked with "from NanoLog" is based on NanoLog (https://github.com/Iyengar111/NanoLog, commit
-/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed unter the MIT License.
+/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed under the MIT License.
 #pragma once
 
 /*
@@ -159,7 +159,7 @@ void Log(LogLine&& logLine);
 /// @param line The logged line number, typically from `__LINE__`.
 /// @param function The logged function, typically from `__func__`. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 /// @param message The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-/// @param args Any args for @p message.
+/// @param args Any arguments for @p message.
 template <typename... T>
 void Log(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
 	LogLine logLine(priority, file, line, function, message);
@@ -173,8 +173,8 @@ void Log(const Priority priority, _In_z_ const char* __restrict const file, cons
 /// @param line The logged line number, typically from `__LINE__`.
 /// @param function The logged function, typically from `__func__`. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 /// @param message The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-/// @param args Any args for @p message.
-/// @copyright The function uses a trick that allows calling a binding lamba using a function pointer. It is published
+/// @param args Any arguments for @p message.
+/// @copyright The function uses a trick that allows calling a binding lambda using a function pointer. It is published
 /// by Joaquín M López Muñoz at http://bannalia.blogspot.com/2016/07/passing-capturing-c-lambda-functions-as.html.
 template <typename... T>
 void LogNoExcept(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) noexcept {
@@ -197,7 +197,7 @@ void LogNoExcept(const Priority priority, _In_z_ const char* __restrict const fi
 /// @param line The logged line number, typically from `__LINE__`.
 /// @param function The logged function, typically from `__func__`. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
 /// @param message The logged message. This MUST be a literal string, i.e. the value is not copied but always referenced by the pointer.
-/// @param args Any args for @p message.
+/// @param args Any arguments for @p message.
 template <typename... T>
 void LogInternal(const Priority priority, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_z_ const char* __restrict const message, T&&... args) {
 	const Priority internalPriority = internal::GetInternalPriority(priority);

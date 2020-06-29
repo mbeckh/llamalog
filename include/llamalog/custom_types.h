@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http ://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -110,10 +110,10 @@ struct FunctionTable {
 	/// @brief Type of the function to create a formatter argument.
 	using CreateFormatArg = fmt::format_context::format_arg (*)(const std::byte* __restrict) noexcept;
 
-	/// @brief A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
+	/// @brief A pointer to a function which creates the custom type either by copying. Both addresses can be assumed to be properly aligned.
 	Copy copy;
 	/// @brief A pointer to a function which creates the custom type either by copy or move, whichever is
-	/// more efficient. Both adresses can be assumed to be properly aligned.
+	/// more efficient. Both addresses can be assumed to be properly aligned.
 	Move move;
 	/// @brief A pointer to a function which calls the type's destructor.
 	Destruct destruct;
@@ -128,10 +128,10 @@ struct FunctionTable {
 /// @tparam kPointer `true` if this is a pointer value with null-safe formatting.
 template <typename T, bool kPointer>
 struct FunctionTableInstance {
-	/// @brief A pointer to a function which creates the custom type either by copying. Both adresses can be assumed to be properly aligned.
+	/// @brief A pointer to a function which creates the custom type either by copying. Both addresses can be assumed to be properly aligned.
 	FunctionTable::Copy copy = Copy<T>;
 	/// @brief A pointer to a function which creates the custom type either by copy or move, whichever is
-	/// more efficient. Both adresses can be assumed to be properly aligned.
+	/// more efficient. Both addresses can be assumed to be properly aligned.
 	FunctionTable::Move move = Move<T>;
 	/// @brief A pointer to a function which calls the type's destructor.
 	FunctionTable::Destruct destruct = Destruct<T>;

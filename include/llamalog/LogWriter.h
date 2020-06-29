@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http ://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,7 +75,7 @@ public:
 	/// @brief Format a timestamp as `YYYY-MM-DD HH:mm:ss.SSS` to a target buffer.
 	/// @details The buffer MUST be of type `fmt::basic_memory_buffer`.
 	/// In case of an error, `0000-00-00 00:00:00.000` is written.
-	/// @remarks Using a template instead of the concrete type removes the need to add {fmt} as a depency for this header.
+	/// @remarks Using a template instead of the concrete type removes the need to add {fmt} as a dependency for this header.
 	/// @tparam Out The target buffer which MUST be of type `fmt::basic_memory_buffer`.
 	/// @param out The target buffer.
 	/// @param timestamp The timestamp.
@@ -129,7 +129,7 @@ public:
 
 public:
 	/// @brief Create the writer.
-	/// @warning The logger deletes any log files older than the neweset @p maxFiles files. Please ensure that any
+	/// @warning The logger deletes any log files older than the newest @p maxFiles files. Please ensure that any
 	/// files are copied to a different location if their contents are required for a longer period.
 	/// @param priority Only events at this `#Priority` or above will be logged by this writer.
 	/// @param directory Directory where to store the log files.

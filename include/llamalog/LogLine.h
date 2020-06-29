@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http ://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,7 @@ limitations under the License.
 
 /// @file
 /// @copyright Code marked with "from NanoLog" is based on NanoLog (https://github.com/Iyengar111/NanoLog, commit
-/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed unter the MIT License.
+/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed under the MIT License.
 #pragma once
 
 /*
@@ -59,7 +59,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #ifndef LLAMALOG_LOGLINE_SIZE
 /// @brief The size of a log line in bytes.
 /// @details Defined as a macro to allow redefinition for different use cases.
-/// @note The value MUST be a power of 2, elso compilation will fail.
+/// @note The value MUST be a power of 2, else compilation will fail.
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Use macro to allow override in build settings.
 #define LLAMALOG_LOGLINE_SIZE 256
 #endif
@@ -96,11 +96,11 @@ public:
 	LogLine(Priority priority, _In_z_ const char* __restrict file, std::uint32_t line, _In_z_ const char* __restrict function, _In_opt_z_ const char* __restrict message) noexcept;
 
 	/// @brief Copy the buffers. @details The copy constructor is required for `std::curent_exception`.
-	/// @param logLine The source logline.
+	/// @param logLine The source log line.
 	LogLine(const LogLine& logLine);
 
 	/// @brief Move the buffers.
-	/// @param logLine The source logline.
+	/// @param logLine The source log line.
 	LogLine(LogLine&& logLine) noexcept;
 
 	/// @brief Calls the destructor of every custom argument.
@@ -108,12 +108,12 @@ public:
 
 public:
 	/// @brief Copy the buffers. @details The assignment operator is required for `std::exception`.
-	/// @param logLine The source logline.
+	/// @param logLine The source log line.
 	/// @return This object.
 	LogLine& operator=(const LogLine& logLine);
 
 	/// @brief Move the buffers.
-	/// @param logLine The source logline.
+	/// @param logLine The source log line.
 	/// @return This object.
 	LogLine& operator=(LogLine&& logLine) noexcept;
 
@@ -478,7 +478,7 @@ private:
 	/// @brief Copy a string to the argument buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the size of the string in characters (NOT
 	/// including a terminating null character) and finally the string's characters (again NOT including a terminating null character).
-	/// This function is optimized compared to `WriteString(const wchar_t*, std::size_t)` because `char` has no alignment requirenents.
+	/// This function is optimized compared to `WriteString(const wchar_t*, std::size_t)` because `char` has no alignment requirements.
 	/// @remarks The type of @p len is `std::size_t` because the check if the length exceeds the capacity of `#Length` happens inside this function.
 	/// @param arg The string to add.
 	/// @param len The string length in characters NOT including a terminating null character.
@@ -522,11 +522,11 @@ private:
 	/// @param objectSize The size of the object.
 	/// @param align The alignment requirement of the type.
 	/// @param functionTable A pointer to the `internal::FunctionTable`.
-	/// @return An adress where to copy the current argument.
+	/// @return An address where to copy the current argument.
 	[[nodiscard]] __declspec(restrict) std::byte* WriteNonTriviallyCopyable(Size objectSize, Align align, _In_ const void* functionTable);
 
 private:
-	///< @brief The stack buffer used for small payloads.
+	/// @brief The stack buffer used for small payloads.
 	/// @copyright Same as `NanoLogLine::m_stack_buffer` from NanoLog.
 	std::byte m_stackBuffer[LLAMALOG_LOGLINE_SIZE                     // target size
 							- sizeof(Priority)                        // m_priority

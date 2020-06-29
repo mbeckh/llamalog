@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http ://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,7 @@ limitations under the License.
 
 /// @file
 /// @copyright Code marked with "from NanoLog" is based on NanoLog (https://github.com/Iyengar111/NanoLog, commit
-/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed unter the MIT License.
+/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed under the MIT License.
 
 /*
 
@@ -394,7 +394,7 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 		// no file created, try again for next message
 	}
 
-	// using CreateFile with FILE_APPEND_DATA does not requre a SetFilePointer to the end
+	// using CreateFile with FILE_APPEND_DATA does not require a SetFilePointer to the end
 }
 
 }  // namespace llamalog

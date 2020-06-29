@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http ://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,7 +16,7 @@ limitations under the License.
 
 /// @file
 /// @copyright Code marked with "from NanoLog" is based on NanoLog (https://github.com/Iyengar111/NanoLog, commit
-/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed unter the MIT License.
+/// 40a53c36e0336af45f7664abeb939f220f78273e), copyright 2016 Karthik Iyengar and distributed under the MIT License.
 
 /*
 
@@ -100,7 +100,7 @@ struct ExceptionInformation final {
 	DWORD threadId;                   ///< @brief Same as `LogLine::m_threadId`.
 	std::uint32_t line;               ///< @brief Same as `LogLine::m_line`.
 	LogLine::Size used;               ///< @brief Same as `LogLine::m_used`.
-	LogLine::Length length;           ///< @brief Length of the exception message (if `messsage` is `nullptr`).
+	LogLine::Length length;           ///< @brief Length of the exception message (if `message` is `nullptr`).
 	bool hasNonTriviallyCopyable;     ///< @brief Same as `LogLine::m_hasNonTriviallyCopyable`.
 	std::byte padding[1];             ///< @brief Padding, but used for `exceptionMessage` in `StackBasedException`.
 };
@@ -209,7 +209,7 @@ using Types = std::tuple<
 template <typename T, typename Types>
 struct TypeIndex;
 
-/// @brief Get `#TypeId` at compile time. @details Specialization for the the final step in recursive evaluation.
+/// @brief Get `#TypeId` at compile time. @details Specialization for the final step in recursive evaluation.
 /// @tparam T The type to get the id for.
 /// @tparam Types The tuple of types.
 /// @copyright The template is copied from `TupleIndex` from NanoLog.
@@ -329,7 +329,7 @@ constexpr __declspec(noalias) LogLine::Size GetNextChunk(const LogLine::Size val
 
 
 /// @brief Get the additional logging context of an exception if it exists and get optional information for `std::error_code`.
-/// @note The function MUST be called from within a catch block to get the object, elso `nullptr` is returned for both values.
+/// @note The function MUST be called from within a catch block to get the object, else `nullptr` is returned for both values.
 /// @param pCode A pointer which is set if the exception is of type `std::system_error` or `system_error`, else the parameter is set to `nullptr`.
 /// @return The logging context if it exists, else `nullptr`.
 [[nodiscard]] _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException(_Out_ const std::error_code*& pCode) noexcept {
@@ -574,10 +574,10 @@ struct fmt::formatter<llamalog::InlineWideChar> {
 	/// @param ctx see `fmt::formatter::format`.
 	/// @return see `fmt::formatter::format`.
 	auto format(const llamalog::InlineWideChar& arg, fmt::basic_format_context<fmt::buffer_range<char>::iterator, char>& ctx) const {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-		// address of buffer is the address of the lenght field
+		// address of buffer is the address of the length field
 		const std::byte* const buffer = &arg.pos;
 
-		llamalog::LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		llamalog::LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&length, buffer, sizeof(length));
 
 		const llamalog::LogLine::Align padding = llamalog::GetPadding<wchar_t>(&buffer[sizeof(length)]);
@@ -691,7 +691,7 @@ struct ExceptionFormatter {
 	/// @param start The start of the subformat pattern.
 	/// @param end The end (exclusive) of the subformat pattern.
 	/// @param ctx The current `fmt::format_context`.
-	/// @param out The ouput target.
+	/// @param out The output target.
 	/// @param args The current formatting arguments.
 	/// @param formatted Set to `true` if any output was produced.
 	/// @return The iterator pointing at the last character of the sub pattern, i.e. the `]`. If not `]` exists, the result is @p end.
@@ -738,7 +738,7 @@ struct ExceptionFormatter {
 	/// @param start The start of the format pattern.
 	/// @param end The end (exclusive) of the format pattern.
 	/// @param ctx The current `fmt::format_context`.
-	/// @param out The ouput target.
+	/// @param out The output target.
 	/// @param args The current formatting arguments.
 	/// @return `true` if any output was produced.
 	bool Format(const T& arg, std::string::const_iterator start, const std::string::const_iterator& end, fmt::format_context& ctx, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) const {
@@ -1075,7 +1075,7 @@ private:
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainException, PlainSystemError>, int> = 0>
 	[[nodiscard]] static bool FormatWhat(const std::byte* __restrict const ptr, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& /* args */) {
-		LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&length, &ptr[offsetof(T, length)], sizeof(length));
 
 		const std::string_view sv(reinterpret_cast<const char*>(&ptr[sizeof(T)]), length);
@@ -1105,7 +1105,7 @@ private:
 	[[nodiscard]] static bool FormatErrorCode(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::byte* const systemError = GetSystemError(ptr);
 
-		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&code, &systemError[offsetof(T, code)], sizeof(code));
 
 		static_assert(sizeof(code) == sizeof(DWORD));
@@ -1131,7 +1131,7 @@ private:
 	[[nodiscard]] static bool FormatCategoryName(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::byte* const systemError = GetSystemError(ptr);
 
-		const std::error_category* pCategory;                                              // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		const std::error_category* pCategory;                                              // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&pCategory, &systemError[offsetof(T, pCategory)], sizeof(pCategory));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 		const std::string_view sv(pCategory->name());
@@ -1151,7 +1151,7 @@ private:
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainSystemError>, int> = 0>
 	[[nodiscard]] static bool FormatCategoryName(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
-		const std::error_category* pCategory;                                      // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		const std::error_category* pCategory;                                      // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&pCategory, &ptr[offsetof(T, pCategory)], sizeof(pCategory));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 		const std::string_view sv(pCategory->name());
@@ -1181,9 +1181,9 @@ private:
 	[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
 		const std::byte* const systemError = GetSystemError(ptr);
 
-		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&code, &systemError[offsetof(T, code)], sizeof(code));
-		const std::error_category* pCategory;                                              // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		const std::error_category* pCategory;                                              // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&pCategory, &systemError[offsetof(T, pCategory)], sizeof(pCategory));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 		const std::string s = pCategory->message(code);
@@ -1203,9 +1203,9 @@ private:
 	/// @return Always `true`.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, PlainSystemError>, int> = 0>
 	[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
-		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		int code;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&code, &ptr[offsetof(T, code)], sizeof(code));
-		const std::error_category* pCategory;                                      // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		const std::error_category* pCategory;                                      // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&pCategory, &ptr[offsetof(T, pCategory)], sizeof(pCategory));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 		const std::string s = pCategory->message(code);
@@ -1231,7 +1231,7 @@ private:
 
 	/// @brief Helper to get the argument buffer.
 	/// @param ptr The address of the current exception argument.
-	/// @return The address of the argment buffer.
+	/// @return The address of the argument buffer.
 	template <typename A = T, typename std::enable_if_t<is_any_v<A, HeapBasedException, HeapBasedSystemError>, int> = 0>
 	[[nodiscard]] static __declspec(restrict, noalias) const std::byte* GetBuffer(const std::byte* __restrict const ptr) noexcept {
 		return reinterpret_cast<const HeapBasedException*>(ptr)->pHeapBuffer;
@@ -1382,7 +1382,7 @@ void DecodeArgument<null>(_Inout_ std::vector<fmt::format_context::format_arg>& 
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
 void DecodeArgument<const char*>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
-	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
 	// no padding required
@@ -1401,7 +1401,7 @@ void DecodeArgument<const char*>(_Inout_ std::vector<fmt::format_context::format
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
 void DecodeArgument<const wchar_t*>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
-	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
 	const LogLine::Align padding = GetPadding<wchar_t>(&buffer[position + kTypeSize<const wchar_t*>]);
@@ -1525,7 +1525,7 @@ void DecodeArgument<HeapBasedSystemError>(_Inout_ std::vector<fmt::format_contex
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
 void DecodeArgument<PlainException>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
-	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainException, length)], sizeof(length));
 
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PlainException*>(&buffer[position + sizeof(TypeId)])));
@@ -1541,7 +1541,7 @@ void DecodeArgument<PlainException>(_Inout_ std::vector<fmt::format_context::for
 /// @copyright This function is based on `decode(std::ostream&, char*, Arg*)` from NanoLog.
 template <>
 void DecodeArgument<PlainSystemError>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
-	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, length)], sizeof(length));
 
 	args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PlainSystemError*>(&buffer[position + sizeof(TypeId)])));
@@ -1559,13 +1559,13 @@ template <>
 void DecodeArgument<TriviallyCopyable>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	constexpr auto kArgSize = kTypeSize<TriviallyCopyable>;
 
-	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable::CreateFormatArg createFormatArg;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	internal::FunctionTable::CreateFormatArg createFormatArg;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&createFormatArg, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(createFormatArg));
 
-	LogLine::Size size;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Size size;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(createFormatArg)], sizeof(size));
 
 	args.push_back(createFormatArg(&buffer[position + kArgSize + padding]));
@@ -1585,13 +1585,13 @@ template <>
 void DecodeArgument<NonTriviallyCopyable>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
-	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable* pFunctionTable;                                                                     // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	internal::FunctionTable* pFunctionTable;                                                                     // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&pFunctionTable, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
-	LogLine::Size size;                                                                                               // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Size size;                                                                                               // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 	args.push_back(pFunctionTable->createFormatArg(&buffer[position + kArgSize + padding]));
@@ -1628,7 +1628,7 @@ void SkipInlineString(_In_ const std::byte* __restrict buffer, _Inout_ LogLine::
 /// @param position The current read position. The value is set to the start of the next argument.
 template <>
 __declspec(noalias) void SkipInlineString<char>(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
-	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
 	// no padding required
@@ -1643,7 +1643,7 @@ __declspec(noalias) void SkipInlineString<char>(_In_ const std::byte* __restrict
 /// @param position The current read position. The value is set to the start of the next argument.
 template <>
 __declspec(noalias) void SkipInlineString<wchar_t>(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
-	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId)], sizeof(length));
 
 	const LogLine::Size offset = position + kTypeSize<const wchar_t*>;
@@ -1656,7 +1656,7 @@ __declspec(noalias) void SkipInlineString<wchar_t>(_In_ const std::byte* __restr
 /// @param buffer The argument buffer.
 /// @param position The current read position. The value is set to the start of the next argument.
 __declspec(noalias) void SkipPlainException(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
-	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainException, length)], sizeof(length));
 
 	position += kTypeSize<PlainException> + length * sizeof(char);
@@ -1666,7 +1666,7 @@ __declspec(noalias) void SkipPlainException(_In_ const std::byte* __restrict con
 /// @param buffer The argument buffer.
 /// @param position The current read position. The value is set to the start of the next argument.
 __declspec(noalias) void SkipPlainSystemError(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
-	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Length length;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&length, &buffer[position + sizeof(TypeId) + offsetof(PlainSystemError, length)], sizeof(length));
 
 	position += kTypeSize<PlainSystemError> + length * sizeof(char);
@@ -1678,10 +1678,10 @@ __declspec(noalias) void SkipPlainSystemError(_In_ const std::byte* __restrict c
 __declspec(noalias) void SkipTriviallyCopyable(_In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
 	constexpr auto kArgSize = kTypeSize<TriviallyCopyable>;
 
-	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	LogLine::Size size;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Size size;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(internal::FunctionTable::CreateFormatArg)], sizeof(size));
 
 	position += kArgSize + padding + size;
@@ -1793,13 +1793,13 @@ void CopyHeapBasedSystemError(_In_ const std::byte* __restrict const src, _Out_ 
 void CopyNonTriviallyCopyable(_In_ const std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ LogLine::Size& position) noexcept {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
-	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&padding, &src[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable* pFunctionTable;                                                                  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	internal::FunctionTable* pFunctionTable;                                                                  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&pFunctionTable, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
-	LogLine::Size size;                                                                                            // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Size size;                                                                                            // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 	// copy management data
@@ -1905,13 +1905,13 @@ __declspec(noalias) void MoveHeapBasedSystemError(_In_ const std::byte* __restri
 void MoveNonTriviallyCopyable(_Inout_ std::byte* __restrict const src, _Out_ std::byte* __restrict const dst, _Inout_ LogLine::Size& position) noexcept {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
-	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&padding, &src[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable* pFunctionTable;                                                                  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	internal::FunctionTable* pFunctionTable;                                                                  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&pFunctionTable, &src[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
-	LogLine::Size size;                                                                                            // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Size size;                                                                                            // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&size, &src[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 	// copy management data
@@ -1996,13 +1996,13 @@ void DestructHeapBasedSystemError(_In_ const std::byte* __restrict const buffer,
 void DestructNonTriviallyCopyable(_In_ std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) noexcept {
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 
-	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Align padding;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&padding, &buffer[position + sizeof(TypeId)], sizeof(padding));
 
-	internal::FunctionTable* pFunctionTable;                                                                     // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	internal::FunctionTable* pFunctionTable;                                                                     // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&pFunctionTable, &buffer[position + sizeof(TypeId) + sizeof(padding)], sizeof(pFunctionTable));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
-	LogLine::Size size;                                                                                               // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+	LogLine::Size size;                                                                                               // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 	std::memcpy(&size, &buffer[position + sizeof(TypeId) + sizeof(padding) + sizeof(pFunctionTable)], sizeof(size));  // NOLINT(bugprone-sizeof-expression): Size of pointer is intended.
 
 	const LogLine::Size offset = position + kArgSize + padding;
@@ -2023,7 +2023,7 @@ void DestructNonTriviallyCopyable(_In_ std::byte* __restrict const buffer, _Inou
 /// @copyright Derived from `NanoLogLine::stringify(std::ostream&)` from NanoLog.
 void CopyArgumentsFromBufferTo(_In_reads_bytes_(used) const std::byte* __restrict const buffer, const LogLine::Size used, std::vector<fmt::format_context::format_arg>& args) {
 	for (LogLine::Size position = 0; position < used;) {
-		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&typeId, &buffer[position], sizeof(typeId));
 
 		/// @cond hide
@@ -2091,7 +2091,7 @@ void CopyObjects(_In_reads_bytes_(used) const std::byte* __restrict const src, _
 
 	LogLine::Size start = 0;
 	for (LogLine::Size position = 0; position < used;) {
-		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&typeId, &src[position], sizeof(typeId));
 
 		/// @cond hide
@@ -2199,7 +2199,7 @@ void MoveObjects(_In_reads_bytes_(used) std::byte* __restrict const src, _Out_wr
 
 	LogLine::Size start = 0;
 	for (LogLine::Size position = 0; position < used;) {
-		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&typeId, &src[position], sizeof(typeId));
 
 		/// @cond hide
@@ -2301,7 +2301,7 @@ void MoveObjects(_In_reads_bytes_(used) std::byte* __restrict const src, _Out_wr
 /// @param used The number of bytes used in the buffer.
 void CallDestructors(_Inout_updates_bytes_(used) std::byte* __restrict buffer, LogLine::Size used) noexcept {
 	for (LogLine::Size position = 0; position < used;) {
-		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using memcpy.
+		TypeId typeId;  // NOLINT(cppcoreguidelines-init-variables): Initialized using std::memcpy.
 		std::memcpy(&typeId, &buffer[position], sizeof(typeId));
 
 		/// @cond hide
@@ -2957,7 +2957,7 @@ void LogLine::WriteString(_In_reads_(len) const wchar_t* __restrict const arg, c
 
 void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const BaseException* pBaseException, _In_opt_ const std::error_code* const pCode) {
 	const std::size_t messageLen = message ? std::strlen(message) : 0;
-	// silenty trim message to size
+	// silently trim message to size
 	const LogLine::Length messageLength = static_cast<LogLine::Length>(std::min<std::size_t>(messageLen, std::numeric_limits<LogLine::Length>::max()));
 	if (messageLength < messageLen) {
 		LLAMALOG_INTERNAL_WARN("Exception message of length {} trimmed to {}", messageLen, messageLength);

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http ://www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -51,7 +51,7 @@ public:
 protected:
 	/// @brief Create the formatted error message with placeholder replacement.
 	/// @param pCode An optional error code used to add an error message to the result.
-	/// @return The formatted error mesasge.
+	/// @return The formatted error message.
 	[[nodiscard]] _Ret_z_ const char* What(_In_opt_ const std::error_code* pCode) const noexcept;
 
 	/// @brief Allow access to the `LogLine` by base classes.
@@ -74,7 +74,7 @@ private:
 };
 
 
-/// @brief A helper class to transfer system errros.
+/// @brief A helper class to transfer system errors.
 /// @details Other than `std::system_error` the message is not formatted until the time the `LogLine` is written or `#system_error::what()` is called.
 class system_error : public std::runtime_error {  // NOLINT(readability-identifier-naming): Looks better when named like std::system_error.
 public:
@@ -99,7 +99,7 @@ public:
 	}
 
 	/// @brief Create the formatted error message.
-	/// @return The formatted error mesasge.
+	/// @return The formatted error message.
 	[[nodiscard]] _Ret_z_ const char* what() const noexcept override;
 
 private:
@@ -130,7 +130,7 @@ public:
 	ExceptionDetail(E&& exception, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_opt_z_ const char* __restrict const message, T&&... args)
 		: E(std::forward<E>(exception))
 		, BaseException(file, line, function, message) {
-#pragma warning(suppress : 4834)  // value MAY BE discarded if there are no args
+#pragma warning(suppress : 4834)  // value MAY BE discarded if there are no arguments
 		(GetLogLine() << ... << std::forward<T>(args));
 	}
 	ExceptionDetail(ExceptionDetail&) = default;            ///< @defaultconstructor
@@ -144,7 +144,7 @@ public:
 public:
 	/// @brief Override `std::exception::what()` to allow formatted output.
 	/// @details Delegates to `BaseException::what()` for placeholder replacement if a message is present.
-	/// @return The formatted error mesasge.
+	/// @return The formatted error message.
 #pragma warning(suppress : 4702)
 	[[nodiscard]] _Ret_z_ const char* what() const noexcept override {  // NOLINT(readability-identifier-naming): override must use same name.
 		if (GetLogLine().GetPattern()) {
@@ -190,7 +190,7 @@ template <typename E, typename... T>
 }
 
 /// @brief Get the additional logging context of an exception if it exists.
-/// @note The function MUST be called from within a catch block to get the object, elso `nullptr` is returned.
+/// @note The function MUST be called from within a catch block to get the object, else `nullptr` is returned.
 /// @return The logging context if it exists, else `nullptr`.
 [[nodiscard]] _Ret_maybenull_ const BaseException* GetCurrentExceptionAsBaseException() noexcept;
 
