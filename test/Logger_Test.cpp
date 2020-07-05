@@ -151,7 +151,6 @@ TEST_F(LoggerTest, Initialize_SetThreadPriorityError_LogError) {
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -169,7 +168,6 @@ TEST_F(LoggerTest, Initialize_SetThreadInformationError_LogError) {
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -262,7 +260,6 @@ TEST_F(LoggerTest, Encoding_WideCharToMultiByteError_LogError) {
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -305,7 +302,6 @@ TEST_F(LoggerTest, Exception_ExceptionDuringLogging_LogError) {
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -325,7 +321,6 @@ TEST_F(LoggerTest, Exception_ThrowObjectDuringLogging_LogError) {
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -358,7 +353,6 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionHandling_LogPanic) {
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -369,12 +363,9 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionHandling_LogPanic) {
 
 TEST_F(LoggerTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
-		.Times(3)
+		.Times(2)
 		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
-			LLAMALOG_THROW(std::exception("Testing exception 1"), "arg={}", L"Test 1");
-		}))
-		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
-			LLAMALOG_THROW(std::exception("Testing exception 2"), "arg={}", L"Test 2");
+			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test Exception");
 		}))
 		.WillRepeatedly(t::DoDefault());
 	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
@@ -384,17 +375,16 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
 	EXPECT_EQ(1, m_lines);
-	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: arg=Test 2 @[^\\n]+\\n"));
+	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: arg=Test Exception @[^\\n]+\\n"));
 }
 
 TEST_F(LoggerTest, Exception_PermamentExceptionDuringExceptionLogging_LogPanic) {
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
-		.Times(3)
+		.Times(2)
 		.WillRepeatedly(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
 			LLAMALOG_THROW(std::exception("Testing exception"), "arg={}", L"Test", "foo");
 		}));
@@ -404,7 +394,6 @@ TEST_F(LoggerTest, Exception_PermamentExceptionDuringExceptionLogging_LogPanic) 
 	llamalog::Initialize(std::move(writer));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 

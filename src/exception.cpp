@@ -45,7 +45,8 @@ _Ret_z_ const char* BaseException::What(_In_opt_ const std::error_code* const pC
 		std::vector<fmt::format_context::format_arg> args;
 		m_logLine.CopyArgumentsTo(args);
 
-		fmt::basic_memory_buffer<char, 256> buf;  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Default exception message buffer size.
+		constexpr std::size_t kDefaultBufferSize = 256;
+		fmt::basic_memory_buffer<char, kDefaultBufferSize> buf;
 		fmt::vformat_to(buf, fmt::to_string_view(m_logLine.GetPattern()),
 						fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
 

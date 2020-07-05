@@ -52,6 +52,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 
 #include <windows.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cinttypes>
 #include <cstddef>
@@ -59,6 +60,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 #include <cstdio>
 #include <deque>
 #include <exception>
+#include <iterator>
 #include <memory>
 #include <new>
 #include <thread>
@@ -68,9 +70,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 namespace llamalog {
 
 namespace {
-
-/// @brief Variable to prevent endless loops caused by internal errors while logging internal errors.
-std::atomic_uint8_t g_currentPriority;
 
 /// @brief A lock free buffer supporting parallel readers and writers.
 /// @copyright Derived from `class Buffer` from NanoLog.
@@ -249,41 +248,55 @@ public:
 	}
 
 	/// @brief Waits until all currently available entries have been written.
+	/// @param flushToEmpty A regular flush ensures that all data is written that has been scheduled for logging when
+	/// calling this function. Set @p flushToEmpty to `true` to wait until all logging is finished. This includes
+	/// any error messages generated from logging but may also take a long time to return when log entries are written
+	/// frequently.
 	/// @param wait A lambda expression called when waiting is required.
 	template <typename W>
-	void Flush(W&& wait) {
-		const Buffer* writeBuffer;      // NOLINT(cppcoreguidelines-init-variables): Flow of control looks somewhat clearer to me when not nesting the blocks.
-		std::uint_fast32_t writeIndex;  // NOLINT(cppcoreguidelines-init-variables): Flow of control looks somewhat clearer to me when not nesting the blocks.
+	void Flush(const bool flushToEmpty, W&& wait) {
 		while (true) {
-			writeBuffer = m_currentWriteBuffer.load(std::memory_order_acquire);
-			writeIndex = m_writeIndex.load(std::memory_order_acquire);
+			const Buffer* const writeBuffer = m_currentWriteBuffer.load(std::memory_order_acquire);
+			const std::uint_fast32_t writeIndex = m_writeIndex.load(std::memory_order_acquire);
 			// check if still the same
-			if (m_currentWriteBuffer.load(std::memory_order_acquire) == writeBuffer && writeIndex < Buffer::kBufferSize) {
-				break;
+			if (m_currentWriteBuffer.load(std::memory_order_acquire) != writeBuffer || writeIndex >= Buffer::kBufferSize) {
+				// read again without waiting
+				continue;
 			}
-		}
-		while (true) {
-			if (!m_currentReadBuffer) {
-				return;
-			}
-			if (m_currentReadBuffer == writeBuffer) {
-				if (writeIndex <= m_readIndex) {
-					return;
+
+			// The following loop is run once when flushing to empty, i.e. the write position is updated after each turn
+			do {
+				// if m_currentReadBuffer == nullptr, the processing loop has not yet started
+				const Buffer* const readBuffer = m_currentReadBuffer;
+				const std::uint_fast32_t readIndex = m_readIndex;
+				// check if still the same
+				if (m_currentReadBuffer != readBuffer || readIndex >= Buffer::kBufferSize) {
+					// read again without waiting
+					continue;
 				}
-				goto wait;  // NOLINT(cppcoreguidelines-avoid-goto, hicpp-avoid-goto): Flow of control looks somewhat clearer to me when using goto.
-			}
-			{
-				SpinLock spinLock(m_flag);
-				for (const std::unique_ptr<Buffer>& ptr : m_buffers) {
-					if (ptr.get() == writeBuffer) {
-						goto wait;  // NOLINT(cppcoreguidelines-avoid-goto, hicpp-avoid-goto): Flow of control looks somewhat clearer to me when using goto.
+
+				if (readBuffer && readBuffer == writeBuffer) {
+					if (writeIndex <= readIndex) {
+						SpinLock spinLock(m_flag);
+						if (m_buffers.empty()) {
+							continue;
+						}
+						if (m_buffers.back().get() == writeBuffer) {
+							// the last buffer and fully read, we're actually done
+							return;
+						}
+						if (std::none_of(m_buffers.cbegin(), std::prev(m_buffers.cend()), [writeBuffer](const std::unique_ptr<Buffer>& ptr) noexcept {
+								return ptr.get() == writeBuffer;
+							})) {
+							// write buffer is no longer queued
+							return;
+						}
 					}
 				}
-				// write buffer is no longer queued
-				return;
-			}
-		wait:
-			wait();
+
+				// wait and then try again
+				wait();
+			} while (!flushToEmpty);
 		}
 	}
 
@@ -397,7 +410,7 @@ public:
 		while (m_state.load(std::memory_order_acquire) == State::kInit) {
 			SleepConditionVariableSRW(&m_wakeConsumer, &m_lock, kConditionInterval, CONDITION_VARIABLE_LOCKMODE_SHARED);
 		}
-		m_buffer.Flush([this]() noexcept {
+		m_buffer.Flush(false, [this]() noexcept {
 			ReleaseSRWLockShared(&m_lock);
 			// do not use SleepConditionVariableSRW so that regular `AddLine` does not have to do a WakeAllConditionVariable
 			Sleep(kFlushInterval);
@@ -427,19 +440,21 @@ private:
 				});
 
 				const Priority priority = pLogLine->GetPriority();
-				g_currentPriority.store(static_cast<std::uint8_t>(priority), std::memory_order_release);
 				for (const std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 					if (logWriter->IsLogged(priority)) {
+						internal::AdjustPriority(priority, 1u);
 						try {
 							logWriter->Log(*pLogLine);
 						} catch (const std::exception& e) {
 							try {
+								internal::AdjustPriority(priority, 2u);
 								LLAMALOG_INTERNAL_ERROR("Error writing log: {}", e);
 							} catch (...) {
 								LLAMALOG_PANIC(e.what());
 							}
 						} catch (...) {
 							try {
+								internal::AdjustPriority(priority, 2u);
 								LLAMALOG_INTERNAL_ERROR("Error writing log");
 							} catch (...) {
 								LLAMALOG_PANIC("Error writing log");
@@ -460,19 +475,21 @@ private:
 			});
 
 			const Priority priority = pLogLine->GetPriority();
-			g_currentPriority.store(static_cast<std::uint8_t>(priority), std::memory_order_release);
 			for (const std::unique_ptr<LogWriter>& logWriter : m_logWriters) {
 				if (logWriter->IsLogged(priority)) {
+					internal::AdjustPriority(priority, 1u);
 					try {
 						logWriter->Log(*pLogLine);
 					} catch (const std::exception& e) {
 						try {
+							internal::AdjustPriority(priority, 2u);
 							LLAMALOG_INTERNAL_ERROR("Error writing log: {}", e);
 						} catch (...) {
 							LLAMALOG_PANIC(e.what());
 						}
 					} catch (...) {
 						try {
+							internal::AdjustPriority(priority, 2u);
 							LLAMALOG_INTERNAL_ERROR("Error writing log");
 						} catch (...) {
 							LLAMALOG_PANIC("Error writing log");
@@ -539,8 +556,25 @@ void Start() {
 	g_pAtomicLogger.load(std::memory_order_acquire)->Start();
 }
 
-[[nodiscard]] Priority GetInternalPriority(const Priority priority) noexcept {
-	return static_cast<Priority>(static_cast<std::uint8_t>(priority) | ((g_currentPriority.load(std::memory_order_acquire) & 3u) + 1));
+Priority AdjustPriority(const Priority priority, const std::uint8_t currentAttempt) noexcept {
+	static thread_local std::uint8_t combinedAttempts;
+	const std::uint8_t currentRetry = static_cast<std::uint8_t>(priority) & 3u;
+
+	if (currentAttempt) {
+		// set the handling to the maximum of processing stage, i.e. internal exception handling and the
+		// number of internal errors leading to this message
+		combinedAttempts = std::max<std::uint8_t>(currentRetry + 1u, currentAttempt);
+	} else if (combinedAttempts) {
+		const std::uint8_t retryCount = std::clamp<std::uint8_t>(static_cast<std::uint8_t>(currentRetry + 1u), combinedAttempts, 3);
+		return static_cast<Priority>((static_cast<std::uint8_t>(priority) & ~3u) | retryCount);
+	} else {
+		// not called from logger
+	}
+	return priority;
+}
+
+[[nodiscard]] bool ShouldPanic(const Priority priority) noexcept {
+	return (static_cast<std::uint8_t>(priority) & 3u) == 3u;
 }
 
 void CallNoExcept(const char* __restrict const file, const std::uint32_t line, const char* __restrict const function, void (*const thunk)(_In_z_ const char* __restrict const, const std::uint32_t, _In_z_ const char* __restrict const, _In_ void* const), _In_ void* const log) noexcept {
@@ -559,7 +593,8 @@ void CallNoExcept(const char* __restrict const file, const std::uint32_t line, c
 
 void Panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
 	// avoid anything that could cause an error
-	char msg[1024];                                                                               // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Default buffer size for panic log.
+	constexpr std::size_t kDefaultBufferSize = 1024;
+	char msg[kDefaultBufferSize];
 	if (sprintf_s(msg, "PANIC: %s @ %s(%s:%" PRIu32 ")\n", message, function, file, line) < 0) {  // NOLINT(cppcoreguidelines-pro-type-vararg): sprintf_s as a last resort.
 		OutputDebugStringA("PANIC: Error writing log\n");
 	} else {

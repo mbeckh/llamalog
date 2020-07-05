@@ -21,6 +21,8 @@ limitations under the License.
 #pragma once
 
 #include <llamalog/LogLine.h>
+#include <llamalog/modifier_format.h>  // IWYU pragma: keep
+#include <llamalog/modifier_types.h>   // IWYU pragma: keep
 
 #include <fmt/core.h>
 
@@ -29,31 +31,30 @@ limitations under the License.
 #include <cstddef>
 #include <memory>
 #include <new>
-#include <string>
 #include <type_traits>
 
-namespace llamalog {
-
-namespace internal {
-
-/// @brief Marker type for a value for pointers.
-/// @details Required as a separate type to ignore formatting placeholders for `null` value.
-template <typename T>
-struct ptr final {  // NOLINT(readability-identifier-naming): Looks better as a 'simple type'.
-	// NOLINTNEXTLINE(readability-identifier-naming): clang-tidy can't properly decide between public member and constant member.
-	const T value;  ///< @brief The actual value.
-};
+namespace llamalog::internal {
 
 /// @brief Helper function to create a type-safe formatter argument.
 /// @tparam T The type of the argument.
+/// @tparam kPointer `true` if the argument is a pointer to a custom value.
+/// @tparam kEscape `true` if the output should be escaped.
 /// @param objectData The serialized byte stream of an object of type @p T.
 /// @return A newly created `fmt::format_context::format_arg`.
-template <typename T, bool kPointer>
+template <typename T, bool kPointer, bool kEscape>
 fmt::format_context::format_arg CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
 	if constexpr (kPointer) {
-		return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const ptr<T>*>(objectData));
+		if constexpr (kEscape) {
+			return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<EscapedArgument<const PointerArgument<T>*>*>(objectData));
+		} else {
+			return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PointerArgument<T>*>(objectData));
+		}
 	} else {
-		return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const T*>(objectData));
+		if constexpr (kEscape) {
+			return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<EscapedArgument<const T*>*>(objectData));
+		} else {
+			return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const T*>(objectData));
+		}
 	}
 }
 
@@ -126,7 +127,7 @@ struct FunctionTable {
 /// @details This is the actual function table with all pointers.
 /// @tparam T The type.
 /// @tparam kPointer `true` if this is a pointer value with null-safe formatting.
-template <typename T, bool kPointer>
+template <typename T, bool kPointer, bool kEscaped>
 struct FunctionTableInstance {
 	/// @brief A pointer to a function which creates the custom type either by copying. Both addresses can be assumed to be properly aligned.
 	FunctionTable::Copy copy = Copy<T>;
@@ -137,38 +138,40 @@ struct FunctionTableInstance {
 	FunctionTable::Destruct destruct = Destruct<T>;
 	/// @brief A pointer to a function which has a single argument of type `std::byte*` and returns a
 	/// newly created `fmt::format_context::format_arg` object.
-	FunctionTable::CreateFormatArg createFormatArg = CreateFormatArg<T, kPointer>;
+	FunctionTable::CreateFormatArg createFormatArg = CreateFormatArg<T, kPointer, kEscaped>;
 };
 
 constexpr std::size_t kMaxCustomTypeSize = 0xFFFFFFFu;  // allow max. 255 MB
 
-}  // namespace internal
+}  // namespace llamalog::internal
 
-template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
+namespace llamalog {
+
+template <typename T, bool kEscape, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 
 	static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
 	static_assert(sizeof(X) <= internal::kMaxCustomTypeSize, "custom type is too large");
-	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::CreateFormatArg<X, false>));
+	WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(std::addressof(arg)), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::CreateFormatArg<X, false, kEscape>));
 	return *this;
 }
 
-template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
+template <typename T, bool kEscape, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T* const arg) {
 	if (arg) {
 		using X = std::remove_pointer_t<std::remove_cv_t<T>>;
 
 		static_assert(alignof(X) <= __STDCPP_DEFAULT_NEW_ALIGNMENT__, "alignment of custom type");
 		static_assert(sizeof(X) <= internal::kMaxCustomTypeSize, "custom type is too large");
-		WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(arg), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::CreateFormatArg<X, true>));
+		WriteTriviallyCopyable(reinterpret_cast<const std::byte*>(arg), sizeof(X), alignof(X), reinterpret_cast<void (*)()>(internal::CreateFormatArg<X, true, kEscape>));
 	} else {
 		WriteNullPointer();
 	}
 	return *this;
 }
 
-template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int>>
+template <typename T, bool kEscape, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T& arg) {
 	using X = std::remove_cv_t<T>;
 
@@ -176,7 +179,7 @@ LogLine& LogLine::AddCustomArgument(const T& arg) {
 	static_assert(sizeof(X) <= internal::kMaxCustomTypeSize, "custom type is too large");
 	static_assert(std::is_copy_constructible_v<X>, "type MUST be copy constructible");
 
-	using FunctionTable = internal::FunctionTableInstance<X, false>;  // offsetof does not support , in type
+	using FunctionTable = internal::FunctionTableInstance<X, false, kEscape>;  // offsetof does not support , in type
 	static_assert(sizeof(FunctionTable) == sizeof(internal::FunctionTable));
 	static_assert(offsetof(FunctionTable, copy) == offsetof(internal::FunctionTable, copy));
 	static_assert(offsetof(FunctionTable, move) == offsetof(internal::FunctionTable, move));
@@ -189,7 +192,7 @@ LogLine& LogLine::AddCustomArgument(const T& arg) {
 	return *this;
 }
 
-template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int>>
+template <typename T, bool kEscape, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int>>
 LogLine& LogLine::AddCustomArgument(const T* const arg) {
 	if (arg) {
 		using X = std::remove_pointer_t<std::remove_cv_t<T>>;
@@ -198,7 +201,7 @@ LogLine& LogLine::AddCustomArgument(const T* const arg) {
 		static_assert(sizeof(X) <= internal::kMaxCustomTypeSize, "custom type is too large");
 		static_assert(std::is_copy_constructible_v<X>, "type MUST be copy constructible");
 
-		using FunctionTable = internal::FunctionTableInstance<X, true>;  // offsetof does not support , in type
+		using FunctionTable = internal::FunctionTableInstance<X, true, kEscape>;  // offsetof does not support , in type
 		static_assert(sizeof(FunctionTable) == sizeof(internal::FunctionTable));
 		static_assert(offsetof(FunctionTable, copy) == offsetof(internal::FunctionTable, copy));
 		static_assert(offsetof(FunctionTable, move) == offsetof(internal::FunctionTable, move));
@@ -215,42 +218,3 @@ LogLine& LogLine::AddCustomArgument(const T* const arg) {
 }
 
 }  // namespace llamalog
-
-/// @brief Specialization of `fmt::formatter` for a pointer value.
-template <typename T>
-struct fmt::formatter<llamalog::internal::ptr<T>> {
-public:
-	/// @brief Parse the format string.
-	/// @param ctx see `fmt::formatter::parse`.
-	/// @return see `fmt::formatter::parse`.
-	auto parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-		auto it = ctx.begin();
-		if (it != ctx.end() && *it == ':') {
-			++it;
-		}
-		auto end = it;
-		while (end != ctx.end() && *end != '?' && *end != '}') {
-			++end;
-		}
-		m_format.reserve(end - it + 3);
-		m_format.push_back('{');
-		m_format.push_back(':');
-		m_format.append(it, end);
-		m_format.push_back('}');
-		while (end != ctx.end() && *end != '}') {
-			++end;
-		}
-		return end;
-	}
-
-	/// @brief Format the pointer value.
-	/// @param arg A pointer value.
-	/// @param ctx see `fmt::formatter::format`.
-	/// @return see `fmt::formatter::format`.
-	auto format(const llamalog::internal::ptr<T>& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
-		return fmt::format_to(ctx.out(), m_format, arg.value);
-	}
-
-private:
-	std::string m_format;  ///< @brief The format pattern for the null value
-};

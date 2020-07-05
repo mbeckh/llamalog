@@ -1,7 +1,10 @@
 # llamalog Changes
 
 ## Upcoming Release
+-   \[Breaking\] No longer logging all output escaped.
 -   \[Feature\] Use automated CI workflow.
+-   \[Fix\] Fixed panic logging triggered too early when logging internal messages from non-logger threads.
+-   \[Fix\] Fixed Logger::Flush  not working properly when called right after initialization.
 
 ## v2.0.0 - 2020-06-08
 -   \[Breaking\] Renamed LogLevel to Priority.

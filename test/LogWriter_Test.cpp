@@ -341,7 +341,6 @@ TEST_F(LogWriterTest, CreateFile_TemporaryErrorDuringRollFile_LogError) {
 	llamalog::Initialize(std::move(writer), std::move(fileWriter));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -361,7 +360,6 @@ TEST_F(LogWriterTest, CreateFile_PermanentErrorDuringRollFile_LogError) {
 	llamalog::Initialize(std::move(writer), std::move(fileWriter));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -392,7 +390,6 @@ TEST_F(LogWriterTest, WriteFile_WritePartially_WriteChunked) {
 	llamalog::Initialize(std::move(writer), std::move(fileWriter));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -420,7 +417,6 @@ TEST_F(LogWriterTest, WriteFile_TemporaryError_LogError) {
 	llamalog::Initialize(std::move(writer), std::move(fileWriter));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -448,7 +444,6 @@ TEST_F(LogWriterTest, WriteFile_PermanentError_LogError) {
 	llamalog::Initialize(std::move(writer), std::move(fileWriter));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -470,7 +465,6 @@ TEST_F(LogWriterTest, CloseHandle_ErrorDuringDestruct_KeepSilent) {
 	llamalog::Initialize(std::move(writer), std::move(fileWriter));
 
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 
@@ -500,7 +494,6 @@ TEST_F(LogWriterTest, CloseHandle_ErrorDuringRollFile_LogError) {
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
 	Sleep(1500);
 	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", "Test");
-	llamalog::Flush();
 
 	llamalog::Shutdown();
 

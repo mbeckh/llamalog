@@ -81,6 +81,29 @@ enum class Priority : std::uint8_t {
 	kFatal = 128  ///< A condition leading to program abort.
 };
 
+/// @brief Wrap a value in this type to get its output escaped according to C rules. Currently, only low ASCII
+/// characters are replaced by their named or numeric counterparts, i.e. 0x0A becomes \n, 0x11 comes \x11.
+/// @tparam T The type of the argument.
+template <typename T>
+struct escape final {
+	/// @brief Create a new wrapper for a parameter.
+	/// @param val The parameter value.
+	explicit escape(const T& val) noexcept
+		: value(val) {
+		// empty
+	}
+	escape(const escape&) = delete;
+	escape(escape&&) = delete;
+	~escape() noexcept = default;
+
+public:
+	escape& operator=(const escape&) = delete;
+	escape& operator=(escape&&) = delete;
+
+public:
+	const T& value;  ///< @brief The parameter value.
+};
+
 /// @brief The class contains all data for formatting and output which happens asynchronously.
 /// @details @internal The stack buffer is allocated in the base class for a better memory layout.
 /// @copyright The interface of this class is based on `class NanoLogLine` from NanoLog.
@@ -333,6 +356,18 @@ public:
 	/// @return The current object for method chaining.
 	LogLine& operator<<(const std::exception& arg);
 
+	/// @brief Request output escaping for a parameter.
+	/// @tparam T The type of the actual parameter.
+	/// @param arg The parameter wrapped in a `escape` struct.
+	/// @return The current object for method chaining.
+	template <typename T>
+	LogLine& operator<<(const escape<T>& arg) {
+		m_escape = true;
+		*this << arg.value;
+		m_escape = false;
+		return *this;
+	}
+
 public:
 	/// @brief Get the timestamp for the log event.
 	/// @return The timestamp.
@@ -401,7 +436,7 @@ public:
 	/// @tparam T The type of the argument. This type MUST have a copy constructor.
 	/// @param arg The object.
 	/// @return The current object for method chaining.
-	template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int> = 0>
+	template <typename T, bool kEscaped = false, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int> = 0>
 	LogLine& AddCustomArgument(const T& arg);
 
 	/// @brief Copy a log argument of a pointer to a custom type to the argument buffer.
@@ -410,7 +445,7 @@ public:
 	/// @tparam T The type of the argument. This type MUST have a copy constructor.
 	/// @param arg The pointer to an object.
 	/// @return The current object for method chaining.
-	template <typename T, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int> = 0>
+	template <typename T, bool kEscaped = false, typename std::enable_if_t<std::is_trivially_copyable_v<T>, int> = 0>
 	LogLine& AddCustomArgument(const T* arg);
 
 	/// @brief Copy a log argument of a custom type to the argument buffer.
@@ -420,7 +455,7 @@ public:
 	/// @tparam T The type of the argument.
 	/// @param arg The object.
 	/// @return The current object for method chaining.
-	template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
+	template <typename T, bool kEscaped = false, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
 	LogLine& AddCustomArgument(const T& arg);
 
 	/// @brief Copy a log argument of a pointer to a custom type to the argument buffer.
@@ -430,7 +465,7 @@ public:
 	/// @tparam T The type of the argument.
 	/// @param arg The pointer to an object.
 	/// @return The current object for method chaining.
-	template <typename T, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
+	template <typename T, bool kEscaped = false, typename std::enable_if_t<!std::is_trivially_copyable_v<T>, int> = 0>
 	LogLine& AddCustomArgument(const T* arg);
 
 public:
@@ -465,7 +500,7 @@ private:
 
 	/// @brief Copy a pointer argument to the buffer.
 	/// @details @internal The internal layout is the `TypeId` followed by the bytes of the value.
-	/// If @p arg is the `nullptr`, a special null argument is added.
+	/// If @p arg is the `nullptr`, a special NullValue argument is added.
 	/// @tparam T The type of the argument. The type MUST be copyable using `std::memcpy`.
 	/// @param arg The value to add.
 	template <typename T>
@@ -524,6 +559,9 @@ private:
 	/// @param functionTable A pointer to the `internal::FunctionTable`.
 	/// @return An address where to copy the current argument.
 	[[nodiscard]] __declspec(restrict) std::byte* WriteNonTriviallyCopyable(Size objectSize, Align align, _In_ const void* functionTable);
+
+private:
+	inline static thread_local bool m_escape = false;  ///< @brief `true` if the currently added argument should use output escaping.
 
 private:
 	/// @brief The stack buffer used for small payloads.

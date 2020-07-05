@@ -156,12 +156,11 @@ TEST(LogLineTest, char_IsCharacterAsHex_PrintHex) {
 
 	EXPECT_EQ("4d", str);
 }
-
 TEST(LogLineTest, char_IsEscaped_PrintEscaped) {
 	LogLine logLine = GetLogLine();
 	{
 		const char arg = '\n';
-		logLine << arg;
+		logLine << escape(arg);
 	}
 	const std::string str = logLine.GetLogMessage();
 
@@ -799,7 +798,7 @@ TEST(LogLineTest, charptr_HasEscapedChar_PrintEscapeChar) {
 	LogLine logLine = GetLogLine();
 	{
 		const char* const arg = "Test\nNext Line\\";
-		logLine << arg;
+		logLine << escape(arg);
 	}
 	const std::string str = logLine.GetLogMessage();
 
@@ -903,7 +902,7 @@ TEST(LogLineTest, wcharptr_HasEscapedChar_PrintEscapedValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"Test\nNext Line\\";
-		logLine << arg;
+		logLine << escape(arg);
 	}
 	const std::string str = logLine.GetLogMessage();
 
@@ -1010,7 +1009,7 @@ TEST(LogLineTest, string_IsReference_PrintValue) {
 TEST(LogLineTest, wstring_IsValue_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
-		logLine << std::wstring(L"Test\xE4\n");
+		logLine << escape(std::wstring(L"Test\xE4\n"));
 	}
 	const std::string str = logLine.GetLogMessage();
 
@@ -1021,7 +1020,7 @@ TEST(LogLineTest, wstring_IsReference_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const std::wstring arg(L"Test\xE4\n");
-		logLine << arg;
+		logLine << escape(arg);
 	}
 	const std::string str = logLine.GetLogMessage();
 

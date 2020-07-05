@@ -42,6 +42,8 @@ CheckOptions:
     value: '1'
   - key:   hicpp-multiway-paths-covered.WarnOnMissingElse
     value: '1'
+  - key:   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals
+    value: '1'
   - key:   misc-unused-parameters.StrictMode
     value: '1'
   - key:   modernize-use-override.IgnoreDestructors

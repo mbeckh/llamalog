@@ -39,6 +39,18 @@
     <ClCompile Include="..\..\src\winapi_log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\marker_format.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\buffer_management.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\modifier_format.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\exception_format.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -69,6 +81,27 @@
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\llamalog\custom_types.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\marker_format.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\marker_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\buffer_management.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\exception_format.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\exception_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\modifier_types.h">
+      <Filter>Header Files\llamalog</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\llamalog\modifier_format.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
   </ItemGroup>

@@ -17,9 +17,11 @@ limitations under the License.
 #include "llamalog/exception.h"
 
 #include "llamalog/LogLine.h"
+#include "llamalog/LogWriter.h"
+#include "llamalog/Logger.h"
 #include "llamalog/custom_types.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -27,10 +29,14 @@ limitations under the License.
 
 #include <algorithm>
 #include <exception>
+#include <memory>
+#include <regex>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 
 namespace llamalog::test {
 
@@ -38,14 +44,14 @@ namespace t = testing;
 
 struct TracingArg {
 public:
-	TracingArg(bool* p) noexcept
+	TracingArg(int* p) noexcept
 		: pCalled(p) {
 		// empty
 	}
 	TracingArg(const TracingArg&) noexcept = default;
 	TracingArg(TracingArg&&) noexcept = default;
 	~TracingArg() noexcept = default;
-	bool* pCalled;
+	int* pCalled;
 };
 
 #ifdef __clang_analyzer__
@@ -77,7 +83,7 @@ public:
 	/// @return see `fmt::formatter::format`.
 	fmt::format_context::iterator format(const llamalog::test::TracingArg& arg, fmt::format_context& ctx) {
 		std::string_view sv("TracingArg");
-		*arg.pCalled = true;
+		(*arg.pCalled)++;
 		return std::copy(sv.cbegin(), sv.cend(), ctx.out());
 	}
 };
@@ -92,15 +98,26 @@ LogLine GetLogLine(const char* const pattern = "{0} {1:%[%C (%c={0}) ]}caused by
 class TestCategory : public std::error_category {
 public:
 	_Ret_z_ const char* name() const noexcept final {
+		callsToName++;
 		return "TestError";
 	}
 
 	std::string message(const int code) const final {
+		callsToMessage++;
 		if (code == 7) {
 			return "This is an error message";
 		}
+		if (code == 666) {
+			throw std::runtime_error("runtime error in message()");
+		}
+		if (code == 667) {
+			throw "anything";
+		}
 		return "This is a different error message";
 	}
+
+	mutable int callsToName = 0;
+	mutable int callsToMessage = 0;
 };
 
 class TestCategoryEscape : public std::error_category {
@@ -120,6 +137,40 @@ public:
 static const TestCategory kTestCategory;
 static const TestCategoryEscape kTestCategoryEscape;
 
+#pragma warning(suppress : 4100)
+MATCHER_P(MatchesRegex, pattern, "") {
+	return std::regex_match(arg, std::regex(pattern));
+}
+
+class StringWriter : public LogWriter {
+public:
+	StringWriter(const Priority logLevel, std::ostringstream& out, int& lines)
+		: LogWriter(logLevel)
+		, m_out(out)
+		, m_lines(lines) {
+		// empty
+	}
+
+protected:
+	void Log(const LogLine& logLine) final {
+		fmt::basic_memory_buffer<char, 256> buffer;
+		fmt::format_to(buffer, "{} {} [{}] {}:{} {} {}\n",
+					   FormatTimestamp(logLine.GetTimestamp()),
+					   FormatPriority(logLine.GetPriority()),
+					   logLine.GetThreadId(),
+					   logLine.GetFile(),
+					   logLine.GetLine(),
+					   logLine.GetFunction(),
+					   logLine.GetLogMessage());
+		m_out << std::string_view(buffer.data(), buffer.size());
+		++m_lines;
+	}
+
+private:
+	std::ostringstream& m_out;
+	int& m_lines;
+};
+
 }  // namespace
 
 
@@ -131,8 +182,131 @@ TEST(exceptionTest, systemerror_what_GetMessage) {
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
 	} catch (std::exception& e) {
+		const int callsBefore = kTestCategory.callsToMessage;
+
 		EXPECT_STREQ(e.what(), "testmsg: This is an error message");
+		EXPECT_EQ(callsBefore + 1, kTestCategory.callsToMessage);
+
+		// uses cached message
+		EXPECT_STREQ(e.what(), "testmsg: This is an error message");
+		EXPECT_EQ(callsBefore + 1, kTestCategory.callsToMessage);
 	}
+}
+
+TEST(exceptionTest, systemerror_whatWithMessage_GetMessage) {
+	try {
+		LLAMALOG_THROW(system_error(7, kTestCategory, "testmsg"), "MyMessage {}", 7);
+	} catch (std::exception& e) {
+		const int callsBefore = kTestCategory.callsToMessage;
+
+		EXPECT_STREQ(e.what(), "MyMessage 7: This is an error message");
+		EXPECT_EQ(callsBefore + 1, kTestCategory.callsToMessage);
+
+		// uses cached message
+		EXPECT_STREQ(e.what(), "MyMessage 7: This is an error message");
+		EXPECT_EQ(callsBefore + 1, kTestCategory.callsToMessage);
+	}
+}
+
+TEST(exceptionTest, systemerror_whatThrowsException_GetError) {
+	std::ostringstream out;
+	int lines = 0;
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, out, lines);
+	llamalog::Initialize(std::move(writer));
+
+	try {
+		throw system_error(666, kTestCategory, "testmsg");
+	} catch (std::exception& e) {
+		const int callsBefore = kTestCategory.callsToMessage;
+		EXPECT_STREQ(e.what(), "<ERROR>");
+		EXPECT_EQ(callsBefore + 1, kTestCategory.callsToMessage);
+
+		// no caching
+		EXPECT_STREQ(e.what(), "<ERROR>");
+		EXPECT_EQ(callsBefore + 2, kTestCategory.callsToMessage);
+	}
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, lines);
+	EXPECT_THAT(out.str(), MatchesRegex("([\\d .:-]{23} ERROR \\[\\d+\\] exception.cpp:\\d+ what Error creating exception message: runtime error in message\\(\\)\\n){2}"));
+}
+
+TEST(exceptionTest, systemerror_whatWithMessageThrowsException_GetError) {
+	std::ostringstream out;
+	int lines = 0;
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, out, lines);
+	llamalog::Initialize(std::move(writer));
+
+	try {
+		LLAMALOG_THROW(system_error(666, kTestCategory, "testmsg"), "MyMessage {}", 7);
+	} catch (std::exception& e) {
+		const int callsBefore = kTestCategory.callsToMessage;
+		EXPECT_STREQ(e.what(), "<ERROR>");
+		EXPECT_EQ(callsBefore + 1, kTestCategory.callsToMessage);
+
+		// no caching
+		EXPECT_STREQ(e.what(), "<ERROR>");
+		EXPECT_EQ(callsBefore + 2, kTestCategory.callsToMessage);
+	}
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, lines);
+	EXPECT_THAT(out.str(), MatchesRegex("([\\d .:-]{23} ERROR \\[\\d+\\] exception.cpp:\\d+ What Error creating exception message: runtime error in message\\(\\)\\n){2}"));
+}
+TEST(exceptionTest, systemerror_whatThrowsPointer_GetError) {
+	std::ostringstream out;
+	int lines = 0;
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, out, lines);
+	llamalog::Initialize(std::move(writer));
+
+	try {
+		throw system_error(667, kTestCategory, "testmsg");
+	} catch (std::exception& e) {
+		const int callsBefore = kTestCategory.callsToMessage;
+
+		EXPECT_STREQ(e.what(), "<ERROR>");
+		EXPECT_EQ(callsBefore + 1, kTestCategory.callsToMessage);
+
+		// no caching
+		EXPECT_STREQ(e.what(), "<ERROR>");
+		EXPECT_EQ(callsBefore + 2, kTestCategory.callsToMessage);
+	}
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, lines);
+	EXPECT_THAT(out.str(), MatchesRegex("([\\d .:-]{23} ERROR \\[\\d+\\] exception.cpp:\\d+ what Error creating exception message\\n){2}"));
+}
+
+TEST(exceptionTest, systemerror_whatWithMessageThrowsPointer_GetError) {
+	std::ostringstream out;
+	int lines = 0;
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, out, lines);
+	llamalog::Initialize(std::move(writer));
+
+	try {
+		LLAMALOG_THROW(system_error(667, kTestCategory, "testmsg"), "MyMessage {}", 7);
+	} catch (std::exception& e) {
+		const int callsBefore = kTestCategory.callsToMessage;
+
+		EXPECT_STREQ(e.what(), "<ERROR>");
+		EXPECT_EQ(callsBefore + 1, kTestCategory.callsToMessage);
+
+		// no caching
+		EXPECT_STREQ(e.what(), "<ERROR>");
+		EXPECT_EQ(callsBefore + 2, kTestCategory.callsToMessage);
+	}
+
+	llamalog::Shutdown();
+
+	EXPECT_EQ(2, lines);
+	EXPECT_THAT(out.str(), MatchesRegex("([\\d .:-]{23} ERROR \\[\\d+\\] exception.cpp:\\d+ What Error creating exception message\\n){2}"));
 }
 
 TEST(exceptionTest, systemerror_whatWithNullptrMessage_GetErrorMessageOnly) {
@@ -183,15 +357,15 @@ TEST(exceptionTest, ExceptionDetail_whatWithNullptrMessage_GetExceptionMessage) 
 
 TEST(exceptionTest, ExceptionDetail_Formatting_FirstCalledWhenLogging) {
 	LogLine logLine = GetLogLine();
-	bool called = false;
+	int called = 0;
 	try {
 		llamalog::Throw(std::range_error("testmsg"), "myfile.cpp", 15, "exfunc", "MyMessage {}", TracingArg(&called));
 	} catch (const std::exception& e) {
 		logLine << "Error" << e << "";
 	}
-	EXPECT_EQ(false, called);
+	EXPECT_EQ(0, called);
 	const std::string str = logLine.GetLogMessage();
-	EXPECT_EQ(true, called);
+	EXPECT_EQ(1, called);
 
 	EXPECT_EQ("Error caused by MyMessage TracingArg\n@ myfile.cpp:15", str);
 }
@@ -1489,10 +1663,10 @@ TEST(exceptionTest, DefaultPattern_systemerrorPlain_PrintDefault) {
 TEST(exceptionTest, Encoding_exceptionHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
-		llamalog::Throw(std::invalid_argument("testmsg\xE2\t"), "myfile.cpp", 15, "exfunc", "Exception\xE5 {} - {}", 1.8, L"test\xE3\t");
+		llamalog::Throw(std::invalid_argument("testmsg\xE2\t"), "myfile.cpp", 15, "exfunc", "Exception\xE5 {} - {}", 1.8, escape(L"test\xE3\t"));
 	} catch (const std::exception& e) {
-		logLine << "Error\xE4\n"
-				<< e << "";
+		logLine << escape("Error\xE4\n")
+				<< escape(e) << "";
 	}
 	const std::string str = logLine.GetLogMessage();
 
@@ -1504,8 +1678,8 @@ TEST(exceptionTest, Encoding_exceptionPlainHasHexChar_PrintUtf8) {
 	try {
 		throw std::invalid_argument("testmsg\xE2\t");
 	} catch (const std::exception& e) {
-		logLine << "Error\xE4\n"
-				<< e << "";
+		logLine << escape("Error\xE4\n")
+				<< escape(e) << "";
 	}
 	const std::string str = logLine.GetLogMessage();
 
@@ -1517,8 +1691,8 @@ TEST(exceptionTest, Encoding_stdsystemerrorPlainHasHexChar_PrintUtf8) {
 	try {
 		throw std::system_error(7, kTestCategoryEscape, "testmsg\xE2\t");
 	} catch (const std::exception& e) {
-		logLine << "Error\xE4\n"
-				<< e << "";
+		logLine << escape("Error\xE4\n")
+				<< escape(e) << "";
 	}
 	const std::string str = logLine.GetLogMessage();
 
@@ -1530,8 +1704,8 @@ TEST(exceptionTest, Encoding_systemerrorPlainHasHexChar_PrintUtf8) {
 	try {
 		throw system_error(7, kTestCategoryEscape, "testmsg\xE2\t");
 	} catch (const std::exception& e) {
-		logLine << "Error\xE4\n"
-				<< e << "";
+		logLine << escape("Error\xE4\n")
+				<< escape(e) << "";
 	}
 	const std::string str = logLine.GetLogMessage();
 

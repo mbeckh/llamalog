@@ -19,13 +19,17 @@ limitations under the License.
 
 #pragma once
 
-#include <llamalog/winapi_log.h>
-
 #include <fmt/core.h>
 
 #include <windows.h>
 
 #include <string>
+
+namespace llamalog {
+
+struct error_code;
+
+}
 
 //
 // Specializations of fmt::formatter

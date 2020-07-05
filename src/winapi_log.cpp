@@ -20,7 +20,9 @@ limitations under the License.
 
 #include "llamalog/LogLine.h"
 #include "llamalog/custom_types.h"
-#include "llamalog/winapi_format.h"  // IWYU pragma: keep
+#include "llamalog/modifier_format.h"  // IWYU pragma: keep
+#include "llamalog/modifier_types.h"   // IWYU pragma: keep
+#include "llamalog/winapi_format.h"    // IWYU pragma: keep
 
 #include <windows.h>
 

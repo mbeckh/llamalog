@@ -30,6 +30,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\llamalog\custom_types.h" />
+    <ClInclude Include="..\..\include\llamalog\modifier_format.h" />
+    <ClInclude Include="..\..\include\llamalog\modifier_types.h" />
     <ClInclude Include="..\..\include\llamalog\exception.h" />
     <ClInclude Include="..\..\include\llamalog\finally.h" />
     <ClInclude Include="..\..\include\llamalog\winapi_format.h" />
@@ -38,9 +40,18 @@
     <ClInclude Include="..\..\include\llamalog\Logger.h" />
     <ClInclude Include="..\..\include\llamalog\LogWriter.h" />
     <ClInclude Include="..\..\include\llamalog\winapi_log.h" />
+    <ClInclude Include="..\..\src\buffer_management.h" />
+    <ClInclude Include="..\..\src\marker_format.h" />
+    <ClInclude Include="..\..\src\marker_types.h" />
+    <ClInclude Include="..\..\src\exception_format.h" />
+    <ClInclude Include="..\..\src\exception_types.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\buffer_management.cpp" />
+    <ClCompile Include="..\..\src\exception_format.cpp" />
+    <ClCompile Include="..\..\src\marker_format.cpp" />
     <ClCompile Include="..\..\src\exception.cpp" />
+    <ClCompile Include="..\..\src\modifier_format.cpp" />
     <ClCompile Include="..\..\src\winapi_format.cpp" />
     <ClCompile Include="..\..\src\LogLine.cpp" />
     <ClCompile Include="..\..\src\Logger.cpp" />

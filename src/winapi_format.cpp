@@ -40,6 +40,7 @@ limitations under the License.
 //
 
 namespace llamalog {
+
 namespace {
 
 /// @brief Remove trailing line feeds from an error message, encode as UTF-8 and print.
@@ -94,8 +95,8 @@ error:
 /// @param ctx The output target.
 /// @result The output iterator.
 fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorCode, fmt::format_context& ctx) {
-	wchar_t buffer[256];  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Default on-stack buffer size for windows error messages.
-	// NOLINTNEXTLINE(hicpp-signed-bitwise): Required by Windows API.
+	constexpr std::size_t kDefaultBufferSize = 256;
+	wchar_t buffer[kDefaultBufferSize];
 	DWORD length = FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, errorCode, 0, buffer, sizeof(buffer) / sizeof(*buffer), nullptr);
 	if (length) {
 		return PostProcessErrorMessage(buffer, length, ctx);
@@ -108,7 +109,6 @@ fmt::format_context::iterator FormatSystemErrorCodeTo(const std::uint32_t errorC
 		auto finally = llamalog::finally([&pBuffer]() noexcept {
 			LocalFree(pBuffer);
 		});
-		// NOLINTNEXTLINE(hicpp-signed-bitwise): Required by Windows API.
 		length = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK, nullptr, errorCode, 0, reinterpret_cast<wchar_t*>(&pBuffer), 0, nullptr);
 		if (length) {
 			return PostProcessErrorMessage(pBuffer, length, ctx);
@@ -143,11 +143,12 @@ fmt::format_parse_context::iterator fmt::formatter<llamalog::error_code>::parse(
 		// a pattern consisting of only a percent is used to suppress the error code
 		m_format.push_back(llamalog::kSuppressErrorCode);
 	} else if (end != it) {
-		m_format.reserve(end - it + 6);  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Counted from number of characters.
+		constexpr std::size_t kGroupingCharacters = 3;
+		m_format.reserve(end - it + 3 + kGroupingCharacters);
 		m_format.append(" ({:");
 		m_format.append(it, end);
 		m_format.append("})");
-		assert(m_format.length() == static_cast<std::size_t>(end - it) + 6);
+		assert(m_format.length() == static_cast<std::size_t>(end - it) + 3 + kGroupingCharacters);
 	} else {
 		// use an empty format
 	}
@@ -176,13 +177,14 @@ fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::form
 	while (end != ctx.end() && *end != '}') {
 		++end;
 	}
-	m_format.reserve((end - it + 3) * 2 + 4);
+	constexpr std::size_t kGroupingCharacters = 4;
+	m_format.reserve((end - it + 3) * 2 + kGroupingCharacters);
 	m_format.append("({:");
 	m_format.append(it, end);
 	m_format.append("}, {:");
 	m_format.append(it, end);
 	m_format.append("})");
-	assert(m_format.length() == (static_cast<std::size_t>(end - it) + 3) * 2 + 4);
+	assert(m_format.length() == (static_cast<std::size_t>(end - it) + 3) * 2 + kGroupingCharacters);
 	return end;
 }
 
@@ -200,7 +202,8 @@ fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::forma
 	while (end != ctx.end() && *end != '}') {
 		++end;
 	}
-	m_format.reserve((end - it + 3) * 4 + 13);  // NOLINT(cppcoreguidelines-avoid-magic-numbers, readability-magic-numbers): Length calculated from strings.
+	constexpr std::size_t kGroupingCharacters = 13;
+	m_format.reserve((end - it + 3) * 4 + kGroupingCharacters);
 	m_format.append("(({:");
 	m_format.append(it, end);
 	m_format.append("}, {:");
@@ -210,7 +213,7 @@ fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::forma
 	m_format.append("}, {:");
 	m_format.append(it, end);
 	m_format.append("}))");
-	assert(m_format.length() == (static_cast<std::size_t>(end - it) + 3) * 4 + 13);
+	assert(m_format.length() == (static_cast<std::size_t>(end - it) + 3) * 4 + kGroupingCharacters);
 	return end;
 }
 

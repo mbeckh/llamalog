@@ -133,7 +133,7 @@ template <typename Out>
 void LogWriter::FormatTimestampTo(Out& out, const FILETIME& timestamp) {
 	SYSTEMTIME st;
 	if (!FileTimeToSystemTime(&timestamp, &st)) {
-		st = {0};
+		st = {};  // initialize to all 0
 	}
 	fmt::format_to(out, kTimestampPattern, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 }
@@ -221,10 +221,8 @@ namespace {
 
 /// @brief Data for calculation next roll-over and filename.
 struct FrequencyInfo {
-	// NOLINTNEXTLINE(readability-identifier-naming): Public member does not have prefix even if constant.
 	const std::uint64_t breakpoint;  ///< @brief Modulus for calculation the next roll over.
-	// NOLINTNEXTLINE(readability-identifier-naming): Public member does not have prefix even if constant.
-	const char* const pattern;  ///< @brief Pattern for variable part of filename.
+	const char* const pattern;       ///< @brief Pattern for variable part of filename.
 };
 
 /// @brief The data for the various `RollingFileWriter::Frequency` values.
@@ -387,7 +385,6 @@ void RollingFileWriter::RollFile(const LogLine& logLine) {
 		}
 	}
 
-	// NOLINTNEXTLINE(hicpp-signed-bitwise): FILE_ATTRIBUTE_NORMAL comes from the Windows API.
 	m_hFile = CreateFileW(path.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 	if (m_hFile == INVALID_HANDLE_VALUE) {  // NOLINT(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 		LLAMALOG_INTERNAL_ERROR("Error creating log: {}", LastError());

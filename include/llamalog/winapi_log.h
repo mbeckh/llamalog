@@ -25,7 +25,7 @@ limitations under the License.
 namespace llamalog {
 
 /// @brief A struct for logging Windows system error codes, e.g. `GetLastError()`, `HRESULT`, etc.
-struct error_code {  // NOLINT(readability-identifier-naming): Looks better when named like std::error_code.
+struct error_code {  // NOLINT(readability-identifier-naming): Similar to std::error_code.
 	constexpr explicit error_code(const int code) noexcept
 		: code(code) {
 		// change variable type if this assertion fails
@@ -41,7 +41,6 @@ struct error_code {  // NOLINT(readability-identifier-naming): Looks better when
 		// empty
 	}
 
-	// NOLINTNEXTLINE(readability-identifier-naming, misc-non-private-member-variables-in-classes): clang-tidy can't properly decide between public member and constant member.
 	const DWORD code;  ///< @brief The system error code.
 };
 
@@ -84,7 +83,7 @@ inline llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const ULARGE_IN
 /// @param logLine The `llamalog::LogLine`.
 /// @param arg The value.
 /// @return @p logLine to allow method chaining.
-inline llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const HINSTANCE arg) {  // NOLINT(misc-misplaced-const): We DO want const HINSTANCE.
+inline llamalog::LogLine& operator<<(llamalog::LogLine& logLine, HINSTANCE arg) {
 	return logLine << static_cast<void*>(arg);
 }
 
@@ -135,11 +134,11 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @param message_ The message pattern which MAY use the syntax of {fmt}.
 /// @return The value of @p result_.
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define LLAMALOG_LOG_HRESULT(priority_, result_, message_, ...)                                                                    \
-	[&](const HRESULT result, const char* const function) -> HRESULT {                                                             \
-		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                                             \
-		llamalog::Log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, llamalog::error_code{result}, __VA_ARGS__); \
-		return result;                                                                                                             \
+#define LLAMALOG_LOG_HRESULT(priority_, result_, message_, ...)                                                                      \
+	[&](const HRESULT result, const char* const function) -> HRESULT {                                                               \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                                               \
+		llamalog::Log(llamalog::Priority::kTrace, file_, __LINE__, function, message_, llamalog::error_code{result}, ##__VA_ARGS__); \
+		return result;                                                                                                               \
 	}(result_, __func__)
 
 /// @brief Log a message at `#llamalog::Priority` @p priority_ for function return values of type `HRESULT` without throwing an exception.
@@ -148,11 +147,11 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @param message_ The message pattern which MAY use the syntax of {fmt}.
 /// @return The value of @p result_.
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define LLAMALOG_LOG_HRESULT_NOEXCEPT(priority_, result_, message_, ...)                                                                   \
-	[&](const HRESULT result, const char* const function) noexcept -> HRESULT {                                                            \
-		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                                                     \
-		llamalog::LogNoExcept(llamalog::Priority::kTrace, file_, __LINE__, function, message_, llamalog::error_code{result}, __VA_ARGS__); \
-		return result;                                                                                                                     \
+#define LLAMALOG_LOG_HRESULT_NOEXCEPT(priority_, result_, message_, ...)                                                                     \
+	[&](const HRESULT result, const char* const function) noexcept -> HRESULT {                                                              \
+		constexpr const char* file_ = llamalog::GetFilename(__FILE__);                                                                       \
+		llamalog::LogNoExcept(llamalog::Priority::kTrace, file_, __LINE__, function, message_, llamalog::error_code{result}, ##__VA_ARGS__); \
+		return result;                                                                                                                       \
 	}(result_, __func__)
 
 
@@ -166,7 +165,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define LOG_TRACE_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kTrace, result_, message_, __VA_ARGS__)
+#define LOG_TRACE_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kTrace, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define LOG_TRACE_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -179,7 +178,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define LOG_DEBUG_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kDebug, result_, message_, __VA_ARGS__)
+#define LOG_DEBUG_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kDebug, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define LOG_DEBUG_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -192,7 +191,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define LOG_INFO_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kInfo, result_, message_, __VA_ARGS__)
+#define LOG_INFO_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kInfo, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define LOG_INFO_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -205,7 +204,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define LOG_WARN_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kWarn, result_, message_, __VA_ARGS__)
+#define LOG_WARN_HRESULT(result_, message_, ...) LLAMALOG_LOG_RESULT(llamalog::Priority::kWarn, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define LOG_WARN_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -218,7 +217,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define LOG_ERROR_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kError, result_, message_, __VA_ARGS__)
+#define LOG_ERROR_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kError, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define LOG_ERROR_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -231,7 +230,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_FATAL) || defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define LOG_FATAL_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kFatal, result_, message_, __VA_ARGS__)
+#define LOG_FATAL_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT(llamalog::Priority::kFatal, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define LOG_FATAL_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -248,7 +247,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define SLOG_TRACE_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kTrace, result_, message_, __VA_ARGS__)
+#define SLOG_TRACE_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kTrace, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define SLOG_TRACE_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -261,7 +260,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define SLOG_DEBUG_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kDebug, result_, message_, __VA_ARGS__)
+#define SLOG_DEBUG_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kDebug, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define SLOG_DEBUG_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -274,7 +273,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define SLOG_INFO_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kInfo, result_, message_, __VA_ARGS__)
+#define SLOG_INFO_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kInfo, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define SLOG_INFO_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -287,7 +286,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define SLOG_WARN_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kWarn, result_, message_, __VA_ARGS__)
+#define SLOG_WARN_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kWarn, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define SLOG_WARN_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -300,7 +299,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define SLOG_ERROR_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kError, result_, message_, __VA_ARGS__)
+#define SLOG_ERROR_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kError, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define SLOG_ERROR_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))
@@ -313,7 +312,7 @@ llamalog::LogLine& operator<<(llamalog::LogLine& logLine, const RECT* arg);
 /// @return The value of @p result_.
 #if defined(LLAMALOG_LEVEL_FATAL) || defined(LLAMALOG_LEVEL_ERROR) || defined(LLAMALOG_LEVEL_WARN) || defined(LLAMALOG_LEVEL_INFO) || defined(LLAMALOG_LEVEL_DEBUG) || defined(LLAMALOG_LEVEL_TRACE)
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
-#define SLOG_FATAL_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kFatal, result_, message_, __VA_ARGS__)
+#define SLOG_FATAL_HRESULT(result_, message_, ...) LLAMALOG_LOG_HRESULT_NOEXCEPT(llamalog::Priority::kFatal, result_, message_, ##__VA_ARGS__)
 #else
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage): Require access to __FILE__, __LINE__ and __func__.
 #define SLOG_FATAL_HRESULT(result_, message_, ...) (llamalog::internal::Unused(__VA_ARGS__), (result_))

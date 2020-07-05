@@ -76,7 +76,7 @@ private:
 
 /// @brief A helper class to transfer system errors.
 /// @details Other than `std::system_error` the message is not formatted until the time the `LogLine` is written or `#system_error::what()` is called.
-class system_error : public std::runtime_error {  // NOLINT(readability-identifier-naming): Looks better when named like std::system_error.
+class system_error : public std::runtime_error {  // NOLINT(readability-identifier-naming): Interface is compatible to std::system_error.
 public:
 	/// @brief Creates a new instance for the provided error code and category.
 	/// @param code The error code.
@@ -143,7 +143,7 @@ public:
 
 public:
 	/// @brief Override `std::exception::what()` to allow formatted output.
-	/// @details Delegates to `BaseException::what()` for placeholder replacement if a message is present.
+	/// @details Delegates to `BaseException::What()` for placeholder replacement if a message is present.
 	/// @return The formatted error message.
 #pragma warning(suppress : 4702)
 	[[nodiscard]] _Ret_z_ const char* what() const noexcept override {  // NOLINT(readability-identifier-naming): override must use same name.
