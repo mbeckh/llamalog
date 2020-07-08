@@ -34,12 +34,13 @@ struct PointerArgument;
 /// @brief A common base class for formatters providing shared functionality.
 /// @details The base class moves code out of the templated struct.
 struct __declspec(novtable) ModifierBaseFormatter {
+protected:
 	/// @brief Parse the format string.
 	/// @param ctx see `fmt::formatter::parse`.
+	/// @param stopAtQuestionMark Stop parsing at a `?` character (required for custom formatting of null values).
 	/// @return see `fmt::formatter::parse`.
-	fmt::format_parse_context::iterator parse(fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+	fmt::format_parse_context::iterator ParseFormatString(fmt::format_parse_context& ctx, bool stopAtQuestionMark);
 
-protected:
 	[[nodiscard]] const std::string& GetFormat() const noexcept {
 		return m_format;
 	}
@@ -51,11 +52,21 @@ private:
 };
 
 struct __declspec(novtable) PointerBaseFormatter : public ModifierBaseFormatter {
+	/// @brief Parse the format string.
+	/// @param ctx see `fmt::formatter::parse`.
+	/// @return see `fmt::formatter::parse`.
+	fmt::format_parse_context::iterator parse(fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+
 protected:
 	fmt::format_context::iterator Format(fmt::format_context::format_arg&& arg, fmt::format_context& ctx) const;
 };
 
 struct __declspec(novtable) EscapeBaseFormatter : public ModifierBaseFormatter {
+	/// @brief Parse the format string.
+	/// @param ctx see `fmt::formatter::parse`.
+	/// @return see `fmt::formatter::parse`.
+	fmt::format_parse_context::iterator parse(fmt::format_parse_context& ctx);  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+
 protected:
 	fmt::format_context::iterator Format(fmt::format_context::format_arg&& arg, fmt::format_context& ctx) const;
 };
@@ -67,7 +78,7 @@ protected:
 //
 
 /// @brief Specialization of `fmt::formatter` for a pointer value.
-/// @tparam The type of the actual argument.
+/// @tparam T The type of the actual argument.
 template <typename T>
 struct fmt::formatter<llamalog::internal::PointerArgument<T>> : public llamalog::internal::PointerBaseFormatter {
 	/// @brief Format the pointer value.
@@ -81,7 +92,7 @@ struct fmt::formatter<llamalog::internal::PointerArgument<T>> : public llamalog:
 };
 
 /// @brief Specialization of `fmt::formatter` for escaped values.
-/// @tparam The type of the actual argument.
+/// @tparam T The type of the actual argument.
 template <typename T>
 struct fmt::formatter<llamalog::internal::EscapedArgument<T>> : public llamalog::internal::EscapeBaseFormatter {
 	/// @brief Format the value and escape its output.

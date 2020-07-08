@@ -58,6 +58,15 @@
     <ClCompile Include="..\..\src\LogWriter.cpp" />
     <ClCompile Include="..\..\src\winapi_log.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\.clang-format" />
+    <None Include="..\..\.clang-tidy" />
+    <None Include="..\..\.codacy.yml" />
+    <None Include="..\..\.editorconfig" />
+    <None Include="..\..\.github\workflows\build.yml" />
+    <None Include="..\..\CHANGES.md" />
+    <None Include="..\..\README.md" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>

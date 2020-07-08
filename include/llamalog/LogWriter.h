@@ -168,7 +168,7 @@ private:
 
 	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast): INVALID_HANDLE_VALUE is part of the Windows API.
 	HANDLE m_hFile = INVALID_HANDLE_VALUE;  ///< @brief The handle of the log file. @hideinitializer
-	FILETIME m_nextRollAt = {0};            ///< @brief Next time to roll over. @hideinitializer
+	FILETIME m_nextRollAt = {};             ///< @brief Next time to roll over. @hideinitializer
 };
 
 }  // namespace llamalog

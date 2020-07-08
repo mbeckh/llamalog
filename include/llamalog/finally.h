@@ -40,10 +40,10 @@ public:
 
 	/// @brief Transfers control of the lambda to this instance.
 	/// @param oth The previous owner.
-	FinalAction(FinalAction<F>&& that) noexcept
-		: m_f(std::move(that.m_f))
-		, m_active(that.m_active) {
-		that.m_active = false;
+	FinalAction(FinalAction<F>&& oth) noexcept
+		: m_f(std::move(oth.m_f))
+		, m_active(oth.m_active) {
+		oth.m_active = false;
 	}
 
 	/// @brief Calls the lambda if still owned by this instance.

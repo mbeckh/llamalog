@@ -114,20 +114,6 @@ static_assert(__STDCPP_DEFAULT_NEW_ALIGNMENT__ <= std::numeric_limits<LogLine::A
 	return kId;
 }
 
-
-/// @brief Get the additional logging context of an exception if it exists.
-/// @note The function MUST be called from within a catch block to get the object, else `nullptr` is returned.
-/// @return The logging context if it exists (else `nullptr`).
-[[nodiscard]] _Ret_maybenull_ const BaseException* GetCurrentException() noexcept {
-	try {
-		throw;
-	} catch (const BaseException& e) {
-		return &e;
-	} catch (...) {
-		return nullptr;
-	}
-}
-
 /// @brief Get information for `std::error_code`.
 /// @note The function MUST be called from within a catch block to get the object, else `nullptr` is returned.
 /// @return A pointer which is set if the exception is of type `std::system_error` or `system_error` (else `nullptr`).
@@ -217,6 +203,7 @@ LogLine::LogLine(const Priority priority, _In_z_ const char* __restrict file, st
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): Initialization of m_stackBuffer depends on data.
 LogLine::LogLine(const LogLine& logLine)
 	: m_priority(logLine.m_priority)
+	, m_hasNonTriviallyCopyable(logLine.m_hasNonTriviallyCopyable)
 	, m_timestamp(logLine.m_timestamp)
 	, m_file(logLine.m_file)
 	, m_function(logLine.m_function)
@@ -506,7 +493,7 @@ LogLine& LogLine::operator<<(_In_opt_z_ const char* __restrict const arg) {
 	if (arg) {
 		WriteString(arg, std::strlen(arg));
 	} else {
-		Write<const void*>(nullptr);
+		WriteNullPointer();
 	}
 	return *this;
 }
@@ -516,7 +503,7 @@ LogLine& LogLine::operator<<(_In_opt_z_ const wchar_t* __restrict const arg) {
 	if (arg) {
 		WriteString(arg, std::wcslen(arg));
 	} else {
-		Write<const void*>(nullptr);
+		WriteNullPointer();
 	}
 	return *this;
 }
@@ -546,7 +533,7 @@ LogLine& LogLine::operator<<(const std::wstring_view& arg) {
 }
 
 LogLine& LogLine::operator<<(const std::exception& arg) {
-	const BaseException* const pBaseException = GetCurrentException();
+	const BaseException* const pBaseException = GetCurrentExceptionAsBaseException();
 	const std::error_code* const pErrorCode = GetCurrentExceptionCode();
 
 	// do not evaluate arg.what() when a BaseException exists
@@ -624,12 +611,12 @@ _Ret_notnull_ __declspec(restrict) std::byte* LogLine::GetWritePosition(const Lo
 // Derived from both methods `NanoLogLine::encode` from NanoLog.
 template <typename T>
 void LogLine::Write(const T arg) {
-	const TypeId argTypeId = GetTypeId<T>(m_escape);
+	const TypeId typeId = GetTypeId<T>(m_escape);
 	constexpr auto kArgSize = kTypeSize<T>;
 	std::byte* __restrict const buffer = GetWritePosition(kArgSize);
 
-	std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
-	std::memcpy(&buffer[sizeof(argTypeId)], &arg, sizeof(arg));
+	std::memcpy(buffer, &typeId, sizeof(typeId));
+	std::memcpy(&buffer[sizeof(typeId)], &arg, sizeof(arg));
 
 	m_used += kArgSize;
 }
@@ -637,18 +624,18 @@ void LogLine::Write(const T arg) {
 template <typename T>
 void LogLine::WritePointer(const T* const arg) {
 	if (arg) {
-		const TypeId argTypeId = GetTypeId<T, true>(m_escape);
+		const TypeId typeId = GetTypeId<T, true>(m_escape);
 		constexpr auto kArgSize = kTypeSize<T>;
 
 		std::byte* __restrict buffer = GetWritePosition(kArgSize);
-		const LogLine::Align padding = GetPadding<T>(&buffer[sizeof(argTypeId)]);
+		const LogLine::Align padding = GetPadding<T>(&buffer[sizeof(typeId)]);
 		if (padding) {
 			// check if the buffer has enough space for the type AND the padding
 			buffer = GetWritePosition(kArgSize + padding);
 		}
 
-		std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
-		std::memcpy(&buffer[sizeof(argTypeId)] + padding, arg, sizeof(*arg));
+		std::memcpy(buffer, &typeId, sizeof(typeId));
+		std::memcpy(&buffer[sizeof(typeId)] + padding, arg, sizeof(*arg));
 
 		m_used += kArgSize + padding;
 	} else {
@@ -657,18 +644,18 @@ void LogLine::WritePointer(const T* const arg) {
 }
 
 void LogLine::WriteNullPointer() {
-	const TypeId argTypeId = GetTypeId<NullValue>(m_escape);
+	const TypeId typeId = GetTypeId<NullValue>(m_escape);
 	constexpr auto kArgSize = kTypeSize<NullValue>;
 	std::byte* __restrict const buffer = GetWritePosition(kArgSize);
 
-	std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
+	std::memcpy(buffer, &typeId, sizeof(typeId));
 
 	m_used += kArgSize;
 }
 
 /// Derived from `NanoLogLine::encode_c_string` from NanoLog.
 void LogLine::WriteString(_In_reads_(len) const char* __restrict const arg, const std::size_t len) {
-	const TypeId argTypeId = GetTypeId<const char*>(m_escape);
+	const TypeId typeId = GetTypeId<const char*>(m_escape);
 	constexpr auto kArgSize = kTypeSize<const char*>;
 	const LogLine::Length length = static_cast<LogLine::Length>(std::min<std::size_t>(len, std::numeric_limits<LogLine::Length>::max()));
 	if (length < len) {
@@ -680,8 +667,8 @@ void LogLine::WriteString(_In_reads_(len) const char* __restrict const arg, cons
 	// no padding required
 	static_assert(alignof(char) == 1, "alignment of char");
 
-	std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
-	std::memcpy(&buffer[sizeof(argTypeId)], &length, sizeof(length));
+	std::memcpy(buffer, &typeId, sizeof(typeId));
+	std::memcpy(&buffer[sizeof(typeId)], &length, sizeof(length));
 	std::memcpy(&buffer[kArgSize], arg, length * sizeof(char));
 
 	m_used += size;
@@ -689,7 +676,7 @@ void LogLine::WriteString(_In_reads_(len) const char* __restrict const arg, cons
 
 /// Derived from `NanoLogLine::encode_c_string` from NanoLog.
 void LogLine::WriteString(_In_reads_(len) const wchar_t* __restrict const arg, const std::size_t len) {
-	const TypeId argTypeId = GetTypeId<const wchar_t*>(m_escape);
+	const TypeId typeId = GetTypeId<const wchar_t*>(m_escape);
 	constexpr auto kArgSize = kTypeSize<const wchar_t*>;
 	const LogLine::Length length = static_cast<LogLine::Length>(std::min<std::size_t>(len, std::numeric_limits<LogLine::Length>::max()));
 	if (length < len) {
@@ -705,8 +692,8 @@ void LogLine::WriteString(_In_reads_(len) const wchar_t* __restrict const arg, c
 	}
 	assert(m_size - m_used >= size + padding);
 
-	std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
-	std::memcpy(&buffer[sizeof(argTypeId)], &length, sizeof(length));
+	std::memcpy(buffer, &typeId, sizeof(typeId));
+	std::memcpy(&buffer[sizeof(typeId)], &length, sizeof(length));
 	std::memcpy(&buffer[kArgSize + padding], arg, length * sizeof(wchar_t));
 
 	m_used += size + padding;
@@ -722,26 +709,26 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 	static_assert(alignof(char) == 1, "alignment of char");  // no padding required for message
 
 	if (!pBaseException) {
-		const TypeId argTypeId = pCode ? GetTypeId<PlainSystemError>(m_escape) : GetTypeId<PlainException>(m_escape);
+		const TypeId typeId = pCode ? GetTypeId<PlainSystemError>(m_escape) : GetTypeId<PlainException>(m_escape);
 		const auto kArgSize = pCode ? kTypeSize<PlainSystemError> : kTypeSize<PlainException>;
 
 		const LogLine::Size size = kArgSize + messageLength * sizeof(char);
 		std::byte* __restrict const buffer = GetWritePosition(size);
 
-		std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
+		std::memcpy(buffer, &typeId, sizeof(typeId));
 
 		static_assert(offsetof(PlainException, length) == offsetof(PlainSystemError, length));
-		std::memcpy(&buffer[sizeof(argTypeId) + offsetof(PlainException, length)], &messageLength, sizeof(messageLength));
+		std::memcpy(&buffer[sizeof(typeId) + offsetof(PlainException, length)], &messageLength, sizeof(messageLength));
 		if (message) {
 			std::memcpy(&buffer[kArgSize], message, messageLength);
 		}
 
 		if (pCode) {
 			const int code = pCode->value();
-			std::memcpy(&buffer[sizeof(argTypeId) + offsetof(PlainSystemError, code)], &code, sizeof(code));
+			std::memcpy(&buffer[sizeof(typeId) + offsetof(PlainSystemError, code)], &code, sizeof(code));
 			const std::error_category* const pCategory = &pCode->category();
 			// NOLINTNEXTLINE(bugprone-sizeof-expression): sizeof pointer is deliberate to automatically follow type changes
-			std::memcpy(&buffer[sizeof(argTypeId) + offsetof(PlainSystemError, pCategory)], &pCategory, sizeof(pCategory));
+			std::memcpy(&buffer[sizeof(typeId) + offsetof(PlainSystemError, pCategory)], &pCategory, sizeof(pCategory));
 		}
 
 		m_used += kArgSize + messageLength;
@@ -751,12 +738,12 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 	const LogLine& logLine = pBaseException->m_logLine;
 	assert(!logLine.m_message ^ !message);  // either pattern or message must be present but not both
 	if (!logLine.m_heapBuffer) {
-		const TypeId argTypeId = pCode ? GetTypeId<StackBasedSystemError>(m_escape) : GetTypeId<StackBasedException>(m_escape);
+		const TypeId typeId = pCode ? GetTypeId<StackBasedSystemError>(m_escape) : GetTypeId<StackBasedException>(m_escape);
 		const auto kArgSize = pCode ? kTypeSize<StackBasedSystemError> : kTypeSize<StackBasedException>;
 		const LogLine::Size size = kArgSize + messageLength * sizeof(char) + logLine.m_used;
 
 		std::byte* __restrict buffer = GetWritePosition(size);
-		const LogLine::Size pos = sizeof(argTypeId);
+		const LogLine::Size pos = sizeof(typeId);
 		const LogLine::Align padding = GetPadding<StackBasedException>(&buffer[pos]);
 		const LogLine::Size offset = pos + padding;
 		if (padding != 0) {
@@ -773,7 +760,7 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 		}
 		const LogLine::Size bufferOffset = bufferPos + bufferPadding;
 
-		std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
+		std::memcpy(buffer, &typeId, sizeof(typeId));
 		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(ExceptionInformation /* StackBasedException */, length));  // copy up to used
 		std::memcpy(&buffer[offset + offsetof(ExceptionInformation /* StackBasedException */, length)], &messageLength, sizeof(messageLength));
 		std::memcpy(&buffer[offset + offsetof(ExceptionInformation /* StackBasedException */, hasNonTriviallyCopyable)], &logLine.m_hasNonTriviallyCopyable, sizeof(bool));
@@ -800,12 +787,12 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 			m_used += nextOffset;
 		}
 	} else {
-		const TypeId argTypeId = pCode ? GetTypeId<HeapBasedSystemError>(m_escape) : GetTypeId<HeapBasedException>(m_escape);
+		const TypeId typeId = pCode ? GetTypeId<HeapBasedSystemError>(m_escape) : GetTypeId<HeapBasedException>(m_escape);
 		const auto kArgSize = pCode ? kTypeSize<HeapBasedSystemError> : kTypeSize<HeapBasedException>;
 		const LogLine::Size size = kArgSize + messageLength * sizeof(char);
 
 		std::byte* __restrict buffer = GetWritePosition(size);
-		const LogLine::Size pos = sizeof(argTypeId);
+		const LogLine::Size pos = sizeof(typeId);
 		const LogLine::Align padding = GetPadding<HeapBasedException>(&buffer[pos]);
 		const LogLine::Size offset = pos + padding;
 		if (padding != 0) {
@@ -815,7 +802,7 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 
 		const LogLine::Size messageOffset = offset + sizeof(HeapBasedException);
 
-		std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
+		std::memcpy(buffer, &typeId, sizeof(typeId));
 		std::memcpy(&buffer[offset], &logLine.m_timestamp, offsetof(ExceptionInformation /* StackBasedException */, length));  // copy up to used
 		std::memcpy(&buffer[offset + offsetof(ExceptionInformation /* StackBasedException */, length)], &messageLength, sizeof(messageLength));
 		std::memcpy(&buffer[offset + offsetof(ExceptionInformation /* StackBasedException */, hasNonTriviallyCopyable)], &logLine.m_hasNonTriviallyCopyable, sizeof(bool));
@@ -852,7 +839,7 @@ void LogLine::WriteException(_In_opt_z_ const char* message, _In_opt_ const Base
 void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byte* __restrict const ptr, const LogLine::Size objectSize, const LogLine::Align align, _In_ void (*const createFormatArg)()) {
 	static_assert(sizeof(createFormatArg) == sizeof(internal::FunctionTable::CreateFormatArg));
 
-	const TypeId argTypeId = GetTypeId<TriviallyCopyable>(m_escape);
+	const TypeId typeId = GetTypeId<TriviallyCopyable>(m_escape);
 	constexpr auto kArgSize = kTypeSize<TriviallyCopyable>;
 	const LogLine::Size size = kArgSize + objectSize;
 
@@ -864,10 +851,10 @@ void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byt
 	}
 	assert(m_size - m_used >= size + padding);
 
-	std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
-	std::memcpy(&buffer[sizeof(argTypeId)], &padding, sizeof(padding));
-	std::memcpy(&buffer[sizeof(argTypeId) + sizeof(padding)], &createFormatArg, sizeof(createFormatArg));
-	std::memcpy(&buffer[sizeof(argTypeId) + sizeof(padding) + sizeof(createFormatArg)], &objectSize, sizeof(objectSize));
+	std::memcpy(buffer, &typeId, sizeof(typeId));
+	std::memcpy(&buffer[sizeof(typeId)], &padding, sizeof(padding));
+	std::memcpy(&buffer[sizeof(typeId) + sizeof(padding)], &createFormatArg, sizeof(createFormatArg));
+	std::memcpy(&buffer[sizeof(typeId) + sizeof(padding) + sizeof(createFormatArg)], &objectSize, sizeof(objectSize));
 	std::memcpy(&buffer[kArgSize + padding], ptr, objectSize);
 
 	m_used += size + padding;
@@ -876,7 +863,7 @@ void LogLine::WriteTriviallyCopyable(_In_reads_bytes_(objectSize) const std::byt
 __declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const LogLine::Size objectSize, const LogLine::Align align, _In_ const void* const functionTable) {
 	static_assert(sizeof(functionTable) == sizeof(internal::FunctionTable*));
 
-	const TypeId argTypeId = GetTypeId<NonTriviallyCopyable>(m_escape);
+	const TypeId typeId = GetTypeId<NonTriviallyCopyable>(m_escape);
 	constexpr auto kArgSize = kTypeSize<NonTriviallyCopyable>;
 	const LogLine::Size size = kArgSize + objectSize;
 
@@ -888,10 +875,10 @@ __declspec(restrict) std::byte* LogLine::WriteNonTriviallyCopyable(const LogLine
 	}
 	assert(m_size - m_used >= size + padding);
 
-	std::memcpy(buffer, &argTypeId, sizeof(argTypeId));
-	std::memcpy(&buffer[sizeof(argTypeId)], &padding, sizeof(padding));
-	std::memcpy(&buffer[sizeof(argTypeId) + sizeof(padding)], &functionTable, sizeof(functionTable));
-	std::memcpy(&buffer[sizeof(argTypeId) + sizeof(padding) + sizeof(functionTable)], &objectSize, sizeof(objectSize));
+	std::memcpy(buffer, &typeId, sizeof(typeId));
+	std::memcpy(&buffer[sizeof(typeId)], &padding, sizeof(padding));
+	std::memcpy(&buffer[sizeof(typeId) + sizeof(padding)], &functionTable, sizeof(functionTable));
+	std::memcpy(&buffer[sizeof(typeId) + sizeof(padding) + sizeof(functionTable)], &objectSize, sizeof(objectSize));
 	std::byte* result = &buffer[kArgSize + padding];
 
 	m_hasNonTriviallyCopyable = true;

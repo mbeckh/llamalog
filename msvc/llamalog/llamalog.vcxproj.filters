@@ -16,6 +16,12 @@
     <Filter Include="Header Files\llamalog">
       <UniqueIdentifier>{28e3ed86-47b3-43f4-a53f-4189dc86cab4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Documentation">
+      <UniqueIdentifier>{e27d17aa-0cfa-4bd0-a975-b5f717b0c81b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Configuration">
+      <UniqueIdentifier>{a1da7967-057e-494c-9acc-5ac152c1dd8d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -104,5 +110,28 @@
     <ClInclude Include="..\..\include\llamalog\modifier_format.h">
       <Filter>Header Files\llamalog</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\CHANGES.md">
+      <Filter>Documentation</Filter>
+    </None>
+    <None Include="..\..\README.md">
+      <Filter>Documentation</Filter>
+    </None>
+    <None Include="..\..\.clang-format">
+      <Filter>Configuration</Filter>
+    </None>
+    <None Include="..\..\.clang-tidy">
+      <Filter>Configuration</Filter>
+    </None>
+    <None Include="..\..\.codacy.yml">
+      <Filter>Configuration</Filter>
+    </None>
+    <None Include="..\..\.editorconfig">
+      <Filter>Configuration</Filter>
+    </None>
+    <None Include="..\..\.github\workflows\build.yml">
+      <Filter>Configuration</Filter>
+    </None>
   </ItemGroup>
 </Project>

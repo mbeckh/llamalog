@@ -3,8 +3,10 @@
 ## Upcoming Release
 -   \[Breaking\] No longer logging all output escaped.
 -   \[Feature\] Use automated CI workflow.
+-   \[Feature\] Allow custom formatting for null values for strings.
 -   \[Fix\] Fixed panic logging triggered too early when logging internal messages from non-logger threads.
 -   \[Fix\] Fixed Logger::Flush  not working properly when called right after initialization.
+-   \[Fix\] Fixed errors in internal buffer handling.
 
 ## v2.0.0 - 2020-06-08
 -   \[Breaking\] Renamed LogLevel to Priority.

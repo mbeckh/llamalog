@@ -128,6 +128,9 @@ template <typename T, typename std::enable_if_t<std::is_same_v<T, PlainSystemErr
 	return ptr;
 }
 
+template <typename T>
+bool Format(const T& arg, std::string::const_iterator start, const std::string::const_iterator& end, fmt::format_context& ctx, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args);
+
 
 /// @brief Parse and format an exception using a subformat, i.e. `{:%[...]}`.
 /// @details Output is only written to @p out if at least one pattern was replaced by a value other than the empty string.
@@ -176,150 +179,6 @@ template <typename T>
 	}
 	ctx.on_error("missing ']' in exception specifier");
 	return end;
-}
-
-/// @brief Parse and format an exception using a pattern , i.e. `{:%[...]}`.
-/// @note The output target @p out MAY differ from the output target of @p ctx.
-/// @param arg The exception to format.
-/// @param start The start of the format pattern.
-/// @param end The end (exclusive) of the format pattern.
-/// @param ctx The current `fmt::format_context`.
-/// @param out The output target.
-/// @param args The current formatting arguments.
-/// @return `true` if any output was produced.
-template <typename T>
-bool Format(const T& arg, std::string::const_iterator start, const std::string::const_iterator& end, fmt::format_context& ctx, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
-	bool formatted = false;
-	for (auto it = start; it != end; ++it) {
-		if (*it == '\\') {
-			// copy content up to here
-			std::copy(start, it, out);
-
-			start = ++it;
-			// leave next character unprocessed
-			if (it == end) {
-				ctx.on_error("invalid escape sequence");
-				break;
-			}
-		} else if (*it == '{') {
-			// copy content up to here
-			std::copy(start, it, out);
-			if (++it == end) {
-				ctx.on_error("missing '}' in exception specifier");
-				start = end;
-				break;
-			}
-
-			auto endOfArgId = it;
-			while (endOfArgId != end && *endOfArgId != '}' && *endOfArgId != ':') {
-				++endOfArgId;
-			}
-			auto startOfPattern = endOfArgId;
-			auto endOfPattern = endOfArgId;
-			if (endOfArgId != end && *endOfArgId == ':') {
-				startOfPattern = endOfArgId + 1;
-				endOfPattern = startOfPattern;
-				while (endOfPattern != end && *endOfPattern != '}') {
-					++endOfPattern;
-				}
-			}
-			if (endOfPattern == end) {
-				ctx.on_error("missing '}' in exception specifier");
-			}
-
-			fmt::format_context::format_arg subArg;
-			if (it == endOfArgId) {
-				ctx.on_error("exception specifier must have argument identifier");
-			} else if (std::all_of(it, endOfArgId, [](const char c) noexcept {
-						   return c >= '0' && c <= '9';
-					   })) {
-				int argId = -1;
-				if (std::from_chars(&*it, &*endOfArgId, argId).ptr != &*endOfArgId) {
-					ctx.on_error("invalid argument id in exception specifier");
-				}
-				subArg = ctx.arg(argId);
-			} else {
-				subArg = ctx.arg(std::string_view(&*it, std::distance(it, endOfArgId)));
-			}
-			const fmt::format_args subArgs(&subArg, 1);
-			fmt::vformat_to(out, fmt::to_string_view("{:" + std::string(startOfPattern, endOfPattern) + "}"), subArgs);
-
-			it = endOfPattern;
-			if (it == end) {
-				break;
-			}
-			start = it + 1;
-		} else if (*it == '%') {
-			// copy content up to here
-			std::copy(start, it, out);
-			if (++it == end) {
-				ctx.on_error("invalid exception specifier");
-				start = end;
-				break;
-			}
-			start = it + 1;
-			switch (*it) {
-			// Subformat
-			case '[':
-				it = ProcessSubformat(arg, start, end, ctx, out, args, formatted);
-				if (it != end) {
-					start = it + 1;
-				} else {
-					start = it;
-				}
-				break;
-			// Timestamp
-			case 'T':
-				formatted |= FormatTimestamp<T>(reinterpret_cast<const std::byte*>(&arg), out);
-				break;
-			// Thread
-			case 't':
-				formatted |= FormatThread<T>(reinterpret_cast<const std::byte*>(&arg), out);
-				break;
-			// File
-			case 'F':
-				formatted |= FormatFile<T>(reinterpret_cast<const std::byte*>(&arg), out);
-				break;
-			// Line
-			case 'L':
-				formatted |= FormatLine<T>(reinterpret_cast<const std::byte*>(&arg), out);
-				break;
-			// Function
-			case 'f':
-				formatted |= FormatFunction<T>(reinterpret_cast<const std::byte*>(&arg), out);
-				break;
-			// Log Message
-			case 'l':
-				formatted |= FormatLogMessage<T>(reinterpret_cast<const std::byte*>(&arg), out, args);
-				break;
-			// what()
-			case 'w':
-				formatted |= FormatWhat<T>(reinterpret_cast<const std::byte*>(&arg), out, args);
-				break;
-			// Error Code
-			case 'c':
-				formatted |= FormatErrorCode<T>(reinterpret_cast<const std::byte*>(&arg), out);
-				break;
-			// Category Name
-			case 'C':
-				formatted |= FormatCategoryName<T>(reinterpret_cast<const std::byte*>(&arg), out);
-				break;
-			// System Error Message
-			case 'm':
-				formatted |= FormatErrorMessage<T>(reinterpret_cast<const std::byte*>(&arg), out);
-				break;
-			// Default is to just print the character (but emit an error)
-			default:
-				ctx.on_error("unknown exception specifier");
-				start = it;
-				break;
-			}
-		} else {
-			// do nothing
-		}
-	}
-	std::copy(start, end, out);
-	return formatted;
 }
 
 /// @brief Format the exception timestamp.
@@ -449,6 +308,46 @@ template <typename T, typename std::enable_if_t<is_any_v<T, PlainException, Plai
 	return false;
 }
 
+/// @brief SFINAE version for types which do not have an error code.
+/// @tparam T The type of the exception to format.
+/// @return Always `false`.
+template <typename T, typename std::enable_if_t<is_any_v<T, StackBasedException, HeapBasedException, PlainException>, int> = 0>
+[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
+	return false;
+}
+
+/// @brief Format the error message for `std::system_error`s and `system_error`s having additional logging data.
+/// @tparam T The type of the exception to format.
+/// @param ptr The address of the exception argument in the buffer.
+/// @param out The output target.
+/// @return Always `true`.
+template <typename T, typename std::enable_if_t<is_any_v<T, StackBasedSystemError, HeapBasedSystemError>, int> = 0>
+[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	const std::byte* const systemError = GetSystemError<T>(ptr);
+
+	const int code = llamalog::buffer::GetValue<int>(&systemError[offsetof(T, code)]);
+	const std::error_category* const pCategory = llamalog::buffer::GetValue<const std::error_category*>(&systemError[offsetof(T, pCategory)]);
+
+	const std::string s = pCategory->message(code);
+	std::copy(s.cbegin(), s.cend(), out);
+	return true;
+}
+
+/// @brief Format the error message for `std::system_error`s and `system_error`s thrown using plain `throw`.
+/// @tparam T The type of the exception to format.
+/// @param ptr The address of the exception argument in the buffer.
+/// @param out The output target.
+/// @return Always `true`.
+template <typename T, typename std::enable_if_t<is_any_v<T, PlainSystemError>, int> = 0>
+[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
+	const int code = llamalog::buffer::GetValue<int>(&ptr[offsetof(T, code)]);
+	const std::error_category* const pCategory = llamalog::buffer::GetValue<const std::error_category*>(&ptr[offsetof(T, pCategory)]);
+
+	const std::string s = pCategory->message(code);
+	std::copy(s.cbegin(), s.cend(), out);
+	return true;
+}
+
 /// @brief Format the exception message. @details This is the version for exception data having additional logging information.
 /// @tparam T The type of the exception to format.
 /// @param ptr The address of the exception argument in the buffer.
@@ -566,44 +465,149 @@ template <typename T, typename std::enable_if_t<is_any_v<T, PlainSystemError>, i
 	return true;
 }
 
-/// @brief SFINAE version for types which do not have an error code.
-/// @tparam T The type of the exception to format.
-/// @return Always `false`.
-template <typename T, typename std::enable_if_t<is_any_v<T, StackBasedException, HeapBasedException, PlainException>, int> = 0>
-[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const /* ptr */, fmt::format_context::iterator& /* out */) noexcept {
-	return false;
-}
 
-/// @brief Format the error message for `std::system_error`s and `system_error`s having additional logging data.
-/// @tparam T The type of the exception to format.
-/// @param ptr The address of the exception argument in the buffer.
+/// @brief Parse and format an exception using a pattern , i.e. `{:%[...]}`.
+/// @note The output target @p out MAY differ from the output target of @p ctx.
+/// @param arg The exception to format.
+/// @param start The start of the format pattern.
+/// @param end The end (exclusive) of the format pattern.
+/// @param ctx The current `fmt::format_context`.
 /// @param out The output target.
-/// @return Always `true`.
-template <typename T, typename std::enable_if_t<is_any_v<T, StackBasedSystemError, HeapBasedSystemError>, int> = 0>
-[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
-	const std::byte* const systemError = GetSystemError<T>(ptr);
+/// @param args The current formatting arguments.
+/// @return `true` if any output was produced.
+template <typename T>
+bool Format(const T& arg, std::string::const_iterator start, const std::string::const_iterator& end, fmt::format_context& ctx, fmt::format_context::iterator& out, std::vector<fmt::format_context::format_arg>& args) {
+	bool formatted = false;
+	for (auto it = start; it != end; ++it) {
+		if (*it == '\\') {
+			// copy content up to here
+			std::copy(start, it, out);
 
-	const int code = llamalog::buffer::GetValue<int>(&systemError[offsetof(T, code)]);
-	const std::error_category* const pCategory = llamalog::buffer::GetValue<const std::error_category*>(&systemError[offsetof(T, pCategory)]);
+			start = ++it;
+			// leave next character unprocessed
+			if (it == end) {
+				ctx.on_error("invalid escape sequence");
+				break;
+			}
+		} else if (*it == '{') {
+			// copy content up to here
+			std::copy(start, it, out);
+			if (++it == end) {
+				ctx.on_error("missing '}' in exception specifier");
+				start = end;
+				break;
+			}
 
-	const std::string s = pCategory->message(code);
-	std::copy(s.cbegin(), s.cend(), out);
-	return true;
-}
+			auto endOfArgId = it;
+			while (endOfArgId != end && *endOfArgId != '}' && *endOfArgId != ':') {
+				++endOfArgId;
+			}
+			auto startOfPattern = endOfArgId;
+			auto endOfPattern = endOfArgId;
+			if (endOfArgId != end && *endOfArgId == ':') {
+				startOfPattern = endOfArgId + 1;
+				endOfPattern = startOfPattern;
+				while (endOfPattern != end && *endOfPattern != '}') {
+					++endOfPattern;
+				}
+			}
+			if (endOfPattern == end) {
+				ctx.on_error("missing '}' in exception specifier");
+			}
 
-/// @brief Format the error message for `std::system_error`s and `system_error`s thrown using plain `throw`.
-/// @tparam T The type of the exception to format.
-/// @param ptr The address of the exception argument in the buffer.
-/// @param out The output target.
-/// @return Always `true`.
-template <typename T, typename std::enable_if_t<is_any_v<T, PlainSystemError>, int> = 0>
-[[nodiscard]] static bool FormatErrorMessage(const std::byte* __restrict const ptr, fmt::format_context::iterator& out) {
-	const int code = llamalog::buffer::GetValue<int>(&ptr[offsetof(T, code)]);
-	const std::error_category* const pCategory = llamalog::buffer::GetValue<const std::error_category*>(&ptr[offsetof(T, pCategory)]);
+			fmt::format_context::format_arg subArg;
+			if (it == endOfArgId) {
+				ctx.on_error("exception specifier must have argument identifier");
+			} else if (std::all_of(it, endOfArgId, [](const char c) noexcept {
+						   return c >= '0' && c <= '9';
+					   })) {
+				int argId = -1;
+				if (std::from_chars(&*it, &*endOfArgId, argId).ptr != &*endOfArgId) {
+					ctx.on_error("invalid argument id in exception specifier");
+				}
+				subArg = ctx.arg(argId);
+			} else {
+				subArg = ctx.arg(std::string_view(&*it, std::distance(it, endOfArgId)));
+			}
+			const fmt::format_args subArgs(&subArg, 1);
+			fmt::vformat_to(out, fmt::to_string_view("{:" + std::string(startOfPattern, endOfPattern) + "}"), subArgs);
 
-	const std::string s = pCategory->message(code);
-	std::copy(s.cbegin(), s.cend(), out);
-	return true;
+			it = endOfPattern;
+			if (it == end) {
+				break;
+			}
+			start = it + 1;
+		} else if (*it == '%') {
+			// copy content up to here
+			std::copy(start, it, out);
+			if (++it == end) {
+				ctx.on_error("invalid exception specifier");
+				start = end;
+				break;
+			}
+			start = it + 1;
+			switch (*it) {
+			// Subformat
+			case '[':
+				it = ProcessSubformat(arg, start, end, ctx, out, args, formatted);
+				if (it != end) {
+					start = it + 1;
+				} else {
+					start = it;
+				}
+				break;
+			// Timestamp
+			case 'T':
+				formatted |= FormatTimestamp<T>(reinterpret_cast<const std::byte*>(&arg), out);
+				break;
+			// Thread
+			case 't':
+				formatted |= FormatThread<T>(reinterpret_cast<const std::byte*>(&arg), out);
+				break;
+			// File
+			case 'F':
+				formatted |= FormatFile<T>(reinterpret_cast<const std::byte*>(&arg), out);
+				break;
+			// Line
+			case 'L':
+				formatted |= FormatLine<T>(reinterpret_cast<const std::byte*>(&arg), out);
+				break;
+			// Function
+			case 'f':
+				formatted |= FormatFunction<T>(reinterpret_cast<const std::byte*>(&arg), out);
+				break;
+			// Log Message
+			case 'l':
+				formatted |= FormatLogMessage<T>(reinterpret_cast<const std::byte*>(&arg), out, args);
+				break;
+			// System Error Message
+			case 'm':
+				formatted |= FormatErrorMessage<T>(reinterpret_cast<const std::byte*>(&arg), out);
+				break;
+			// what()
+			case 'w':
+				formatted |= FormatWhat<T>(reinterpret_cast<const std::byte*>(&arg), out, args);
+				break;
+			// Error Code
+			case 'c':
+				formatted |= FormatErrorCode<T>(reinterpret_cast<const std::byte*>(&arg), out);
+				break;
+			// Category Name
+			case 'C':
+				formatted |= FormatCategoryName<T>(reinterpret_cast<const std::byte*>(&arg), out);
+				break;
+			// Default is to just print the character (but emit an error)
+			default:
+				ctx.on_error("unknown exception specifier");
+				start = it;
+				break;
+			}
+		} else {
+			// do nothing
+		}
+	}
+	std::copy(start, end, out);
+	return formatted;
 }
 
 }  // namespace
@@ -656,11 +660,11 @@ fmt::format_context::iterator ExceptionFormatter<T>::format(const T& arg, fmt::f
 }
 
 // Explicit instantiation definitions in to keep compile times down
-template ExceptionFormatter<StackBasedException>;
-template ExceptionFormatter<StackBasedSystemError>;
-template ExceptionFormatter<HeapBasedException>;
-template ExceptionFormatter<HeapBasedSystemError>;
-template ExceptionFormatter<PlainException>;
-template ExceptionFormatter<PlainSystemError>;
+template struct ExceptionFormatter<StackBasedException>;
+template struct ExceptionFormatter<StackBasedSystemError>;
+template struct ExceptionFormatter<HeapBasedException>;
+template struct ExceptionFormatter<HeapBasedSystemError>;
+template struct ExceptionFormatter<PlainException>;
+template struct ExceptionFormatter<PlainSystemError>;
 
 }  // namespace llamalog::exception

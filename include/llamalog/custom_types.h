@@ -186,8 +186,8 @@ LogLine& LogLine::AddCustomArgument(const T& arg) {
 	static_assert(offsetof(FunctionTable, destruct) == offsetof(internal::FunctionTable, destruct));
 	static_assert(offsetof(FunctionTable, createFormatArg) == offsetof(internal::FunctionTable, createFormatArg));
 
-	static constexpr FunctionTable functionTable;
-	std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), static_cast<const void*>(&functionTable));
+	static constexpr FunctionTable kFunctionTable;
+	std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), static_cast<const void*>(&kFunctionTable));
 	new (ptr) X(arg);
 	return *this;
 }
@@ -208,8 +208,8 @@ LogLine& LogLine::AddCustomArgument(const T* const arg) {
 		static_assert(offsetof(FunctionTable, destruct) == offsetof(internal::FunctionTable, destruct));
 		static_assert(offsetof(FunctionTable, createFormatArg) == offsetof(internal::FunctionTable, createFormatArg));
 
-		static constexpr FunctionTable functionTable;
-		std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), static_cast<const void*>(&functionTable));
+		static constexpr FunctionTable kFunctionTable;
+		std::byte* __restrict const ptr = WriteNonTriviallyCopyable(sizeof(X), alignof(X), static_cast<const void*>(&kFunctionTable));
 		new (ptr) X(*arg);
 	} else {
 		WriteNullPointer();

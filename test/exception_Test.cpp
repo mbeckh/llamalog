@@ -1788,4 +1788,20 @@ TEST(exception_Test, SubFormat_IssystemerrorPlain_PrintValue) {
 	EXPECT_EQ("TestError testmsg: This is an error message", str);
 }
 
+TEST(exception_Test, GetCurrentExceptionAsBaseException_IsBaseException_ReturnPointer) {
+	try {
+		LLAMALOG_THROW(system_error(7, kTestCategory, "testmsg"));
+	} catch (const std::exception&) {
+		EXPECT_NE(nullptr, GetCurrentExceptionAsBaseException());
+	}
+}
+
+TEST(exception_Test, GetCurrentExceptionAsBaseException_IsPlainException_ReturnNullptr) {
+	try {
+		throw system_error(7, kTestCategory, "testmsg");
+	} catch (const std::exception&) {
+		EXPECT_EQ(nullptr, GetCurrentExceptionAsBaseException());
+	}
+}
+
 }  // namespace llamalog::test

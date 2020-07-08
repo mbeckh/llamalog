@@ -173,7 +173,8 @@ constexpr LogLine::Size kGrowBytes = 512u;
 constexpr __declspec(noalias) LogLine::Size GetNextChunk(const LogLine::Size value) noexcept {
 	constexpr LogLine::Size kMask = kGrowBytes - 1u;
 	static_assert((kGrowBytes & kMask) == 0, "kGrowBytes must be a multiple of 2");
-	return value + ((kGrowBytes - (kGrowBytes & kMask)) & kMask);
+
+	return value + ((kGrowBytes - (value & kMask)) & kMask);
 }
 
 /// @brief Get the required padding for a type starting at the next possible offset.

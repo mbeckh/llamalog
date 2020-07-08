@@ -82,10 +82,10 @@ enum class Priority : std::uint8_t {
 };
 
 /// @brief Wrap a value in this type to get its output escaped according to C rules. Currently, only low ASCII
-/// characters are replaced by their named or numeric counterparts, i.e. 0x0A becomes \n, 0x11 comes \x11.
+/// characters are replaced by their named or numeric counterparts, i.e. 0x0A becomes \\n, 0x11 becomes \\x11.
 /// @tparam T The type of the argument.
 template <typename T>
-struct escape final {
+struct escape final {  // NOLINT(readability-identifier-naming): Infrastructure is less prominent in lower case.
 	/// @brief Create a new wrapper for a parameter.
 	/// @param val The parameter value.
 	explicit escape(const T& val) noexcept
@@ -96,11 +96,9 @@ struct escape final {
 	escape(escape&&) = delete;
 	~escape() noexcept = default;
 
-public:
 	escape& operator=(const escape&) = delete;
 	escape& operator=(escape&&) = delete;
 
-public:
 	const T& value;  ///< @brief The parameter value.
 };
 

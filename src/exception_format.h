@@ -56,13 +56,13 @@ struct ExceptionFormatter : public ExceptionBaseFormatter {
 	fmt::format_context::iterator format(const T& arg, fmt::format_context& ctx) const;  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 };
 
-// Explicit instantiaton declarations to keep compile times down
-extern template ExceptionFormatter<StackBasedException>;
-extern template ExceptionFormatter<StackBasedSystemError>;
-extern template ExceptionFormatter<HeapBasedException>;
-extern template ExceptionFormatter<HeapBasedSystemError>;
-extern template ExceptionFormatter<PlainException>;
-extern template ExceptionFormatter<PlainSystemError>;
+// Explicit instantiation declarations to keep compile times down
+extern template struct ExceptionFormatter<StackBasedException>;
+extern template struct ExceptionFormatter<StackBasedSystemError>;
+extern template struct ExceptionFormatter<HeapBasedException>;
+extern template struct ExceptionFormatter<HeapBasedSystemError>;
+extern template struct ExceptionFormatter<PlainException>;
+extern template struct ExceptionFormatter<PlainSystemError>;
 
 }  // namespace llamalog::exception
 

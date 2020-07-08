@@ -117,7 +117,7 @@ void DecodeArgument<const char*>(_Inout_ std::vector<fmt::format_context::format
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
 		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<const InlineChar>*>(&buffer[position + sizeof(TypeId)])));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(std::string_view(reinterpret_cast<const char*>(&buffer[position + kTypeSize<const char*>]), length)));
+		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const InlineChar*>(&buffer[position + sizeof(TypeId)])));
 	}
 	position += kTypeSize<const char*> + length * sizeof(char);
 }
@@ -506,7 +506,7 @@ void CopyHeapBasedException(_In_ const std::byte* __restrict const src, _Out_ st
 		CopyObjects(pSrcException->pHeapBuffer, pDstException->pHeapBuffer, pSrcException->exceptionInformation.used);
 	} else {
 		// copy everything in one turn
-		std::memcpy(pDstException->pHeapBuffer, pSrcException->pHeapBuffer, sizeof(HeapBasedException) + pSrcException->exceptionInformation.used);
+		std::memcpy(pDstException->pHeapBuffer, pSrcException->pHeapBuffer, pSrcException->exceptionInformation.used);
 	}
 	heapBuffer.release();
 

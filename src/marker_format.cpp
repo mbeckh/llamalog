@@ -46,7 +46,7 @@ fmt::format_parse_context::iterator InlineCharBaseFormatter::parse(const fmt::fo
 		++start;
 	}
 	auto end = start;
-	while (end != last && *end != '}') {
+	while (end != last && *end != '}' && *end != '?') {
 		++end;
 	}
 
@@ -55,6 +55,10 @@ fmt::format_parse_context::iterator InlineCharBaseFormatter::parse(const fmt::fo
 	m_format.append(start, end);
 	m_format.push_back('}');
 
+	// read until closing bracket if ? was matched
+	while (end != last && *end != '}') {
+		++end;
+	}
 	return end;
 }
 

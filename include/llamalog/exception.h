@@ -113,7 +113,7 @@ private:
 namespace internal {
 
 /// @brief The actual exception class thrown by `#Throw`.
-/// @tparam The type of the exception.
+/// @tparam E The type of the exception.
 template <typename E>
 class ExceptionDetail final : public E
 	, public BaseException {
@@ -130,8 +130,8 @@ public:
 	ExceptionDetail(E&& exception, _In_z_ const char* __restrict const file, const std::uint32_t line, _In_z_ const char* __restrict const function, _In_opt_z_ const char* __restrict const message, T&&... args)
 		: E(std::forward<E>(exception))
 		, BaseException(file, line, function, message) {
-#pragma warning(suppress : 4834)  // value MAY BE discarded if there are no arguments
-		(GetLogLine() << ... << std::forward<T>(args));
+#pragma warning(suppress : 4834)                         // value MAY be discarded if there are no arguments
+		(GetLogLine() << ... << std::forward<T>(args));  //NOLINT(clang-diagnostic-unused-result): Value MAY be discarded if there are no arguments.
 	}
 	ExceptionDetail(ExceptionDetail&) = default;            ///< @defaultconstructor
 	ExceptionDetail(ExceptionDetail&&) noexcept = default;  ///< @defaultconstructor

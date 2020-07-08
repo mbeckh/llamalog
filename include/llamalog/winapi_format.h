@@ -27,9 +27,9 @@ limitations under the License.
 
 namespace llamalog {
 
-struct error_code;
+struct error_code;  // NOLINT(readability-identifier-naming): Interface follows std::error_code.
 
-}
+}  // namespace llamalog
 
 //
 // Specializations of fmt::formatter

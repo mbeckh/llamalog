@@ -26,6 +26,7 @@ limitations under the License.
 #include <detours_gmock.h>
 #include <windows.h>
 
+#include <cstdio>
 #include <memory>
 #include <regex>
 #include <sstream>
@@ -76,7 +77,15 @@ MATCHER_P(MatchesRegex, pattern, "") {
 	fn_(1, BOOL, WINAPI, FindClose,                                                                                                                                                                \
 		(HANDLE hFindFile),                                                                                                                                                                        \
 		(hFindFile),                                                                                                                                                                               \
-		t::Return(TRUE))
+		t::Return(TRUE));                                                                                                                                                                          \
+	fn_(2, int, __cdecl, fputs,                                                                                                                                                                    \
+		(const char* str, FILE* stream),                                                                                                                                                           \
+		(str, stream),                                                                                                                                                                             \
+		t::Return(1));                                                                                                                                                                             \
+	fn_(1, void, WINAPI, OutputDebugStringA,                                                                                                                                                       \
+		(LPCSTR lpOutputString),                                                                                                                                                                   \
+		(lpOutputString),                                                                                                                                                                          \
+		nullptr)
 
 DTGM_DECLARE_API_MOCK(Win32, WIN32_FUNCTIONS);
 
@@ -622,6 +631,43 @@ TEST_F(LogWriter_Test, DeleteFileW_ErrorDuringRollFile_LogError) {
 
 	EXPECT_EQ(2, m_lines);
 	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]+\\n[0-9:. -]{23} WARN [^\\n]* RollFile Error deleting log 'll_test.2019-01-05.log': [^\\n]+ \\(2\\)\\n"));
+}
+
+TEST_F(LogWriter_Test, StdErrWriter_Log_WriteOutput) {
+	std::string value;
+	EXPECT_CALL(m_mock, fputs(t::_, stderr))
+		.WillOnce(t::Invoke([&value](const char* str, t::Unused) {
+			value = str;
+			return 1;
+		}));
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	std::unique_ptr<StdErrWriter> stdErrWriter = std::make_unique<StdErrWriter>(Priority::kDebug);
+	llamalog::Initialize(std::move(writer), std::move(stdErrWriter));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Shutdown();  // shutdown instead of flush before detach
+
+	EXPECT_EQ(1, m_lines);
+	EXPECT_EQ(m_out.str(), value);
+}
+
+TEST_F(LogWriter_Test, DebugWriter_Log_WriteOutput) {
+	std::string value;
+	EXPECT_CALL(m_mock, OutputDebugStringA)
+		.WillOnce(t::Invoke([&value](LPCSTR lpOutputString) {
+			value = lpOutputString;
+		}));
+
+	std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
+	std::unique_ptr<DebugWriter> debugWriter = std::make_unique<DebugWriter>(Priority::kDebug);
+	llamalog::Initialize(std::move(writer), std::move(debugWriter));
+
+	llamalog::Log(Priority::kDebug, GetFilename(__FILE__), 99, __func__, "{}", L"Test");
+	llamalog::Shutdown();  // shutdown instead of flush before detach
+
+	EXPECT_EQ(1, m_lines);
+	EXPECT_EQ(m_out.str(), value);
 }
 
 }  // namespace llamalog::test

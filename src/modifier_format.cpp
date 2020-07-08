@@ -121,7 +121,7 @@ std::vector<fmt::format_context::format_arg> GetArguments(fmt::format_context::f
 
 namespace internal {
 
-fmt::format_parse_context::iterator ModifierBaseFormatter::parse(fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+fmt::format_parse_context::iterator ModifierBaseFormatter::ParseFormatString(fmt::format_parse_context& ctx, const bool stopAtQuestionMark) {
 	auto start = ctx.begin();
 	const auto last = ctx.end();
 	if (start != last && *start == ':') {
@@ -131,9 +131,10 @@ fmt::format_parse_context::iterator ModifierBaseFormatter::parse(fmt::format_par
 	int open = 1;
 	auto current = start;
 	auto end = start;
+	const char questionMark = stopAtQuestionMark ? '?' : '\0';  // set to invalid char for simpler conditions
 
 	m_format.assign("{:");
-	while (end != last && ((*end != '}' && *end != '?') || open > 1)) {
+	while (end != last && ((*end != '}' && *end != questionMark) || open > 1)) {
 		if (*end == '\\') {
 			if (++end == last) {
 				ctx.on_error("invalid escape sequence");
@@ -144,7 +145,7 @@ fmt::format_parse_context::iterator ModifierBaseFormatter::parse(fmt::format_par
 			current = end;
 			++open;
 			continue;  // already incremented
-		} else if (*end == '}' || *end == '?' || *end == ':') {
+		} else if (*end == '}' || *end == questionMark || *end == ':') {
 			int argId = -1;
 			if (current == end) {
 				argId = ctx.next_arg_id();
@@ -183,10 +184,18 @@ fmt::format_parse_context::iterator ModifierBaseFormatter::parse(fmt::format_par
 	return end;
 }
 
+fmt::format_parse_context::iterator PointerBaseFormatter::parse(fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+	return ParseFormatString(ctx, true);
+}
+
 fmt::format_context::iterator PointerBaseFormatter::Format(fmt::format_context::format_arg&& arg, fmt::format_context& ctx) const {
 	const std::vector<fmt::format_context::format_arg> args = GetArguments(arg, ctx);
 	return fmt::vformat_to(ctx.out(), fmt::to_string_view(GetFormat()),
 						   fmt::basic_format_args<fmt::format_context>(args.data(), static_cast<fmt::format_args::size_type>(args.size())));
+}
+
+fmt::format_parse_context::iterator EscapeBaseFormatter::parse(fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
+	return ParseFormatString(ctx, false);
 }
 
 fmt::format_context::iterator EscapeBaseFormatter::Format(fmt::format_context::format_arg&& arg, fmt::format_context& ctx) const {
