@@ -35,9 +35,9 @@ thread_local int g_destructorCalled;
 thread_local int g_copyConstructorCalled;
 thread_local int g_moveConstructorCalled;
 
-class custom_typesTest : public t::Test {
-public:
-	custom_typesTest() {
+class custom_types_Test : public t::Test {
+protected:
+	void SetUp() override {
 		g_instancesCreated = 0;
 		g_destructorCalled = 0;
 		g_copyConstructorCalled = 0;
@@ -234,7 +234,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 // TriviallyCopyable
 //
 
-TEST_F(custom_typesTest, TriviallyCopyable_IsValue_PrintValue) {
+TEST_F(custom_types_Test, TriviallyCopyable_IsValue_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -255,7 +255,7 @@ TEST_F(custom_typesTest, TriviallyCopyable_IsValue_PrintValue) {
 	EXPECT_EQ(1, g_instancesCreated);
 }
 
-TEST_F(custom_typesTest, TriviallyCopyable_IsValueWithCustomFormat_ThrowError) {
+TEST_F(custom_types_Test, TriviallyCopyable_IsValueWithCustomFormat_ThrowError) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{
@@ -275,7 +275,7 @@ TEST_F(custom_typesTest, TriviallyCopyable_IsValueWithCustomFormat_ThrowError) {
 	EXPECT_EQ(1, g_instancesCreated);
 }
 
-TEST_F(custom_typesTest, TriviallyCopyable_IsPointer_PrintValue) {
+TEST_F(custom_types_Test, TriviallyCopyable_IsPointer_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -297,7 +297,7 @@ TEST_F(custom_typesTest, TriviallyCopyable_IsPointer_PrintValue) {
 	EXPECT_EQ(1, g_instancesCreated);
 }
 
-TEST_F(custom_typesTest, TriviallyCopyable_IsPointerWithCustomFormat_PrintValue) {
+TEST_F(custom_types_Test, TriviallyCopyable_IsPointerWithCustomFormat_PrintValue) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{
@@ -319,7 +319,7 @@ TEST_F(custom_typesTest, TriviallyCopyable_IsPointerWithCustomFormat_PrintValue)
 	EXPECT_EQ(1, g_instancesCreated);
 }
 
-TEST_F(custom_typesTest, TriviallyCopyable_IsNullptr_PrintNull) {
+TEST_F(custom_types_Test, TriviallyCopyable_IsNullptr_PrintNull) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -339,7 +339,7 @@ TEST_F(custom_typesTest, TriviallyCopyable_IsNullptr_PrintNull) {
 	EXPECT_EQ(0, g_instancesCreated);
 }
 
-TEST_F(custom_typesTest, TriviallyCopyable_IsNullptrWithCustomFormat_PrintNull) {
+TEST_F(custom_types_Test, TriviallyCopyable_IsNullptrWithCustomFormat_PrintNull) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{
@@ -364,7 +364,7 @@ TEST_F(custom_typesTest, TriviallyCopyable_IsNullptrWithCustomFormat_PrintNull) 
 // MoveConstructible
 //
 
-TEST_F(custom_typesTest, MoveConstructible_IsValue_PrintValue) {
+TEST_F(custom_types_Test, MoveConstructible_IsValue_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -406,7 +406,7 @@ TEST_F(custom_typesTest, MoveConstructible_IsValue_PrintValue) {
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, MoveConstructible_IsValueWithCustomFormat_ThrowError) {
+TEST_F(custom_types_Test, MoveConstructible_IsValueWithCustomFormat_ThrowError) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{
@@ -448,7 +448,7 @@ TEST_F(custom_typesTest, MoveConstructible_IsValueWithCustomFormat_ThrowError) {
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, MoveConstructible_IsPointer_PrintValue) {
+TEST_F(custom_types_Test, MoveConstructible_IsPointer_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -491,7 +491,7 @@ TEST_F(custom_typesTest, MoveConstructible_IsPointer_PrintValue) {
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, MoveConstructible_IsPointerWithCustomFormat_PrintValue) {
+TEST_F(custom_types_Test, MoveConstructible_IsPointerWithCustomFormat_PrintValue) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{
@@ -534,7 +534,7 @@ TEST_F(custom_typesTest, MoveConstructible_IsPointerWithCustomFormat_PrintValue)
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, MoveConstructible_IsNullptr_PrintNull) {
+TEST_F(custom_types_Test, MoveConstructible_IsNullptr_PrintNull) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -575,7 +575,7 @@ TEST_F(custom_typesTest, MoveConstructible_IsNullptr_PrintNull) {
 	EXPECT_EQ(0, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, MoveConstructible_IsNullptrWithCustomFormat_PrintNull) {
+TEST_F(custom_types_Test, MoveConstructible_IsNullptrWithCustomFormat_PrintNull) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{
@@ -621,7 +621,7 @@ TEST_F(custom_typesTest, MoveConstructible_IsNullptrWithCustomFormat_PrintNull) 
 // CopyConstructible
 //
 
-TEST_F(custom_typesTest, CopyConstructible_IsValue_PrintValue) {
+TEST_F(custom_types_Test, CopyConstructible_IsValue_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -663,7 +663,7 @@ TEST_F(custom_typesTest, CopyConstructible_IsValue_PrintValue) {
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, CopyConstructible_IsValueWithCustomFormat_ThrowError) {
+TEST_F(custom_types_Test, CopyConstructible_IsValueWithCustomFormat_ThrowError) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{
@@ -705,7 +705,7 @@ TEST_F(custom_typesTest, CopyConstructible_IsValueWithCustomFormat_ThrowError) {
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, CopyConstructible_IsPointer_PrintValue) {
+TEST_F(custom_types_Test, CopyConstructible_IsPointer_PrintValue) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -748,7 +748,7 @@ TEST_F(custom_typesTest, CopyConstructible_IsPointer_PrintValue) {
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, CopyConstructible_IsPointerWithCustomFormat_PrintValue) {
+TEST_F(custom_types_Test, CopyConstructible_IsPointerWithCustomFormat_PrintValue) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{
@@ -791,7 +791,7 @@ TEST_F(custom_typesTest, CopyConstructible_IsPointerWithCustomFormat_PrintValue)
 	EXPECT_EQ(3, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, CopyConstructible_IsNullptr_PrintNull) {
+TEST_F(custom_types_Test, CopyConstructible_IsNullptr_PrintNull) {
 	{
 		LogLine logLine = GetLogLine();
 		{
@@ -832,7 +832,7 @@ TEST_F(custom_typesTest, CopyConstructible_IsNullptr_PrintNull) {
 	EXPECT_EQ(0, g_destructorCalled);
 }
 
-TEST_F(custom_typesTest, CopyConstructible_IsNullptrWithCustomFormat_PrintNull) {
+TEST_F(custom_types_Test, CopyConstructible_IsNullptrWithCustomFormat_PrintNull) {
 	{
 		LogLine logLine = GetLogLine("{:?nullptr}");
 		{

@@ -35,7 +35,7 @@ namespace t = testing;
 // error_code
 //
 
-TEST(winapi_formatTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
+TEST(winapi_format_Test, ErrorCode_IsSystemFormatDefault_PrintMessage) {
 	std::string str;
 	{
 		const error_code arg{ERROR_ACCESS_DENIED};
@@ -45,7 +45,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatDefault_PrintMessage) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(5\\)"));
 }
 
-TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
+TEST(winapi_format_Test, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
 	std::string str;
 	{
 		const error_code arg{ERROR_ACCESS_DENIED};
@@ -55,7 +55,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsDecimal_PrintDecimal) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(05\\)"));
 }
 
-TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
+TEST(winapi_format_Test, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 	std::string str;
 	{
 		const error_code arg{ERROR_ACCESS_DENIED};
@@ -65,7 +65,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemFormatAsHex_PrintHex) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(5\\)"));
 }
 
-TEST(winapi_formatTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
+TEST(winapi_format_Test, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
 	std::string str;
 	{
 		const error_code arg{ERROR_ACCESS_DENIED};
@@ -75,7 +75,7 @@ TEST(winapi_formatTest, ErrorCode_IsSystemOmitCode_PrintMessageOnly) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S"));
 }
 
-TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
+TEST(winapi_format_Test, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
 	std::string str;
 	{
 		const error_code arg{E_INVALIDARG};
@@ -85,7 +85,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatDefault_PrintMessage) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(0x80070057\\)"));
 }
 
-TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
+TEST(winapi_format_Test, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
 	std::string str;
 	{
 		const error_code arg{E_INVALIDARG};
@@ -95,7 +95,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsDecimal_PrintDecimal) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(2147942487\\)"));
 }
 
-TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
+TEST(winapi_format_Test, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
 	std::string str;
 	{
 		const error_code arg{E_INVALIDARG};
@@ -105,7 +105,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTFormatAsHex_PrintHex) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(80070057\\)"));
 }
 
-TEST(winapi_formatTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
+TEST(winapi_format_Test, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
 	std::string str;
 	{
 		const error_code arg{ERROR_ACCESS_DENIED};
@@ -120,7 +120,7 @@ TEST(winapi_formatTest, ErrorCode_IsHRESULTOmitCode_PrintMessageOnly) {
 // POINT
 //
 
-TEST(winapi_formatTest, POINT_FormatValue_PrintValue) {
+TEST(winapi_format_Test, POINT_FormatValue_PrintValue) {
 	std::string str;
 	{
 		const POINT arg = {-10, 20};
@@ -130,7 +130,7 @@ TEST(winapi_formatTest, POINT_FormatValue_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(winapi_formatTest, POINT_FormatInline_PrintValue) {
+TEST(winapi_format_Test, POINT_FormatInline_PrintValue) {
 	std::string str;
 	{
 		str = fmt::format("{}", POINT{-10, 20});
@@ -144,7 +144,7 @@ TEST(winapi_formatTest, POINT_FormatInline_PrintValue) {
 // RECT
 //
 
-TEST(winapi_formatTest, RECT_Format_PrintValue) {
+TEST(winapi_format_Test, RECT_Format_PrintValue) {
 	std::string str;
 	{
 		const RECT arg = {-10, 20, 30, 40};

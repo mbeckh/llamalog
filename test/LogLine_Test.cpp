@@ -40,7 +40,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 // bool
 //
 
-TEST(LogLineTest, bool_IsTrue_PrintTrue) {
+TEST(LogLine_Test, bool_IsTrue_PrintTrue) {
 	LogLine logLine = GetLogLine();
 	{
 		const bool arg = true;
@@ -51,7 +51,7 @@ TEST(LogLineTest, bool_IsTrue_PrintTrue) {
 	EXPECT_EQ("true", str);
 }
 
-TEST(LogLineTest, bool_IsFalse_PrintFalse) {
+TEST(LogLine_Test, bool_IsFalse_PrintFalse) {
 	LogLine logLine = GetLogLine();
 	{
 		const bool arg = false;
@@ -62,7 +62,7 @@ TEST(LogLineTest, bool_IsFalse_PrintFalse) {
 	EXPECT_EQ("false", str);
 }
 
-TEST(LogLineTest, bool_IsTrueAsNumber_PrintOne) {
+TEST(LogLine_Test, bool_IsTrueAsNumber_PrintOne) {
 	LogLine logLine = GetLogLine("{:d}");
 	{
 		const bool arg = true;
@@ -73,7 +73,7 @@ TEST(LogLineTest, bool_IsTrueAsNumber_PrintOne) {
 	EXPECT_EQ("1", str);
 }
 
-TEST(LogLineTest, bool_PointerIsTrue_PrintTrue) {
+TEST(LogLine_Test, bool_PointerIsTrue_PrintTrue) {
 	LogLine logLine = GetLogLine();
 	{
 		const bool value = true;
@@ -85,7 +85,7 @@ TEST(LogLineTest, bool_PointerIsTrue_PrintTrue) {
 	EXPECT_EQ("true", str);
 }
 
-TEST(LogLineTest, bool_PointerIsTrueWithCustomFormat_PrintTrue) {
+TEST(LogLine_Test, bool_PointerIsTrueWithCustomFormat_PrintTrue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const bool value = true;
@@ -97,7 +97,7 @@ TEST(LogLineTest, bool_PointerIsTrueWithCustomFormat_PrintTrue) {
 	EXPECT_EQ("true", str);
 }
 
-TEST(LogLineTest, bool_PointerIsNullptr_PrintNull) {
+TEST(LogLine_Test, bool_PointerIsNullptr_PrintNull) {
 	LogLine logLine = GetLogLine();
 	{
 		const bool* arg = nullptr;
@@ -108,7 +108,7 @@ TEST(LogLineTest, bool_PointerIsNullptr_PrintNull) {
 	EXPECT_EQ("(null)", str);
 }
 
-TEST(LogLineTest, bool_PointerIsNullptrWithCustomFormat_PrintNull) {
+TEST(LogLine_Test, bool_PointerIsNullptrWithCustomFormat_PrintNull) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const bool* arg = nullptr;
@@ -124,7 +124,7 @@ TEST(LogLineTest, bool_PointerIsNullptrWithCustomFormat_PrintNull) {
 // char
 //
 
-TEST(LogLineTest, char_IsCharacter_PrintCharacter) {
+TEST(LogLine_Test, char_IsCharacter_PrintCharacter) {
 	LogLine logLine = GetLogLine();
 	{
 		const char arg = 'a';
@@ -135,7 +135,7 @@ TEST(LogLineTest, char_IsCharacter_PrintCharacter) {
 	EXPECT_EQ("a", str);
 }
 
-TEST(LogLineTest, char_IsCharacterAsNumber_PrintNumber) {
+TEST(LogLine_Test, char_IsCharacterAsNumber_PrintNumber) {
 	LogLine logLine = GetLogLine("{:d}");
 	{
 		const char arg = 'a';
@@ -146,7 +146,7 @@ TEST(LogLineTest, char_IsCharacterAsNumber_PrintNumber) {
 	EXPECT_EQ("97", str);
 }
 
-TEST(LogLineTest, char_IsCharacterAsHex_PrintHex) {
+TEST(LogLine_Test, char_IsCharacterAsHex_PrintHex) {
 	LogLine logLine = GetLogLine("{:x}");
 	{
 		const char arg = 'M';
@@ -156,7 +156,7 @@ TEST(LogLineTest, char_IsCharacterAsHex_PrintHex) {
 
 	EXPECT_EQ("4d", str);
 }
-TEST(LogLineTest, char_IsEscaped_PrintEscaped) {
+TEST(LogLine_Test, char_IsEscaped_PrintEscaped) {
 	LogLine logLine = GetLogLine();
 	{
 		const char arg = '\n';
@@ -167,7 +167,7 @@ TEST(LogLineTest, char_IsEscaped_PrintEscaped) {
 	EXPECT_EQ("\\n", str);
 }
 
-TEST(LogLineTest, char_IsEscapedDoNotEscape_PrintUnescaped) {
+TEST(LogLine_Test, char_IsEscapedDoNotEscape_PrintUnescaped) {
 	LogLine logLine = GetLogLine("{:c}");
 	{
 		const char arg = '\n';
@@ -183,7 +183,7 @@ TEST(LogLineTest, char_IsEscapedDoNotEscape_PrintUnescaped) {
 // signed char
 //
 
-TEST(LogLineTest, signedchar_IsValue_PrintValue) {
+TEST(LogLine_Test, signedchar_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const signed char arg = 64u;
@@ -194,7 +194,7 @@ TEST(LogLineTest, signedchar_IsValue_PrintValue) {
 	EXPECT_EQ("64", str);
 }
 
-TEST(LogLineTest, signedchar_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, signedchar_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const signed char value = 64u;
@@ -211,7 +211,7 @@ TEST(LogLineTest, signedchar_PointerIsValueWithCustomFormat_PrintValue) {
 // unsigned char
 //
 
-TEST(LogLineTest, unsignedchar_IsValue_PrintValue) {
+TEST(LogLine_Test, unsignedchar_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const unsigned char arg = 179u;
@@ -223,7 +223,7 @@ TEST(LogLineTest, unsignedchar_IsValue_PrintValue) {
 	EXPECT_EQ("179", str);
 }
 
-TEST(LogLineTest, unsignedchar_PointerIsValue_PrintValue) {
+TEST(LogLine_Test, unsignedchar_PointerIsValue_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const unsigned char value = 179u;
@@ -241,7 +241,7 @@ TEST(LogLineTest, unsignedchar_PointerIsValue_PrintValue) {
 // short
 //
 
-TEST(LogLineTest, short_IsPositive_PrintValue) {
+TEST(LogLine_Test, short_IsPositive_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const short arg = 2790;
@@ -253,7 +253,7 @@ TEST(LogLineTest, short_IsPositive_PrintValue) {
 	EXPECT_EQ("2790", str);
 }
 
-TEST(LogLineTest, short_IsNegative_PrintValue) {
+TEST(LogLine_Test, short_IsNegative_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const short arg = -2790;
@@ -265,7 +265,7 @@ TEST(LogLineTest, short_IsNegative_PrintValue) {
 	EXPECT_EQ("-2790", str);
 }
 
-TEST(LogLineTest, short_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, short_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const short value = 2790;
@@ -282,7 +282,7 @@ TEST(LogLineTest, short_PointerIsValueWithCustomFormat_PrintValue) {
 // unsigned short
 //
 
-TEST(LogLineTest, unsignedshort_IsValue_PrintValue) {
+TEST(LogLine_Test, unsignedshort_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const unsigned short arg = 37900u;
@@ -294,7 +294,7 @@ TEST(LogLineTest, unsignedshort_IsValue_PrintValue) {
 	EXPECT_EQ("37900", str);
 }
 
-TEST(LogLineTest, unsignedshort_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, unsignedshort_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const unsigned short value = 37900u;
@@ -311,7 +311,7 @@ TEST(LogLineTest, unsignedshort_PointerIsValueWithCustomFormat_PrintValue) {
 // int
 //
 
-TEST(LogLineTest, int_IsPositive_PrintValue) {
+TEST(LogLine_Test, int_IsPositive_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const int arg = 27900;
@@ -323,7 +323,7 @@ TEST(LogLineTest, int_IsPositive_PrintValue) {
 	EXPECT_EQ("27900", str);
 }
 
-TEST(LogLineTest, int_IsNegative_PrintValue) {
+TEST(LogLine_Test, int_IsNegative_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const int arg = -27900;
@@ -335,7 +335,7 @@ TEST(LogLineTest, int_IsNegative_PrintValue) {
 	EXPECT_EQ("-27900", str);
 }
 
-TEST(LogLineTest, int_PointerIsValue_PrintValue) {
+TEST(LogLine_Test, int_PointerIsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const int value = -27900;
@@ -347,7 +347,7 @@ TEST(LogLineTest, int_PointerIsValue_PrintValue) {
 	EXPECT_EQ("-27900", str);
 }
 
-TEST(LogLineTest, int_PointerIsNullptr_PrintValue) {
+TEST(LogLine_Test, int_PointerIsNullptr_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const int* arg = nullptr;
@@ -358,7 +358,7 @@ TEST(LogLineTest, int_PointerIsNullptr_PrintValue) {
 	EXPECT_EQ("(null)", str);
 }
 
-TEST(LogLineTest, int_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, int_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const int value = -27900;
@@ -370,7 +370,7 @@ TEST(LogLineTest, int_PointerIsValueWithCustomFormat_PrintValue) {
 	EXPECT_EQ("-27900", str);
 }
 
-TEST(LogLineTest, int_PointerIsNullptrWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, int_PointerIsNullptrWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const int* arg = nullptr;
@@ -386,7 +386,7 @@ TEST(LogLineTest, int_PointerIsNullptrWithCustomFormat_PrintValue) {
 // unsigned int
 //
 
-TEST(LogLineTest, unsignedint_IsValue_PrintValue) {
+TEST(LogLine_Test, unsignedint_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const unsigned int arg = 37900u;
@@ -398,7 +398,7 @@ TEST(LogLineTest, unsignedint_IsValue_PrintValue) {
 	EXPECT_EQ("37900", str);
 }
 
-TEST(LogLineTest, unsignedint_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, unsignedint_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const unsigned int value = 37900u;
@@ -415,7 +415,7 @@ TEST(LogLineTest, unsignedint_PointerIsValueWithCustomFormat_PrintValue) {
 // long
 //
 
-TEST(LogLineTest, long_IsPositive_PrintValue) {
+TEST(LogLine_Test, long_IsPositive_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const long arg = 379000L;
@@ -427,7 +427,7 @@ TEST(LogLineTest, long_IsPositive_PrintValue) {
 	EXPECT_EQ("379000", str);
 }
 
-TEST(LogLineTest, long_IsNegative_PrintValue) {
+TEST(LogLine_Test, long_IsNegative_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const long arg = -379000L;
@@ -439,7 +439,7 @@ TEST(LogLineTest, long_IsNegative_PrintValue) {
 	EXPECT_EQ("-379000", str);
 }
 
-TEST(LogLineTest, long_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, long_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const long value = -379000L;
@@ -456,7 +456,7 @@ TEST(LogLineTest, long_PointerIsValueWithCustomFormat_PrintValue) {
 // unsigned long
 //
 
-TEST(LogLineTest, unsignedlong_IsValue_PrintValue) {
+TEST(LogLine_Test, unsignedlong_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const unsigned long arg = 3790000000ul;
@@ -468,7 +468,7 @@ TEST(LogLineTest, unsignedlong_IsValue_PrintValue) {
 	EXPECT_EQ("3790000000", str);
 }
 
-TEST(LogLineTest, unsignedlong_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, unsignedlong_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const unsigned long value = 3790000000;
@@ -485,7 +485,7 @@ TEST(LogLineTest, unsignedlong_PointerIsValueWithCustomFormat_PrintValue) {
 // long long
 //
 
-TEST(LogLineTest, longlong_IsPositive_PrintValue) {
+TEST(LogLine_Test, longlong_IsPositive_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const long long arg = 379000000000LL;
@@ -497,7 +497,7 @@ TEST(LogLineTest, longlong_IsPositive_PrintValue) {
 	EXPECT_EQ("379000000000", str);
 }
 
-TEST(LogLineTest, longlong_IsNegative_PrintValue) {
+TEST(LogLine_Test, longlong_IsNegative_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const long long arg = -379000000000LL;
@@ -509,7 +509,7 @@ TEST(LogLineTest, longlong_IsNegative_PrintValue) {
 	EXPECT_EQ("-379000000000", str);
 }
 
-TEST(LogLineTest, longlong_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, longlong_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const long long value = -379000000000LL;
@@ -526,7 +526,7 @@ TEST(LogLineTest, longlong_PointerIsValueWithCustomFormat_PrintValue) {
 // unsigned long long
 //
 
-TEST(LogLineTest, unsignedlonglong_IsValue_PrintValue) {
+TEST(LogLine_Test, unsignedlonglong_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const unsigned long long arg = 10790000000000000000ull;
@@ -538,7 +538,7 @@ TEST(LogLineTest, unsignedlonglong_IsValue_PrintValue) {
 	EXPECT_EQ("10790000000000000000", str);
 }
 
-TEST(LogLineTest, unsignedlonglong_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, unsignedlonglong_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const unsigned long long value = 10790000000000000000ull;
@@ -555,7 +555,7 @@ TEST(LogLineTest, unsignedlonglong_PointerIsValueWithCustomFormat_PrintValue) {
 // float
 //
 
-TEST(LogLineTest, float_IsValue_PrintValue) {
+TEST(LogLine_Test, float_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine("{:g}");
 	{
 		const float arg = 8.8f;
@@ -566,7 +566,7 @@ TEST(LogLineTest, float_IsValue_PrintValue) {
 	EXPECT_EQ("8.8", str);
 }
 
-TEST(LogLineTest, float_IsFltMin_PrintValue) {
+TEST(LogLine_Test, float_IsFltMin_PrintValue) {
 	LogLine logLine = GetLogLine("{:g}");
 	{
 		const float arg = FLT_MIN;
@@ -579,7 +579,7 @@ TEST(LogLineTest, float_IsFltMin_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(LogLineTest, float_IsFltMax_PrintValue) {
+TEST(LogLine_Test, float_IsFltMax_PrintValue) {
 	LogLine logLine = GetLogLine("{:g}");
 	{
 		const float arg = -FLT_MAX;
@@ -592,7 +592,7 @@ TEST(LogLineTest, float_IsFltMax_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(LogLineTest, float_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, float_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:g?nullptr}");
 	{
 		const float value = 8.8f;
@@ -609,7 +609,7 @@ TEST(LogLineTest, float_PointerIsValueWithCustomFormat_PrintValue) {
 // double
 //
 
-TEST(LogLineTest, double_IsValue_PrintValue) {
+TEST(LogLine_Test, double_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const double arg = 8.8;
@@ -620,7 +620,7 @@ TEST(LogLineTest, double_IsValue_PrintValue) {
 	EXPECT_EQ("8.8", str);
 }
 
-TEST(LogLineTest, double_IsDblMin_PrintValue) {
+TEST(LogLine_Test, double_IsDblMin_PrintValue) {
 	LogLine logLine = GetLogLine("{:g}");
 	{
 		const double arg = DBL_MIN;
@@ -633,7 +633,7 @@ TEST(LogLineTest, double_IsDblMin_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(LogLineTest, double_IsDblMax_PrintValue) {
+TEST(LogLine_Test, double_IsDblMax_PrintValue) {
 	LogLine logLine = GetLogLine("{:g}");
 	{
 		const double arg = -DBL_MAX;
@@ -646,7 +646,7 @@ TEST(LogLineTest, double_IsDblMax_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(LogLineTest, double_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, double_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:g?nullptr}");
 	{
 		const double value = 8.8f;
@@ -663,7 +663,7 @@ TEST(LogLineTest, double_PointerIsValueWithCustomFormat_PrintValue) {
 // long double
 //
 
-TEST(LogLineTest, longdouble_IsValue_PrintValue) {
+TEST(LogLine_Test, longdouble_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const long double arg = 8.8l;
@@ -674,7 +674,7 @@ TEST(LogLineTest, longdouble_IsValue_PrintValue) {
 	EXPECT_EQ("8.8", str);
 }
 
-TEST(LogLineTest, longdouble_IsLdblMin_PrintValue) {
+TEST(LogLine_Test, longdouble_IsLdblMin_PrintValue) {
 	LogLine logLine = GetLogLine("{:g}");
 	{
 		const long double arg = LDBL_MIN;
@@ -687,7 +687,7 @@ TEST(LogLineTest, longdouble_IsLdblMin_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(LogLineTest, longdouble_IsLdblMax_PrintValue) {
+TEST(LogLine_Test, longdouble_IsLdblMax_PrintValue) {
 	LogLine logLine = GetLogLine("{:g}");
 	{
 		const long double arg = LDBL_MAX;
@@ -700,7 +700,7 @@ TEST(LogLineTest, longdouble_IsLdblMax_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(LogLineTest, longdouble_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, longdouble_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:g?nullptr}");
 	{
 		const long double value = 8.8f;
@@ -717,7 +717,7 @@ TEST(LogLineTest, longdouble_PointerIsValueWithCustomFormat_PrintValue) {
 // void*
 //
 
-TEST(LogLineTest, voidptr_IsValue_PrintValue) {
+TEST(LogLine_Test, voidptr_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		void* arg = reinterpret_cast<void*>(0x123);
@@ -728,7 +728,7 @@ TEST(LogLineTest, voidptr_IsValue_PrintValue) {
 	EXPECT_EQ("0x123", str);
 }
 
-TEST(LogLineTest, voidptr_IsNullptr_PrintZero) {
+TEST(LogLine_Test, voidptr_IsNullptr_PrintZero) {
 	LogLine logLine = GetLogLine();
 	{
 		const void* const arg = nullptr;
@@ -744,7 +744,7 @@ TEST(LogLineTest, voidptr_IsNullptr_PrintZero) {
 // nullptr
 //
 
-TEST(LogLineTest, nullptr_IsValue_PrintNull) {
+TEST(LogLine_Test, nullptr_IsValue_PrintNull) {
 	LogLine logLine = GetLogLine();
 	{
 		const nullptr_t arg = nullptr;
@@ -760,7 +760,7 @@ TEST(LogLineTest, nullptr_IsValue_PrintNull) {
 // char*
 //
 
-TEST(LogLineTest, charptr_IsLiteral_PrintValue) {
+TEST(LogLine_Test, charptr_IsLiteral_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		logLine << "Test";
@@ -770,7 +770,7 @@ TEST(LogLineTest, charptr_IsLiteral_PrintValue) {
 	EXPECT_EQ("Test", str);
 }
 
-TEST(LogLineTest, charptr_IsValue_PrintValue) {
+TEST(LogLine_Test, charptr_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const char* const arg = "Test";
@@ -782,7 +782,7 @@ TEST(LogLineTest, charptr_IsValue_PrintValue) {
 }
 
 // Tests that string in buffer is still accessible after grow
-TEST(LogLineTest, charptr_IsLongValue_PrintValue) {
+TEST(LogLine_Test, charptr_IsLongValue_PrintValue) {
 	LogLine logLine = GetLogLine("{} {:.3}");
 	{
 		const char* const arg0 = "Test";
@@ -794,7 +794,7 @@ TEST(LogLineTest, charptr_IsLongValue_PrintValue) {
 	EXPECT_EQ("Test xxx", str);
 }
 
-TEST(LogLineTest, charptr_HasEscapedChar_PrintEscapeChar) {
+TEST(LogLine_Test, charptr_HasEscapedChar_PrintEscapeChar) {
 	LogLine logLine = GetLogLine();
 	{
 		const char* const arg = "Test\nNext Line\\";
@@ -805,7 +805,7 @@ TEST(LogLineTest, charptr_HasEscapedChar_PrintEscapeChar) {
 	EXPECT_EQ("Test\\nNext Line\\\\", str);
 }
 
-TEST(LogLineTest, charptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
+TEST(LogLine_Test, charptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
 	LogLine logLine = GetLogLine("{:s}");
 	{
 		const char* const arg = "Test\nNext Line\\";
@@ -816,7 +816,7 @@ TEST(LogLineTest, charptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
 	EXPECT_EQ("Test\nNext Line\\", str);
 }
 
-TEST(LogLineTest, charptr_HasHexChar_PrintUtf8) {
+TEST(LogLine_Test, charptr_HasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const char* const arg = "Te\xE4st";
@@ -827,7 +827,7 @@ TEST(LogLineTest, charptr_HasHexChar_PrintUtf8) {
 	EXPECT_EQ("Te\xE4st", str);
 }
 
-TEST(LogLineTest, charptr_HasHexCharDoNotEscape_PrintUtf8) {
+TEST(LogLine_Test, charptr_HasHexCharDoNotEscape_PrintUtf8) {
 	LogLine logLine = GetLogLine("{:s}");
 	{
 		const char* const arg = "Te\xE4st";
@@ -838,7 +838,7 @@ TEST(LogLineTest, charptr_HasHexCharDoNotEscape_PrintUtf8) {
 	EXPECT_EQ("Te\xE4st", str);
 }
 
-TEST(LogLineTest, charptr_IsNullptr_PrintZero) {
+TEST(LogLine_Test, charptr_IsNullptr_PrintZero) {
 	LogLine logLine = GetLogLine();
 	{
 		const char* const arg = nullptr;
@@ -854,7 +854,7 @@ TEST(LogLineTest, charptr_IsNullptr_PrintZero) {
 // wchar_t*
 //
 
-TEST(LogLineTest, wcharptr_IsLiteral_PrintValue) {
+TEST(LogLine_Test, wcharptr_IsLiteral_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		logLine << L"Test";
@@ -864,7 +864,7 @@ TEST(LogLineTest, wcharptr_IsLiteral_PrintValue) {
 	EXPECT_EQ("Test", str);
 }
 
-TEST(LogLineTest, wcharptr_IsValue_PrintValue) {
+TEST(LogLine_Test, wcharptr_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"Test";
@@ -875,7 +875,7 @@ TEST(LogLineTest, wcharptr_IsValue_PrintValue) {
 	EXPECT_EQ("Test", str);
 }
 
-TEST(LogLineTest, wcharptr_IsLongValue_PrintValue) {
+TEST(LogLine_Test, wcharptr_IsLongValue_PrintValue) {
 	LogLine logLine = GetLogLine("{:.3}");
 	{
 		const std::wstring arg(257, L'x');
@@ -886,7 +886,7 @@ TEST(LogLineTest, wcharptr_IsLongValue_PrintValue) {
 	EXPECT_EQ("xxx", str);
 }
 
-TEST(LogLineTest, wcharptr_IsLongValueAfterConversion_PrintUtf8) {
+TEST(LogLine_Test, wcharptr_IsLongValueAfterConversion_PrintUtf8) {
 	LogLine logLine = GetLogLine("{:.5}");
 	{
 		std::wstring arg(256, L'x');
@@ -898,7 +898,7 @@ TEST(LogLineTest, wcharptr_IsLongValueAfterConversion_PrintUtf8) {
 	EXPECT_EQ("\xC3\xA4xxx", str);
 }
 
-TEST(LogLineTest, wcharptr_HasEscapedChar_PrintEscapedValue) {
+TEST(LogLine_Test, wcharptr_HasEscapedChar_PrintEscapedValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"Test\nNext Line\\";
@@ -909,7 +909,7 @@ TEST(LogLineTest, wcharptr_HasEscapedChar_PrintEscapedValue) {
 	EXPECT_EQ("Test\\nNext Line\\\\", str);
 }
 
-TEST(LogLineTest, wcharptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
+TEST(LogLine_Test, wcharptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
 	LogLine logLine = GetLogLine("{:s}");
 	{
 		const wchar_t* const arg = L"Test\nNext Line\\";
@@ -920,7 +920,7 @@ TEST(LogLineTest, wcharptr_HasEscapedCharDoNotEscape_PrintUnescaped) {
 	EXPECT_EQ("Test\nNext Line\\", str);
 }
 
-TEST(LogLineTest, wcharptr_HasSpecialCharAtEnd_PrintUtf8) {
+TEST(LogLine_Test, wcharptr_HasSpecialCharAtEnd_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"Test\xE4";
@@ -931,7 +931,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtEnd_PrintUtf8) {
 	EXPECT_EQ("Test\xC3\xA4", str);
 }
 
-TEST(LogLineTest, wcharptr_HasSpecialCharAtEndDoNotEscape_PrintUtf8) {
+TEST(LogLine_Test, wcharptr_HasSpecialCharAtEndDoNotEscape_PrintUtf8) {
 	LogLine logLine = GetLogLine("{:s}");
 	{
 		const wchar_t* const arg = L"Test\xE4";
@@ -942,7 +942,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtEndDoNotEscape_PrintUtf8) {
 	EXPECT_EQ("Test\xC3\xA4", str);
 }
 
-TEST(LogLineTest, wcharptr_HasSpecialCharAtStart_PrintUtf8) {
+TEST(LogLine_Test, wcharptr_HasSpecialCharAtStart_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"\xE4Test";
@@ -953,7 +953,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharAtStart_PrintUtf8) {
 	EXPECT_EQ("\xC3\xA4Test", str);
 }
 
-TEST(LogLineTest, wcharptr_HasSpecialCharInMiddle_PrintUtf8) {
+TEST(LogLine_Test, wcharptr_HasSpecialCharInMiddle_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = L"Te\xE4st";
@@ -964,7 +964,7 @@ TEST(LogLineTest, wcharptr_HasSpecialCharInMiddle_PrintUtf8) {
 	EXPECT_EQ("Te\xC3\xA4st", str);
 }
 
-TEST(LogLineTest, wcharptr_IsNullptr_PrintNull) {
+TEST(LogLine_Test, wcharptr_IsNullptr_PrintNull) {
 	LogLine logLine = GetLogLine();
 	{
 		const wchar_t* const arg = nullptr;
@@ -980,7 +980,7 @@ TEST(LogLineTest, wcharptr_IsNullptr_PrintNull) {
 // string
 //
 
-TEST(LogLineTest, string_IsValue_PrintValue) {
+TEST(LogLine_Test, string_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		logLine << std::string("Test");
@@ -990,7 +990,7 @@ TEST(LogLineTest, string_IsValue_PrintValue) {
 	EXPECT_EQ("Test", str);
 }
 
-TEST(LogLineTest, string_IsReference_PrintValue) {
+TEST(LogLine_Test, string_IsReference_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const std::string arg("Test");
@@ -1006,7 +1006,7 @@ TEST(LogLineTest, string_IsReference_PrintValue) {
 // wstring
 //
 
-TEST(LogLineTest, wstring_IsValue_PrintUtf8) {
+TEST(LogLine_Test, wstring_IsValue_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		logLine << escape(std::wstring(L"Test\xE4\n"));
@@ -1016,7 +1016,7 @@ TEST(LogLineTest, wstring_IsValue_PrintUtf8) {
 	EXPECT_EQ("Test\xC3\xA4\\n", str);
 }
 
-TEST(LogLineTest, wstring_IsReference_PrintUtf8) {
+TEST(LogLine_Test, wstring_IsReference_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
 		const std::wstring arg(L"Test\xE4\n");
@@ -1032,7 +1032,7 @@ TEST(LogLineTest, wstring_IsReference_PrintUtf8) {
 // std::align_val_t
 //
 
-TEST(LogLineTest, stdalignvalt_IsValue_PrintValue) {
+TEST(LogLine_Test, stdalignvalt_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const std::align_val_t arg = static_cast<std::align_val_t>(4096);
@@ -1043,7 +1043,7 @@ TEST(LogLineTest, stdalignvalt_IsValue_PrintValue) {
 	EXPECT_EQ("4096", str);
 }
 
-TEST(LogLineTest, stdalignvalt_PointerIsValueWithCustomFormat_PrintValue) {
+TEST(LogLine_Test, stdalignvalt_PointerIsValueWithCustomFormat_PrintValue) {
 	LogLine logLine = GetLogLine("{:x?nullptr}");
 	{
 		const std::align_val_t value = static_cast<std::align_val_t>(4096);
@@ -1059,7 +1059,7 @@ TEST(LogLineTest, stdalignvalt_PointerIsValueWithCustomFormat_PrintValue) {
 // Multiple arguments
 //
 
-TEST(LogLineTest, Multiple_ThreeArguments_PrintValues) {
+TEST(LogLine_Test, Multiple_ThreeArguments_PrintValues) {
 	LogLine logLine = GetLogLine("{} {} {}");
 	{
 		const char* arg0 = "Test";
@@ -1072,7 +1072,7 @@ TEST(LogLineTest, Multiple_ThreeArguments_PrintValues) {
 	EXPECT_EQ("Test 7 test", str);
 }
 
-TEST(LogLineTest, Multiple_ThreeArgumentsWithLong_PrintValues) {
+TEST(LogLine_Test, Multiple_ThreeArgumentsWithLong_PrintValues) {
 	LogLine logLine = GetLogLine("{} {:.3} {:.3}");
 	{
 		const char* arg0 = "Test";
@@ -1107,7 +1107,7 @@ public:
 	int& m_line;
 };
 
-TEST(ArgumentFormatterTest, CustomFormat_ThrowsException_PrintException) {
+TEST(ArgumentFormatter_Test, CustomFormat_ThrowsException_PrintException) {
 	int line;
 
 	const string str = M3C_ARGUMENTS_TO_STRING(false, ThrowingFormat("x", line));

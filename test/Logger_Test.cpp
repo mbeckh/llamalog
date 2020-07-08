@@ -73,7 +73,7 @@ MATCHER_P(MatchesRegex, pattern, "") {
 	return std::regex_match(arg, std::regex(pattern));
 }
 
-class LoggerTest : public t::Test {
+class Logger_Test : public t::Test {
 protected:
 	void TearDown() override {
 		DTGM_DETACH_API_MOCK(Win32);
@@ -121,17 +121,17 @@ private:
 // GetFilename
 //
 
-TEST_F(LoggerTest, GetFilename_HasPath_ReturnFilename) {
+TEST_F(Logger_Test, GetFilename_HasPath_ReturnFilename) {
 	constexpr const char* filename = GetFilename(__FILE__);
 	EXPECT_STREQ("Logger_Test.cpp", filename);
 }
 
-TEST_F(LoggerTest, GetFilename_HasNoPath_ReturnFilename) {
+TEST_F(Logger_Test, GetFilename_HasNoPath_ReturnFilename) {
 	constexpr const char* filename = GetFilename("Logger_Test.cpp");
 	EXPECT_STREQ("Logger_Test.cpp", filename);
 }
 
-TEST_F(LoggerTest, GetFilename_IsEmpty_ReturnEmpty) {
+TEST_F(Logger_Test, GetFilename_IsEmpty_ReturnEmpty) {
 	constexpr const char* filename = GetFilename("");
 	EXPECT_STREQ("", filename);
 }
@@ -141,7 +141,7 @@ TEST_F(LoggerTest, GetFilename_IsEmpty_ReturnEmpty) {
 // Creation Errors
 //
 
-TEST_F(LoggerTest, Initialize_SetThreadPriorityError_LogError) {
+TEST_F(Logger_Test, Initialize_SetThreadPriorityError_LogError) {
 	EXPECT_CALL(m_win32, SetThreadPriority(DTGM_ARG2))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_HANDLE, FALSE));
 	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
@@ -158,7 +158,7 @@ TEST_F(LoggerTest, Initialize_SetThreadPriorityError_LogError) {
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} WARN [^\\n]*Error configuring thread: [^\\n]+ \\(6\\)\\n[^\\n]+Test\\n"));
 }
 
-TEST_F(LoggerTest, Initialize_SetThreadInformationError_LogError) {
+TEST_F(Logger_Test, Initialize_SetThreadInformationError_LogError) {
 	EXPECT_CALL(m_win32, SetThreadInformation(DTGM_ARG4))
 		.WillOnce(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_HANDLE, FALSE));
 	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
@@ -179,7 +179,7 @@ TEST_F(LoggerTest, Initialize_SetThreadInformationError_LogError) {
 // Log
 //
 
-TEST_F(LoggerTest, Log_OneLine) {
+TEST_F(Logger_Test, Log_OneLine) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -193,7 +193,7 @@ TEST_F(LoggerTest, Log_OneLine) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] Logger_Test.cpp:99 TestBody 7\n"));
 }
 
-TEST_F(LoggerTest, Log_1000Lines) {
+TEST_F(Logger_Test, Log_1000Lines) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -213,7 +213,7 @@ TEST_F(LoggerTest, Log_1000Lines) {
 // Log exception safe
 //
 
-TEST_F(LoggerTest, LogNoExcept_OneLineWithNoExcept_NoThrow) {
+TEST_F(Logger_Test, LogNoExcept_OneLineWithNoExcept_NoThrow) {
 	const std::thread::id threadId = std::this_thread::get_id();
 
 	EXPECT_CALL(m_win32, WakeConditionVariable(DTGM_ARG1))
@@ -250,7 +250,7 @@ TEST_F(LoggerTest, LogNoExcept_OneLineWithNoExcept_NoThrow) {
 // Encoding Error
 //
 
-TEST_F(LoggerTest, Encoding_WideCharToMultiByteError_LogError) {
+TEST_F(Logger_Test, Encoding_WideCharToMultiByteError_LogError) {
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.WillRepeatedly(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_FLAGS, 0));
 	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
@@ -267,7 +267,7 @@ TEST_F(LoggerTest, Encoding_WideCharToMultiByteError_LogError) {
 	EXPECT_THAT(m_out.str(), MatchesRegex("[^\\n]*<ERROR>\\n[0-9:. -]{23} ERROR [^\\n]*WideCharToMultiByte for length 4: <ERROR> \\(1004\\)\\n[0-9:. -]{23} ERROR [^\\n]*WideCharToMultiByte for length \\d+: <ERROR> \\(1004\\)\\n"));
 }
 
-TEST_F(LoggerTest, Encoding_WideCharToMultiByteErrorWithoutFlush_LogError) {
+TEST_F(Logger_Test, Encoding_WideCharToMultiByteErrorWithoutFlush_LogError) {
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.WillRepeatedly(detours_gmock::SetLastErrorAndReturn(ERROR_INVALID_FLAGS, 0));
 	EXPECT_CALL(m_win32, OutputDebugStringA(t::StartsWith("PANIC: ")))
@@ -288,7 +288,7 @@ TEST_F(LoggerTest, Encoding_WideCharToMultiByteErrorWithoutFlush_LogError) {
 // Exception during logging
 //
 
-TEST_F(LoggerTest, Exception_ExceptionDuringLogging_LogError) {
+TEST_F(Logger_Test, Exception_ExceptionDuringLogging_LogError) {
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.Times(2)
 		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
@@ -309,7 +309,7 @@ TEST_F(LoggerTest, Exception_ExceptionDuringLogging_LogError) {
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: arg=Test @[^\\n]+\\n"));
 }
 
-TEST_F(LoggerTest, Exception_ThrowObjectDuringLogging_LogError) {
+TEST_F(Logger_Test, Exception_ThrowObjectDuringLogging_LogError) {
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
 			throw "test error";
@@ -328,7 +328,7 @@ TEST_F(LoggerTest, Exception_ThrowObjectDuringLogging_LogError) {
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log\\n"));
 }
 
-TEST_F(LoggerTest, Exception_ExceptionDuringExceptionHandling_LogPanic) {
+TEST_F(Logger_Test, Exception_ExceptionDuringExceptionHandling_LogPanic) {
 	const std::thread::id threadId = std::this_thread::get_id();
 
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
@@ -361,7 +361,7 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionHandling_LogPanic) {
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: arg=Test @[^\\n]+\\n"));
 }
 
-TEST_F(LoggerTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
+TEST_F(Logger_Test, Exception_ExceptionDuringExceptionLogging_LogLastError) {
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.Times(2)
 		.WillOnce(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
@@ -382,7 +382,7 @@ TEST_F(LoggerTest, Exception_ExceptionDuringExceptionLogging_LogLastError) {
 	EXPECT_THAT(m_out.str(), MatchesRegex("[0-9:. -]{23} ERROR [^\\n]+Pop Error writing log: arg=Test Exception @[^\\n]+\\n"));
 }
 
-TEST_F(LoggerTest, Exception_PermamentExceptionDuringExceptionLogging_LogPanic) {
+TEST_F(Logger_Test, Exception_PermamentExceptionDuringExceptionLogging_LogPanic) {
 	EXPECT_CALL(m_win32, WideCharToMultiByte(DTGM_ARG8))
 		.Times(2)
 		.WillRepeatedly(t::Invoke([](t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused, t::Unused) -> BOOL {
@@ -404,7 +404,7 @@ TEST_F(LoggerTest, Exception_PermamentExceptionDuringExceptionLogging_LogPanic) 
 // Macros
 //
 
-TEST_F(LoggerTest, LOGTRACE_WriterIsDebug_NoOutput) {
+TEST_F(Logger_Test, LOGTRACE_WriterIsDebug_NoOutput) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -418,7 +418,7 @@ TEST_F(LoggerTest, LOGTRACE_WriterIsDebug_NoOutput) {
 	EXPECT_EQ("", m_out.str());
 }
 
-TEST_F(LoggerTest, LOGTRACE_WriterIsTrace_Output) {
+TEST_F(Logger_Test, LOGTRACE_WriterIsTrace_Output) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kTrace, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -432,7 +432,7 @@ TEST_F(LoggerTest, LOGTRACE_WriterIsTrace_Output) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
-TEST_F(LoggerTest, LOGTRACE_WithArgs) {
+TEST_F(Logger_Test, LOGTRACE_WithArgs) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kTrace, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -446,7 +446,7 @@ TEST_F(LoggerTest, LOGTRACE_WithArgs) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test 1\n"));
 }
 
-TEST_F(LoggerTest, LOGDEBUG) {
+TEST_F(Logger_Test, LOGDEBUG) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -460,7 +460,7 @@ TEST_F(LoggerTest, LOGDEBUG) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
-TEST_F(LoggerTest, LOGDEBUG_WitArgs) {
+TEST_F(Logger_Test, LOGDEBUG_WitArgs) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -474,7 +474,7 @@ TEST_F(LoggerTest, LOGDEBUG_WitArgs) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d DEBUG \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test Test\n"));
 }
 
-TEST_F(LoggerTest, LOGINFO) {
+TEST_F(Logger_Test, LOGINFO) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -488,7 +488,7 @@ TEST_F(LoggerTest, LOGINFO) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
-TEST_F(LoggerTest, LOGINFO_WithArgs) {
+TEST_F(Logger_Test, LOGINFO_WithArgs) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -503,7 +503,7 @@ TEST_F(LoggerTest, LOGINFO_WithArgs) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d INFO \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test Test\n"));
 }
 
-TEST_F(LoggerTest, LOGWARN) {
+TEST_F(Logger_Test, LOGWARN) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -517,7 +517,7 @@ TEST_F(LoggerTest, LOGWARN) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
-TEST_F(LoggerTest, LOGWARN_WithArgs) {
+TEST_F(Logger_Test, LOGWARN_WithArgs) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -531,7 +531,7 @@ TEST_F(LoggerTest, LOGWARN_WithArgs) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d WARN \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test 1s\n"));
 }
 
-TEST_F(LoggerTest, LOGERROR) {
+TEST_F(Logger_Test, LOGERROR) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -545,7 +545,7 @@ TEST_F(LoggerTest, LOGERROR) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
-TEST_F(LoggerTest, LOGERROR_WithArgs) {
+TEST_F(Logger_Test, LOGERROR_WithArgs) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -559,7 +559,7 @@ TEST_F(LoggerTest, LOGERROR_WithArgs) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d ERROR \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test 1Test2\n"));
 }
 
-TEST_F(LoggerTest, LOGFATAL) {
+TEST_F(Logger_Test, LOGFATAL) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -573,7 +573,7 @@ TEST_F(LoggerTest, LOGFATAL) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test\n"));
 }
 
-TEST_F(LoggerTest, LOGFATAL_WithArgs) {
+TEST_F(Logger_Test, LOGFATAL_WithArgs) {
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kDebug, m_out, m_lines);
 		llamalog::Initialize(std::move(writer));
@@ -587,7 +587,7 @@ TEST_F(LoggerTest, LOGFATAL_WithArgs) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d FATAL \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody Test 1.1\n"));
 }
 
-TEST_F(LoggerTest, LOGTRACERESULT) {
+TEST_F(Logger_Test, LOGTRACERESULT) {
 	int result = 0;
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kTrace, m_out, m_lines);
@@ -604,7 +604,7 @@ TEST_F(LoggerTest, LOGTRACERESULT) {
 	EXPECT_THAT(m_out.str(), t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d TRACE \\[\\d+\\] Logger_Test.cpp:\\d+ TestBody 2\n"));
 }
 
-TEST_F(LoggerTest, LOGTRACERESULT_WithArgs) {
+TEST_F(Logger_Test, LOGTRACERESULT_WithArgs) {
 	int result = 0;
 	{
 		std::unique_ptr<StringWriter> writer = std::make_unique<StringWriter>(Priority::kTrace, m_out, m_lines);

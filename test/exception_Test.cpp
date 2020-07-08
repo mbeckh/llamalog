@@ -178,7 +178,7 @@ private:
 // system_error
 //
 
-TEST(exceptionTest, systemerror_what_GetMessage) {
+TEST(exception_Test, systemerror_what_GetMessage) {
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
 	} catch (std::exception& e) {
@@ -193,7 +193,7 @@ TEST(exceptionTest, systemerror_what_GetMessage) {
 	}
 }
 
-TEST(exceptionTest, systemerror_whatWithMessage_GetMessage) {
+TEST(exception_Test, systemerror_whatWithMessage_GetMessage) {
 	try {
 		LLAMALOG_THROW(system_error(7, kTestCategory, "testmsg"), "MyMessage {}", 7);
 	} catch (std::exception& e) {
@@ -208,7 +208,7 @@ TEST(exceptionTest, systemerror_whatWithMessage_GetMessage) {
 	}
 }
 
-TEST(exceptionTest, systemerror_whatThrowsException_GetError) {
+TEST(exception_Test, systemerror_whatThrowsException_GetError) {
 	std::ostringstream out;
 	int lines = 0;
 
@@ -233,7 +233,7 @@ TEST(exceptionTest, systemerror_whatThrowsException_GetError) {
 	EXPECT_THAT(out.str(), MatchesRegex("([\\d .:-]{23} ERROR \\[\\d+\\] exception.cpp:\\d+ what Error creating exception message: runtime error in message\\(\\)\\n){2}"));
 }
 
-TEST(exceptionTest, systemerror_whatWithMessageThrowsException_GetError) {
+TEST(exception_Test, systemerror_whatWithMessageThrowsException_GetError) {
 	std::ostringstream out;
 	int lines = 0;
 
@@ -257,7 +257,7 @@ TEST(exceptionTest, systemerror_whatWithMessageThrowsException_GetError) {
 	EXPECT_EQ(2, lines);
 	EXPECT_THAT(out.str(), MatchesRegex("([\\d .:-]{23} ERROR \\[\\d+\\] exception.cpp:\\d+ What Error creating exception message: runtime error in message\\(\\)\\n){2}"));
 }
-TEST(exceptionTest, systemerror_whatThrowsPointer_GetError) {
+TEST(exception_Test, systemerror_whatThrowsPointer_GetError) {
 	std::ostringstream out;
 	int lines = 0;
 
@@ -283,7 +283,7 @@ TEST(exceptionTest, systemerror_whatThrowsPointer_GetError) {
 	EXPECT_THAT(out.str(), MatchesRegex("([\\d .:-]{23} ERROR \\[\\d+\\] exception.cpp:\\d+ what Error creating exception message\\n){2}"));
 }
 
-TEST(exceptionTest, systemerror_whatWithMessageThrowsPointer_GetError) {
+TEST(exception_Test, systemerror_whatWithMessageThrowsPointer_GetError) {
 	std::ostringstream out;
 	int lines = 0;
 
@@ -309,7 +309,7 @@ TEST(exceptionTest, systemerror_whatWithMessageThrowsPointer_GetError) {
 	EXPECT_THAT(out.str(), MatchesRegex("([\\d .:-]{23} ERROR \\[\\d+\\] exception.cpp:\\d+ What Error creating exception message\\n){2}"));
 }
 
-TEST(exceptionTest, systemerror_whatWithNullptrMessage_GetErrorMessageOnly) {
+TEST(exception_Test, systemerror_whatWithNullptrMessage_GetErrorMessageOnly) {
 	try {
 		throw system_error(7, kTestCategory, nullptr);
 	} catch (std::exception& e) {
@@ -317,7 +317,7 @@ TEST(exceptionTest, systemerror_whatWithNullptrMessage_GetErrorMessageOnly) {
 	}
 }
 
-TEST(exceptionTest, systemerror_whatWithEmptyMessage_GetErrorMessageOnly) {
+TEST(exception_Test, systemerror_whatWithEmptyMessage_GetErrorMessageOnly) {
 	try {
 		throw system_error(7, kTestCategory, "");
 	} catch (std::exception& e) {
@@ -325,7 +325,7 @@ TEST(exceptionTest, systemerror_whatWithEmptyMessage_GetErrorMessageOnly) {
 	}
 }
 
-TEST(exceptionTest, systemerror_code_GetErrorCode) {
+TEST(exception_Test, systemerror_code_GetErrorCode) {
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
 	} catch (system_error& e) {
@@ -339,7 +339,7 @@ TEST(exceptionTest, systemerror_code_GetErrorCode) {
 // ExceptionDetail
 //
 
-TEST(exceptionTest, ExceptionDetail_what_GetMessage) {
+TEST(exception_Test, ExceptionDetail_what_GetMessage) {
 	try {
 		throw internal::ExceptionDetail(std::range_error("testmsg"), "myfile.cpp", 15, "exfunc", "MyMessage {}", "myarg");
 	} catch (std::exception& e) {
@@ -347,7 +347,7 @@ TEST(exceptionTest, ExceptionDetail_what_GetMessage) {
 	}
 }
 
-TEST(exceptionTest, ExceptionDetail_whatWithNullptrMessage_GetExceptionMessage) {
+TEST(exception_Test, ExceptionDetail_whatWithNullptrMessage_GetExceptionMessage) {
 	try {
 		throw internal::ExceptionDetail(std::range_error("testmsg"), "myfile.cpp", 15, "exfunc", nullptr);
 	} catch (std::exception& e) {
@@ -355,7 +355,7 @@ TEST(exceptionTest, ExceptionDetail_whatWithNullptrMessage_GetExceptionMessage) 
 	}
 }
 
-TEST(exceptionTest, ExceptionDetail_Formatting_FirstCalledWhenLogging) {
+TEST(exception_Test, ExceptionDetail_Formatting_FirstCalledWhenLogging) {
 	LogLine logLine = GetLogLine();
 	int called = 0;
 	try {
@@ -375,7 +375,7 @@ TEST(exceptionTest, ExceptionDetail_Formatting_FirstCalledWhenLogging) {
 // std::current_exception
 //
 
-TEST(exceptionTest, stdcurrentexception_IsStdException_HasValue) {
+TEST(exception_Test, stdcurrentexception_IsStdException_HasValue) {
 	std::exception_ptr eptr;
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -385,7 +385,7 @@ TEST(exceptionTest, stdcurrentexception_IsStdException_HasValue) {
 	EXPECT_NE(nullptr, eptr);
 }
 
-TEST(exceptionTest, stdcurrentexception_Issystemerror_HasValue) {
+TEST(exception_Test, stdcurrentexception_Issystemerror_HasValue) {
 	std::exception_ptr eptr;
 	try {
 		llamalog::Throw(system_error(5, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -400,7 +400,7 @@ TEST(exceptionTest, stdcurrentexception_Issystemerror_HasValue) {
 // std::exception
 //
 
-TEST(exceptionTest, Throwexception_IsInline_PrintValue) {
+TEST(exception_Test, Throwexception_IsInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -412,7 +412,7 @@ TEST(exceptionTest, Throwexception_IsInline_PrintValue) {
 	EXPECT_EQ("Error caused by Exception 1.8 - test\n@ myfile.cpp:15", str);
 }
 
-TEST(exceptionTest, Throwexception_IsInlineAndExtendBuffer_PrintValue) {
+TEST(exception_Test, Throwexception_IsInlineAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -424,7 +424,7 @@ TEST(exceptionTest, Throwexception_IsInlineAndExtendBuffer_PrintValue) {
 	EXPECT_EQ("Error caused by Exception 1.8 - test\n@ myfile.cpp:15 yyy", str);
 }
 
-TEST(exceptionTest, Throwexception_IsHeap_PrintValue) {
+TEST(exception_Test, Throwexception_IsHeap_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
@@ -436,7 +436,7 @@ TEST(exceptionTest, Throwexception_IsHeap_PrintValue) {
 	EXPECT_EQ("Error caused by Exception 1.8 - xx\n@ myfile.cpp:15", str);
 }
 
-TEST(exceptionTest, Throwexception_IsHeapAndExtendBuffer_PrintValue) {
+TEST(exception_Test, Throwexception_IsHeapAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
@@ -453,7 +453,7 @@ TEST(exceptionTest, Throwexception_IsHeapAndExtendBuffer_PrintValue) {
 // std::system_error
 //
 
-TEST(exceptionTest, Throwstdsystemerror_IsInline_PrintValue) {
+TEST(exception_Test, Throwstdsystemerror_IsInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -465,7 +465,7 @@ TEST(exceptionTest, Throwstdsystemerror_IsInline_PrintValue) {
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - test: This is an error message\n@ myfile.cpp:15", str);
 }
 
-TEST(exceptionTest, Throwstdsystemerror_IsInlineAndExtendBuffer_PrintValue) {
+TEST(exception_Test, Throwstdsystemerror_IsInlineAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -477,7 +477,7 @@ TEST(exceptionTest, Throwstdsystemerror_IsInlineAndExtendBuffer_PrintValue) {
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - test: This is an error message\n@ myfile.cpp:15 yyy", str);
 }
 
-TEST(exceptionTest, Throwstdsystemerror_IsHeap_PrintValue) {
+TEST(exception_Test, Throwstdsystemerror_IsHeap_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
@@ -489,7 +489,7 @@ TEST(exceptionTest, Throwstdsystemerror_IsHeap_PrintValue) {
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - xx: This is an error message\n@ myfile.cpp:15", str);
 }
 
-TEST(exceptionTest, Throwstdsystemerror_IsHeapAndExtendBuffer_PrintValue) {
+TEST(exception_Test, Throwstdsystemerror_IsHeapAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
@@ -506,7 +506,7 @@ TEST(exceptionTest, Throwstdsystemerror_IsHeapAndExtendBuffer_PrintValue) {
 // system_error
 //
 
-TEST(exceptionTest, Throwsystemerror_IsInline_PrintValue) {
+TEST(exception_Test, Throwsystemerror_IsInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -518,7 +518,7 @@ TEST(exceptionTest, Throwsystemerror_IsInline_PrintValue) {
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - test: This is an error message\n@ myfile.cpp:15", str);
 }
 
-TEST(exceptionTest, Throwsystemerror_IsInlineAndExtendBuffer_PrintValue) {
+TEST(exception_Test, Throwsystemerror_IsInlineAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -530,7 +530,7 @@ TEST(exceptionTest, Throwsystemerror_IsInlineAndExtendBuffer_PrintValue) {
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - test: This is an error message\n@ myfile.cpp:15 yyy", str);
 }
 
-TEST(exceptionTest, Throwsystemerror_IsHeap_PrintValue) {
+TEST(exception_Test, Throwsystemerror_IsHeap_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
@@ -542,7 +542,7 @@ TEST(exceptionTest, Throwsystemerror_IsHeap_PrintValue) {
 	EXPECT_EQ("Error TestError (7=Error) caused by Exception 1.8 - xx: This is an error message\n@ myfile.cpp:15", str);
 }
 
-TEST(exceptionTest, Throwsystemerror_IsHeapAndExtendBuffer_PrintValue) {
+TEST(exception_Test, Throwsystemerror_IsHeapAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {:.2}", 1.8, std::string(256, 'x'));
@@ -559,7 +559,7 @@ TEST(exceptionTest, Throwsystemerror_IsHeapAndExtendBuffer_PrintValue) {
 // std::exception thrown as plain C++ exception
 //
 
-TEST(exceptionTest, throwexception_IsPlain_PrintValue) {
+TEST(exception_Test, throwexception_IsPlain_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		throw std::invalid_argument("testmsg");
@@ -571,7 +571,7 @@ TEST(exceptionTest, throwexception_IsPlain_PrintValue) {
 	EXPECT_EQ("Error caused by testmsg", str);
 }
 
-TEST(exceptionTest, throwexception_IsPlainAndExtendBuffer_PrintValue) {
+TEST(exception_Test, throwexception_IsPlainAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		throw std::invalid_argument("testmsg");
@@ -589,7 +589,7 @@ TEST(exceptionTest, throwexception_IsPlainAndExtendBuffer_PrintValue) {
 // std::system_error thrown as plain C++ exception
 //
 
-TEST(exceptionTest, throwstdsystemerror_IsPlain_PrintValue) {
+TEST(exception_Test, throwstdsystemerror_IsPlain_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -601,7 +601,7 @@ TEST(exceptionTest, throwstdsystemerror_IsPlain_PrintValue) {
 	EXPECT_EQ("Error TestError (7=Error) caused by testmsg: This is an error message", str);
 }
 
-TEST(exceptionTest, throwstdsystemerror_IsPlainAndExtendBuffer_PrintValue) {
+TEST(exception_Test, throwstdsystemerror_IsPlainAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -619,7 +619,7 @@ TEST(exceptionTest, throwstdsystemerror_IsPlainAndExtendBuffer_PrintValue) {
 // system_error thrown as plain C++ exception
 //
 
-TEST(exceptionTest, throwsystemerror_IsPlain_PrintValue) {
+TEST(exception_Test, throwsystemerror_IsPlain_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
@@ -631,7 +631,7 @@ TEST(exceptionTest, throwsystemerror_IsPlain_PrintValue) {
 	EXPECT_EQ("Error TestError (7=Error) caused by testmsg: This is an error message", str);
 }
 
-TEST(exceptionTest, throwsystemerror_IsPlainAndExtendBuffer_PrintValue) {
+TEST(exception_Test, throwsystemerror_IsPlainAndExtendBuffer_PrintValue) {
 	LogLine logLine = GetLogLine();
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
@@ -651,7 +651,7 @@ TEST(exceptionTest, throwsystemerror_IsPlainAndExtendBuffer_PrintValue) {
 
 // Timestamp
 
-TEST(exceptionTest, Pattern_IsTWithexceptionStack_PrintTimestamp) {
+TEST(exception_Test, Pattern_IsTWithexceptionStack_PrintTimestamp) {
 	LogLine logLine = GetLogLine("{:%T}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -663,7 +663,7 @@ TEST(exceptionTest, Pattern_IsTWithexceptionStack_PrintTimestamp) {
 	EXPECT_THAT(str, t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d"));
 }
 
-TEST(exceptionTest, Pattern_IsTWithexceptionHeap_PrintTimestamp) {
+TEST(exception_Test, Pattern_IsTWithexceptionHeap_PrintTimestamp) {
 	LogLine logLine = GetLogLine("{:%T}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -675,7 +675,7 @@ TEST(exceptionTest, Pattern_IsTWithexceptionHeap_PrintTimestamp) {
 	EXPECT_THAT(str, t::MatchesRegex("\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d"));
 }
 
-TEST(exceptionTest, Pattern_IsTWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IsTWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%T}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -690,7 +690,7 @@ TEST(exceptionTest, Pattern_IsTWithexceptionPlain_PrintNothing) {
 
 // thread
 
-TEST(exceptionTest, Pattern_IstWithexceptionStack_PrintThread) {
+TEST(exception_Test, Pattern_IstWithexceptionStack_PrintThread) {
 	LogLine logLine = GetLogLine("{:%t}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -702,7 +702,7 @@ TEST(exceptionTest, Pattern_IstWithexceptionStack_PrintThread) {
 	EXPECT_THAT(str, t::MatchesRegex("\\d+"));
 }
 
-TEST(exceptionTest, Pattern_IstWithexceptionHeap_PrintThread) {
+TEST(exception_Test, Pattern_IstWithexceptionHeap_PrintThread) {
 	LogLine logLine = GetLogLine("{:%t}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -714,7 +714,7 @@ TEST(exceptionTest, Pattern_IstWithexceptionHeap_PrintThread) {
 	EXPECT_THAT(str, t::MatchesRegex("\\d+"));
 }
 
-TEST(exceptionTest, Pattern_IstWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IstWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%t}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -729,7 +729,7 @@ TEST(exceptionTest, Pattern_IstWithexceptionPlain_PrintNothing) {
 
 // File
 
-TEST(exceptionTest, Pattern_IsFWithexceptionStack_PrintFile) {
+TEST(exception_Test, Pattern_IsFWithexceptionStack_PrintFile) {
 	LogLine logLine = GetLogLine("{:%F}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -741,7 +741,7 @@ TEST(exceptionTest, Pattern_IsFWithexceptionStack_PrintFile) {
 	EXPECT_EQ(str, "myfile.cpp");
 }
 
-TEST(exceptionTest, Pattern_IsFWithexceptionHeap_PrintFile) {
+TEST(exception_Test, Pattern_IsFWithexceptionHeap_PrintFile) {
 	LogLine logLine = GetLogLine("{:%F}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -753,7 +753,7 @@ TEST(exceptionTest, Pattern_IsFWithexceptionHeap_PrintFile) {
 	EXPECT_EQ(str, "myfile.cpp");
 }
 
-TEST(exceptionTest, Pattern_IsFWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IsFWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%F}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -768,7 +768,7 @@ TEST(exceptionTest, Pattern_IsFWithexceptionPlain_PrintNothing) {
 
 // Line
 
-TEST(exceptionTest, Pattern_IsLWithexceptionStack_PrintLine) {
+TEST(exception_Test, Pattern_IsLWithexceptionStack_PrintLine) {
 	LogLine logLine = GetLogLine("{:%L}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -780,7 +780,7 @@ TEST(exceptionTest, Pattern_IsLWithexceptionStack_PrintLine) {
 	EXPECT_EQ(str, "15");
 }
 
-TEST(exceptionTest, Pattern_IsLWithexceptionHeap_PrintLine) {
+TEST(exception_Test, Pattern_IsLWithexceptionHeap_PrintLine) {
 	LogLine logLine = GetLogLine("{:%L}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -792,7 +792,7 @@ TEST(exceptionTest, Pattern_IsLWithexceptionHeap_PrintLine) {
 	EXPECT_EQ(str, "15");
 }
 
-TEST(exceptionTest, Pattern_IsLWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IsLWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%L}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -807,7 +807,7 @@ TEST(exceptionTest, Pattern_IsLWithexceptionPlain_PrintNothing) {
 
 // Function
 
-TEST(exceptionTest, Pattern_IsfWithexceptionStack_PrintFunction) {
+TEST(exception_Test, Pattern_IsfWithexceptionStack_PrintFunction) {
 	LogLine logLine = GetLogLine("{:%f}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -819,7 +819,7 @@ TEST(exceptionTest, Pattern_IsfWithexceptionStack_PrintFunction) {
 	EXPECT_EQ(str, "exfunc");
 }
 
-TEST(exceptionTest, Pattern_IsfWithexceptionHeap_PrintFunction) {
+TEST(exception_Test, Pattern_IsfWithexceptionHeap_PrintFunction) {
 	LogLine logLine = GetLogLine("{:%f}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -831,7 +831,7 @@ TEST(exceptionTest, Pattern_IsfWithexceptionHeap_PrintFunction) {
 	EXPECT_EQ(str, "exfunc");
 }
 
-TEST(exceptionTest, Pattern_IsfWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IsfWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%f}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -846,7 +846,7 @@ TEST(exceptionTest, Pattern_IsfWithexceptionPlain_PrintNothing) {
 
 // Log Message
 
-TEST(exceptionTest, Pattern_IslWithexceptionStack_PrintLogMessge) {
+TEST(exception_Test, Pattern_IslWithexceptionStack_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -858,7 +858,7 @@ TEST(exceptionTest, Pattern_IslWithexceptionStack_PrintLogMessge) {
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
 
-TEST(exceptionTest, Pattern_IslWithexceptionStackAndNoMessage_PrintNothing) {
+TEST(exception_Test, Pattern_IslWithexceptionStackAndNoMessage_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
@@ -870,7 +870,7 @@ TEST(exceptionTest, Pattern_IslWithexceptionStackAndNoMessage_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IslWithexceptionHeap_PrintLogMessge) {
+TEST(exception_Test, Pattern_IslWithexceptionHeap_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -882,7 +882,7 @@ TEST(exceptionTest, Pattern_IslWithexceptionHeap_PrintLogMessge) {
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
 
-TEST(exceptionTest, Pattern_IslWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IslWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -894,7 +894,7 @@ TEST(exceptionTest, Pattern_IslWithexceptionPlain_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IslWithstdsystemerrorStack_PrintLogMessge) {
+TEST(exception_Test, Pattern_IslWithstdsystemerrorStack_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -906,7 +906,7 @@ TEST(exceptionTest, Pattern_IslWithstdsystemerrorStack_PrintLogMessge) {
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
 
-TEST(exceptionTest, Pattern_IslWithstdsystemerrorStackAndNoMessage_PrintNothing) {
+TEST(exception_Test, Pattern_IslWithstdsystemerrorStackAndNoMessage_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
@@ -918,7 +918,7 @@ TEST(exceptionTest, Pattern_IslWithstdsystemerrorStackAndNoMessage_PrintNothing)
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IslWithstdsystemerrorHeap_PrintLogMessge) {
+TEST(exception_Test, Pattern_IslWithstdsystemerrorHeap_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -930,7 +930,7 @@ TEST(exceptionTest, Pattern_IslWithstdsystemerrorHeap_PrintLogMessge) {
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
 
-TEST(exceptionTest, Pattern_IslWithstdsystemerrorPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IslWithstdsystemerrorPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -942,7 +942,7 @@ TEST(exceptionTest, Pattern_IslWithstdsystemerrorPlain_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IslWithsystemerrorStack_PrintLogMessge) {
+TEST(exception_Test, Pattern_IslWithsystemerrorStack_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -954,7 +954,7 @@ TEST(exceptionTest, Pattern_IslWithsystemerrorStack_PrintLogMessge) {
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
 
-TEST(exceptionTest, Pattern_IslWithsystemerrorStackAndNoMessage_PrintNothing) {
+TEST(exception_Test, Pattern_IslWithsystemerrorStackAndNoMessage_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
@@ -966,7 +966,7 @@ TEST(exceptionTest, Pattern_IslWithsystemerrorStackAndNoMessage_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IslWithsystemerrorHeap_PrintLogMessge) {
+TEST(exception_Test, Pattern_IslWithsystemerrorHeap_PrintLogMessge) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -978,7 +978,7 @@ TEST(exceptionTest, Pattern_IslWithsystemerrorHeap_PrintLogMessge) {
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
 
-TEST(exceptionTest, Pattern_IslWithsystemerrorPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IslWithsystemerrorPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%l}");
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
@@ -993,7 +993,7 @@ TEST(exceptionTest, Pattern_IslWithsystemerrorPlain_PrintNothing) {
 
 // what()
 
-TEST(exceptionTest, Pattern_IswWithexceptionStack_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithexceptionStack_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1005,7 +1005,7 @@ TEST(exceptionTest, Pattern_IswWithexceptionStack_PrintWhat) {
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
 
-TEST(exceptionTest, Pattern_IswWithexceptionStackAndNomessage_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithexceptionStackAndNomessage_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
@@ -1017,7 +1017,7 @@ TEST(exceptionTest, Pattern_IswWithexceptionStackAndNomessage_PrintWhat) {
 	EXPECT_EQ(str, "testmsg");
 }
 
-TEST(exceptionTest, Pattern_IswWithexceptionHeap_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithexceptionHeap_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1029,7 +1029,7 @@ TEST(exceptionTest, Pattern_IswWithexceptionHeap_PrintWhat) {
 	EXPECT_EQ(str, "Exception 1.8 - test");
 }
 
-TEST(exceptionTest, Pattern_IswWithexceptionPlain_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithexceptionPlain_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -1041,7 +1041,7 @@ TEST(exceptionTest, Pattern_IswWithexceptionPlain_PrintWhat) {
 	EXPECT_EQ(str, "testmsg");
 }
 
-TEST(exceptionTest, Pattern_IswWithstdsystemerrorStack_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithstdsystemerrorStack_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1054,7 +1054,7 @@ TEST(exceptionTest, Pattern_IswWithstdsystemerrorStack_PrintWhat) {
 }
 
 
-TEST(exceptionTest, Pattern_IswWithstdsystemerrorStackAndNoMessage_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithstdsystemerrorStackAndNoMessage_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
@@ -1066,7 +1066,7 @@ TEST(exceptionTest, Pattern_IswWithstdsystemerrorStackAndNoMessage_PrintWhat) {
 	EXPECT_EQ(str, "testmsg: This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IswWithstdsystemerrorHeap_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithstdsystemerrorHeap_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1078,7 +1078,7 @@ TEST(exceptionTest, Pattern_IswWithstdsystemerrorHeap_PrintWhat) {
 	EXPECT_EQ(str, "Exception 1.8 - test: This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IswWithstdsystemerrorPlain_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithstdsystemerrorPlain_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -1090,7 +1090,7 @@ TEST(exceptionTest, Pattern_IswWithstdsystemerrorPlain_PrintWhat) {
 	EXPECT_EQ(str, "testmsg: This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IswWithsystemerrorStack_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithsystemerrorStack_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1102,7 +1102,7 @@ TEST(exceptionTest, Pattern_IswWithsystemerrorStack_PrintWhat) {
 	EXPECT_EQ(str, "Exception 1.8 - test: This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IswWithsystemerrorStackAndNomessage_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithsystemerrorStackAndNomessage_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
@@ -1114,7 +1114,7 @@ TEST(exceptionTest, Pattern_IswWithsystemerrorStackAndNomessage_PrintWhat) {
 	EXPECT_EQ(str, "testmsg: This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IswWithsystemerrorHeap_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithsystemerrorHeap_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1126,7 +1126,7 @@ TEST(exceptionTest, Pattern_IswWithsystemerrorHeap_PrintWhat) {
 	EXPECT_EQ(str, "Exception 1.8 - test: This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IswWithsystemerrorPlain_PrintWhat) {
+TEST(exception_Test, Pattern_IswWithsystemerrorPlain_PrintWhat) {
 	LogLine logLine = GetLogLine("{:%w}");
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
@@ -1141,7 +1141,7 @@ TEST(exceptionTest, Pattern_IswWithsystemerrorPlain_PrintWhat) {
 
 // Error Code
 
-TEST(exceptionTest, Pattern_IscWithexceptionStack_PrintNothing) {
+TEST(exception_Test, Pattern_IscWithexceptionStack_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1153,7 +1153,7 @@ TEST(exceptionTest, Pattern_IscWithexceptionStack_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IscWithexceptionHeap_PrintNothing) {
+TEST(exception_Test, Pattern_IscWithexceptionHeap_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1165,7 +1165,7 @@ TEST(exceptionTest, Pattern_IscWithexceptionHeap_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IscWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IscWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -1177,7 +1177,7 @@ TEST(exceptionTest, Pattern_IscWithexceptionPlain_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IscWithstdsystemerrorStack_PrintCodeValue) {
+TEST(exception_Test, Pattern_IscWithstdsystemerrorStack_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1189,7 +1189,7 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorStack_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
-TEST(exceptionTest, Pattern_IscWithstdsystemerrorStackHRESULT_PrintCodeValueHex) {
+TEST(exception_Test, Pattern_IscWithstdsystemerrorStackHRESULT_PrintCodeValueHex) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(std::system_error(E_INVALIDARG, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1201,7 +1201,7 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorStackHRESULT_PrintCodeValueHex)
 	EXPECT_EQ(str, "0x80070057");
 }
 
-TEST(exceptionTest, Pattern_IscWithstdsystemerrorHeap_PrintCodeValue) {
+TEST(exception_Test, Pattern_IscWithstdsystemerrorHeap_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1213,7 +1213,7 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorHeap_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
-TEST(exceptionTest, Pattern_IscWithstdsystemerrorHeapHRESULT_PrintCodeValueHex) {
+TEST(exception_Test, Pattern_IscWithstdsystemerrorHeapHRESULT_PrintCodeValueHex) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(std::system_error(E_INVALIDARG, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1225,7 +1225,7 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorHeapHRESULT_PrintCodeValueHex) 
 	EXPECT_EQ(str, "0x80070057");
 }
 
-TEST(exceptionTest, Pattern_IscWithstdsystemerrorPlain_PrintCodeValue) {
+TEST(exception_Test, Pattern_IscWithstdsystemerrorPlain_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -1237,7 +1237,7 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorPlain_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
-TEST(exceptionTest, Pattern_IscWithstdsystemerrorPlainHRESULT_PrintCodeValueHex) {
+TEST(exception_Test, Pattern_IscWithstdsystemerrorPlainHRESULT_PrintCodeValueHex) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		throw std::system_error(E_INVALIDARG, kTestCategory, "testmsg");
@@ -1249,7 +1249,7 @@ TEST(exceptionTest, Pattern_IscWithstdsystemerrorPlainHRESULT_PrintCodeValueHex)
 	EXPECT_EQ(str, "0x80070057");
 }
 
-TEST(exceptionTest, Pattern_IscWithsystemerrorStack_PrintCodeValue) {
+TEST(exception_Test, Pattern_IscWithsystemerrorStack_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1261,7 +1261,7 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorStack_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
-TEST(exceptionTest, Pattern_IscWithsystemerrorStackHRESULT_PrintCodeValueHex) {
+TEST(exception_Test, Pattern_IscWithsystemerrorStackHRESULT_PrintCodeValueHex) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(system_error(E_INVALIDARG, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1273,7 +1273,7 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorStackHRESULT_PrintCodeValueHex) {
 	EXPECT_EQ(str, "0x80070057");
 }
 
-TEST(exceptionTest, Pattern_IscWithsystemerrorHeap_PrintCodeValue) {
+TEST(exception_Test, Pattern_IscWithsystemerrorHeap_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1285,7 +1285,7 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorHeap_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
-TEST(exceptionTest, Pattern_IscWithsystemerrorHeapHRESULT_PrintCodeValueHex) {
+TEST(exception_Test, Pattern_IscWithsystemerrorHeapHRESULT_PrintCodeValueHex) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		llamalog::Throw(system_error(E_INVALIDARG, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1297,7 +1297,7 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorHeapHRESULT_PrintCodeValueHex) {
 	EXPECT_EQ(str, "0x80070057");
 }
 
-TEST(exceptionTest, Pattern_IscWithsystemerrorPlain_PrintCodeValue) {
+TEST(exception_Test, Pattern_IscWithsystemerrorPlain_PrintCodeValue) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
@@ -1309,7 +1309,7 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorPlain_PrintCodeValue) {
 	EXPECT_EQ(str, "7");
 }
 
-TEST(exceptionTest, Pattern_IscWithsystemerrorPlainHRESULT_PrintCodeValueHex) {
+TEST(exception_Test, Pattern_IscWithsystemerrorPlainHRESULT_PrintCodeValueHex) {
 	LogLine logLine = GetLogLine("{:%c}");
 	try {
 		throw system_error(E_INVALIDARG, kTestCategory, "testmsg");
@@ -1324,7 +1324,7 @@ TEST(exceptionTest, Pattern_IscWithsystemerrorPlainHRESULT_PrintCodeValueHex) {
 
 // Error Category
 
-TEST(exceptionTest, Pattern_IsCWithexceptionStack_PrintNothing) {
+TEST(exception_Test, Pattern_IsCWithexceptionStack_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1336,7 +1336,7 @@ TEST(exceptionTest, Pattern_IsCWithexceptionStack_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IsCWithexceptionHeap_PrintNothing) {
+TEST(exception_Test, Pattern_IsCWithexceptionHeap_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1348,7 +1348,7 @@ TEST(exceptionTest, Pattern_IsCWithexceptionHeap_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IsCWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IsCWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -1360,7 +1360,7 @@ TEST(exceptionTest, Pattern_IsCWithexceptionPlain_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IsCWithstdsystemerrorStack_PrintCategory) {
+TEST(exception_Test, Pattern_IsCWithstdsystemerrorStack_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1372,7 +1372,7 @@ TEST(exceptionTest, Pattern_IsCWithstdsystemerrorStack_PrintCategory) {
 	EXPECT_EQ(str, "TestError");
 }
 
-TEST(exceptionTest, Pattern_IsCWithstdsystemerrorHeap_PrintCategory) {
+TEST(exception_Test, Pattern_IsCWithstdsystemerrorHeap_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1384,7 +1384,7 @@ TEST(exceptionTest, Pattern_IsCWithstdsystemerrorHeap_PrintCategory) {
 	EXPECT_EQ(str, "TestError");
 }
 
-TEST(exceptionTest, Pattern_IsCWithstdsystemerrorPlain_PrintCategory) {
+TEST(exception_Test, Pattern_IsCWithstdsystemerrorPlain_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -1396,7 +1396,7 @@ TEST(exceptionTest, Pattern_IsCWithstdsystemerrorPlain_PrintCategory) {
 	EXPECT_EQ(str, "TestError");
 }
 
-TEST(exceptionTest, Pattern_IsCWithsystemerrorStack_PrintCategory) {
+TEST(exception_Test, Pattern_IsCWithsystemerrorStack_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1408,7 +1408,7 @@ TEST(exceptionTest, Pattern_IsCWithsystemerrorStack_PrintCategory) {
 	EXPECT_EQ(str, "TestError");
 }
 
-TEST(exceptionTest, Pattern_IsCWithsystemerrorHeap_PrintCategory) {
+TEST(exception_Test, Pattern_IsCWithsystemerrorHeap_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1420,7 +1420,7 @@ TEST(exceptionTest, Pattern_IsCWithsystemerrorHeap_PrintCategory) {
 	EXPECT_EQ(str, "TestError");
 }
 
-TEST(exceptionTest, Pattern_IsCWithsystemerrorPlain_PrintCategory) {
+TEST(exception_Test, Pattern_IsCWithsystemerrorPlain_PrintCategory) {
 	LogLine logLine = GetLogLine("{:%C}");
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
@@ -1435,7 +1435,7 @@ TEST(exceptionTest, Pattern_IsCWithsystemerrorPlain_PrintCategory) {
 
 // Error Message
 
-TEST(exceptionTest, Pattern_IsmWithexceptionStack_PrintNothing) {
+TEST(exception_Test, Pattern_IsmWithexceptionStack_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1447,7 +1447,7 @@ TEST(exceptionTest, Pattern_IsmWithexceptionStack_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IsmWithexceptionHeap_PrintNothing) {
+TEST(exception_Test, Pattern_IsmWithexceptionHeap_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1459,7 +1459,7 @@ TEST(exceptionTest, Pattern_IsmWithexceptionHeap_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IsmWithexceptionPlain_PrintNothing) {
+TEST(exception_Test, Pattern_IsmWithexceptionPlain_PrintNothing) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -1471,7 +1471,7 @@ TEST(exceptionTest, Pattern_IsmWithexceptionPlain_PrintNothing) {
 	EXPECT_EQ(str, "");
 }
 
-TEST(exceptionTest, Pattern_IsmWithstdsystemerrorStack_PrintErrorMessage) {
+TEST(exception_Test, Pattern_IsmWithstdsystemerrorStack_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1483,7 +1483,7 @@ TEST(exceptionTest, Pattern_IsmWithstdsystemerrorStack_PrintErrorMessage) {
 	EXPECT_EQ(str, "This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IsmWithstdsystemerrorHeap_PrintErrorMessage) {
+TEST(exception_Test, Pattern_IsmWithstdsystemerrorHeap_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1495,7 +1495,7 @@ TEST(exceptionTest, Pattern_IsmWithstdsystemerrorHeap_PrintErrorMessage) {
 	EXPECT_EQ(str, "This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IsmWithstdsystemerrorPlain_PrintErrorMessage) {
+TEST(exception_Test, Pattern_IsmWithstdsystemerrorPlain_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -1507,7 +1507,7 @@ TEST(exceptionTest, Pattern_IsmWithstdsystemerrorPlain_PrintErrorMessage) {
 	EXPECT_EQ(str, "This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IsmWithsystemerrorStack_PrintErrorMessage) {
+TEST(exception_Test, Pattern_IsmWithsystemerrorStack_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1519,7 +1519,7 @@ TEST(exceptionTest, Pattern_IsmWithsystemerrorStack_PrintErrorMessage) {
 	EXPECT_EQ(str, "This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IsmWithsystemerrorHeap_PrintErrorMessage) {
+TEST(exception_Test, Pattern_IsmWithsystemerrorHeap_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test", std::string(512, 'x'));
@@ -1531,7 +1531,7 @@ TEST(exceptionTest, Pattern_IsmWithsystemerrorHeap_PrintErrorMessage) {
 	EXPECT_EQ(str, "This is an error message");
 }
 
-TEST(exceptionTest, Pattern_IsmWithsystemerrorPlain_PrintErrorMessage) {
+TEST(exception_Test, Pattern_IsmWithsystemerrorPlain_PrintErrorMessage) {
 	LogLine logLine = GetLogLine("{:%m}");
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
@@ -1547,7 +1547,7 @@ TEST(exceptionTest, Pattern_IsmWithsystemerrorPlain_PrintErrorMessage) {
 // Default Pattern
 //
 
-TEST(exceptionTest, DefaultPattern_Isexception_PrintDefault) {
+TEST(exception_Test, DefaultPattern_Isexception_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1559,7 +1559,7 @@ TEST(exceptionTest, DefaultPattern_Isexception_PrintDefault) {
 	EXPECT_THAT(str, t::MatchesRegex("Error Exception 1\\.8 - test @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
-TEST(exceptionTest, DefaultPattern_IsexceptionAndNoMessage_PrintDefault) {
+TEST(exception_Test, DefaultPattern_IsexceptionAndNoMessage_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc");
@@ -1571,7 +1571,7 @@ TEST(exceptionTest, DefaultPattern_IsexceptionAndNoMessage_PrintDefault) {
 	EXPECT_THAT(str, t::MatchesRegex("Error testmsg @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
-TEST(exceptionTest, DefaultPattern_IsexceptionPlain_PrintDefault) {
+TEST(exception_Test, DefaultPattern_IsexceptionPlain_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -1583,7 +1583,7 @@ TEST(exceptionTest, DefaultPattern_IsexceptionPlain_PrintDefault) {
 	EXPECT_EQ("Error testmsg", str);
 }
 
-TEST(exceptionTest, DefaultPattern_Isstdsystemerror_PrintDefault) {
+TEST(exception_Test, DefaultPattern_Isstdsystemerror_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1595,7 +1595,7 @@ TEST(exceptionTest, DefaultPattern_Isstdsystemerror_PrintDefault) {
 	EXPECT_THAT(str, t::MatchesRegex("Error Exception 1\\.8 - test: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
-TEST(exceptionTest, DefaultPattern_IsstdsystemerrorAndNoMessage_PrintDefault) {
+TEST(exception_Test, DefaultPattern_IsstdsystemerrorAndNoMessage_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
@@ -1607,7 +1607,7 @@ TEST(exceptionTest, DefaultPattern_IsstdsystemerrorAndNoMessage_PrintDefault) {
 	EXPECT_THAT(str, t::MatchesRegex("Error testmsg: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
-TEST(exceptionTest, DefaultPattern_IsstdsystemerrorPlain_PrintDefault) {
+TEST(exception_Test, DefaultPattern_IsstdsystemerrorPlain_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -1619,7 +1619,7 @@ TEST(exceptionTest, DefaultPattern_IsstdsystemerrorPlain_PrintDefault) {
 	EXPECT_EQ("Error testmsg: This is an error message (TestError 7)", str);
 }
 
-TEST(exceptionTest, DefaultPattern_Issystemerror_PrintDefault) {
+TEST(exception_Test, DefaultPattern_Issystemerror_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1631,7 +1631,7 @@ TEST(exceptionTest, DefaultPattern_Issystemerror_PrintDefault) {
 	EXPECT_THAT(str, t::MatchesRegex("Error Exception 1\\.8 - test: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
-TEST(exceptionTest, DefaultPattern_IssystemerrorAndNoMessage_PrintDefault) {
+TEST(exception_Test, DefaultPattern_IssystemerrorAndNoMessage_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc");
@@ -1643,7 +1643,7 @@ TEST(exceptionTest, DefaultPattern_IssystemerrorAndNoMessage_PrintDefault) {
 	EXPECT_THAT(str, t::MatchesRegex("Error testmsg: This is an error message \\(TestError 7\\) @\\{\\d\\d\\d\\d-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d\\.\\d\\d\\d \\[\\d+\\] myfile.cpp:15 exfunc\\}"));
 }
 
-TEST(exceptionTest, DefaultPattern_systemerrorPlain_PrintDefault) {
+TEST(exception_Test, DefaultPattern_systemerrorPlain_PrintDefault) {
 	LogLine logLine = GetLogLine("{} {}");
 	try {
 		throw system_error(7, kTestCategory, "testmsg");
@@ -1660,7 +1660,7 @@ TEST(exceptionTest, DefaultPattern_systemerrorPlain_PrintDefault) {
 // Encoding
 //
 
-TEST(exceptionTest, Encoding_exceptionHasHexChar_PrintUtf8) {
+TEST(exception_Test, Encoding_exceptionHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg\xE2\t"), "myfile.cpp", 15, "exfunc", "Exception\xE5 {} - {}", 1.8, escape(L"test\xE3\t"));
@@ -1673,7 +1673,7 @@ TEST(exceptionTest, Encoding_exceptionHasHexChar_PrintUtf8) {
 	EXPECT_EQ("Error\xE4\\n caused by Exception\xE5 1.8 - test\xC3\xA3\\t\n@ myfile.cpp:15", str);
 }
 
-TEST(exceptionTest, Encoding_exceptionPlainHasHexChar_PrintUtf8) {
+TEST(exception_Test, Encoding_exceptionPlainHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
 		throw std::invalid_argument("testmsg\xE2\t");
@@ -1686,7 +1686,7 @@ TEST(exceptionTest, Encoding_exceptionPlainHasHexChar_PrintUtf8) {
 	EXPECT_EQ("Error\xE4\\n caused by testmsg\xE2\\t", str);
 }
 
-TEST(exceptionTest, Encoding_stdsystemerrorPlainHasHexChar_PrintUtf8) {
+TEST(exception_Test, Encoding_stdsystemerrorPlainHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
 		throw std::system_error(7, kTestCategoryEscape, "testmsg\xE2\t");
@@ -1699,7 +1699,7 @@ TEST(exceptionTest, Encoding_stdsystemerrorPlainHasHexChar_PrintUtf8) {
 	EXPECT_EQ("Error\xE4\\n TestError\xE0 (7=Error\xE4\\n\xE6) caused by testmsg\xE2\\t: This is an error message\\r\xE1", str);
 }
 
-TEST(exceptionTest, Encoding_systemerrorPlainHasHexChar_PrintUtf8) {
+TEST(exception_Test, Encoding_systemerrorPlainHasHexChar_PrintUtf8) {
 	LogLine logLine = GetLogLine("{0} {1:%[%C (%c={0}\xE6) ]}caused by {1:%w}{1:%[\n@ %F:%L]}{2:.4}");
 	try {
 		throw system_error(7, kTestCategoryEscape, "testmsg\xE2\t");
@@ -1716,7 +1716,7 @@ TEST(exceptionTest, Encoding_systemerrorPlainHasHexChar_PrintUtf8) {
 // Sub-Sub-Format
 //
 
-TEST(exceptionTest, SubFormat_Isexception_PrintValue) {
+TEST(exception_Test, SubFormat_Isexception_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
 		llamalog::Throw(std::invalid_argument("testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1728,7 +1728,7 @@ TEST(exceptionTest, SubFormat_Isexception_PrintValue) {
 	EXPECT_EQ("myfile.cpp Exception 1.8 - test", str);
 }
 
-TEST(exceptionTest, SubFormat_IsexceptionPlain_PrintValue) {
+TEST(exception_Test, SubFormat_IsexceptionPlain_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
 		throw std::invalid_argument("testmsg");
@@ -1740,7 +1740,7 @@ TEST(exceptionTest, SubFormat_IsexceptionPlain_PrintValue) {
 	EXPECT_EQ("testmsg", str);
 }
 
-TEST(exceptionTest, SubFormat_Isstdsystemerror_PrintValue) {
+TEST(exception_Test, SubFormat_Isstdsystemerror_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
 		llamalog::Throw(std::system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1752,7 +1752,7 @@ TEST(exceptionTest, SubFormat_Isstdsystemerror_PrintValue) {
 	EXPECT_EQ("TestError myfile.cpp Exception 1.8 - test: This is an error message", str);
 }
 
-TEST(exceptionTest, SubFormat_IsstdsystemerrorPlain_PrintValue) {
+TEST(exception_Test, SubFormat_IsstdsystemerrorPlain_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
 		throw std::system_error(7, kTestCategory, "testmsg");
@@ -1764,7 +1764,7 @@ TEST(exceptionTest, SubFormat_IsstdsystemerrorPlain_PrintValue) {
 	EXPECT_EQ("TestError testmsg: This is an error message", str);
 }
 
-TEST(exceptionTest, SubFormat_Issystemerror_PrintValue) {
+TEST(exception_Test, SubFormat_Issystemerror_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
 		llamalog::Throw(system_error(7, kTestCategory, "testmsg"), "myfile.cpp", 15, "exfunc", "Exception {} - {}", 1.8, "test");
@@ -1776,7 +1776,7 @@ TEST(exceptionTest, SubFormat_Issystemerror_PrintValue) {
 	EXPECT_EQ("TestError myfile.cpp Exception 1.8 - test: This is an error message", str);
 }
 
-TEST(exceptionTest, SubFormat_IssystemerrorPlain_PrintValue) {
+TEST(exception_Test, SubFormat_IssystemerrorPlain_PrintValue) {
 	LogLine logLine = GetLogLine("{0:%[%[%C ]%[%F ]]%w}");
 	try {
 		throw system_error(7, kTestCategory, "testmsg");

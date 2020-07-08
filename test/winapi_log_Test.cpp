@@ -46,7 +46,7 @@ LogLine GetLogLine(const char* const pattern = "{}") {
 // error_code
 //
 
-TEST(winapi_logTest, errorcode_LogWin32Error_PrintMessage) {
+TEST(winapi_log_Test, errorcode_LogWin32Error_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
 		const error_code arg{ERROR_ACCESS_DENIED};
@@ -57,7 +57,7 @@ TEST(winapi_logTest, errorcode_LogWin32Error_PrintMessage) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(5\\)"));
 }
 
-TEST(winapi_logTest, errorcode_LogHRESULT_PrintMessage) {
+TEST(winapi_log_Test, errorcode_LogHRESULT_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
 		const error_code arg{E_INVALIDARG};
@@ -68,7 +68,7 @@ TEST(winapi_logTest, errorcode_LogHRESULT_PrintMessage) {
 	EXPECT_THAT(str, t::MatchesRegex(".+\\S \\(0x80070057\\)"));
 }
 
-TEST(winapi_logTest, errorcode_LastError_PrintMessage) {
+TEST(winapi_log_Test, errorcode_LastError_PrintMessage) {
 	LogLine logLine = GetLogLine();
 	{
 		SetLastError(ERROR_ACCESS_DENIED);
@@ -84,7 +84,7 @@ TEST(winapi_logTest, errorcode_LastError_PrintMessage) {
 // LARGE_INTEGER
 //
 
-TEST(winapi_logTest, LARGEINTEGER_Log_PrintValue) {
+TEST(winapi_log_Test, LARGEINTEGER_Log_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const LARGE_INTEGER arg = {.LowPart = 0xFFu, .HighPart = -1L};
@@ -100,7 +100,7 @@ TEST(winapi_logTest, LARGEINTEGER_Log_PrintValue) {
 // ULARGE_INTEGER
 //
 
-TEST(winapi_logTest, ULARGEINTEGER_Log_PrintValue) {
+TEST(winapi_log_Test, ULARGEINTEGER_Log_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const ULARGE_INTEGER arg = {.LowPart = 0xFFu, .HighPart = 0xFFu};
@@ -116,7 +116,7 @@ TEST(winapi_logTest, ULARGEINTEGER_Log_PrintValue) {
 // HINSTANCE
 //
 
-TEST(winapi_logTest, HINSTANCE_LogValue_PrintValue) {
+TEST(winapi_log_Test, HINSTANCE_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	char sz[1024];
 	{
@@ -129,7 +129,7 @@ TEST(winapi_logTest, HINSTANCE_LogValue_PrintValue) {
 	EXPECT_EQ(sz, str);
 }
 
-TEST(winapi_logTest, HINSTANCE_LogNullptr_PrintZero) {
+TEST(winapi_log_Test, HINSTANCE_LogNullptr_PrintZero) {
 	LogLine logLine = GetLogLine();
 	{
 		const HINSTANCE arg = nullptr;  // NOLINT(misc-misplaced-const): We DO want a const variable.
@@ -145,7 +145,7 @@ TEST(winapi_logTest, HINSTANCE_LogNullptr_PrintZero) {
 // POINT
 //
 
-TEST(winapi_logTest, POINT_LogValue_PrintValue) {
+TEST(winapi_log_Test, POINT_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const POINT arg = {-10, 20};
@@ -156,7 +156,7 @@ TEST(winapi_logTest, POINT_LogValue_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(winapi_logTest, POINT_LogInline_PrintValue) {
+TEST(winapi_log_Test, POINT_LogInline_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		logLine << POINT{-10, 20};
@@ -166,7 +166,7 @@ TEST(winapi_logTest, POINT_LogInline_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(winapi_logTest, POINT_LogValuePrintPadded_PrintPadded) {
+TEST(winapi_log_Test, POINT_LogValuePrintPadded_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const POINT arg = {-10, 20};
@@ -177,7 +177,7 @@ TEST(winapi_logTest, POINT_LogValuePrintPadded_PrintPadded) {
 	EXPECT_EQ("(-010,  020)", str);
 }
 
-TEST(winapi_logTest, POINT_LogPointerValue_PrintValue) {
+TEST(winapi_log_Test, POINT_LogPointerValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const POINT value = {-10, 20};
@@ -189,7 +189,7 @@ TEST(winapi_logTest, POINT_LogPointerValue_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(winapi_logTest, POINT_LogPointerNullptr_PrintNull) {
+TEST(winapi_log_Test, POINT_LogPointerNullptr_PrintNull) {
 	LogLine logLine = GetLogLine();
 	{
 		const POINT* const arg = nullptr;
@@ -200,7 +200,7 @@ TEST(winapi_logTest, POINT_LogPointerNullptr_PrintNull) {
 	EXPECT_EQ("(null)", str);
 }
 
-TEST(winapi_logTest, POINT_LogPointerValueWithCustomformat_PrintValue) {
+TEST(winapi_log_Test, POINT_LogPointerValueWithCustomformat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const POINT value = {-10, 20};
@@ -212,7 +212,7 @@ TEST(winapi_logTest, POINT_LogPointerValueWithCustomformat_PrintValue) {
 	EXPECT_EQ("(-10, 20)", str);
 }
 
-TEST(winapi_logTest, POINT_LogPointerNullptrWithCustomformat_PrintNull) {
+TEST(winapi_log_Test, POINT_LogPointerNullptrWithCustomformat_PrintNull) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const POINT* const arg = nullptr;
@@ -223,7 +223,7 @@ TEST(winapi_logTest, POINT_LogPointerNullptrWithCustomformat_PrintNull) {
 	EXPECT_EQ("nullptr", str);
 }
 
-TEST(winapi_logTest, POINT_LogPointerValuePrintPadded_PrintPadded) {
+TEST(winapi_log_Test, POINT_LogPointerValuePrintPadded_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const POINT value = {-10, 20};
@@ -235,7 +235,7 @@ TEST(winapi_logTest, POINT_LogPointerValuePrintPadded_PrintPadded) {
 	EXPECT_EQ("(-010,  020)", str);
 }
 
-TEST(winapi_logTest, POINT_LogPointerNullptrPrintPadded_PrintNull) {
+TEST(winapi_log_Test, POINT_LogPointerNullptrPrintPadded_PrintNull) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const POINT* const arg = nullptr;
@@ -246,7 +246,7 @@ TEST(winapi_logTest, POINT_LogPointerNullptrPrintPadded_PrintNull) {
 	EXPECT_EQ("(null)", str);
 }
 
-TEST(winapi_logTest, POINT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded) {
+TEST(winapi_log_Test, POINT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
 	{
 		const POINT value = {-10, 20};
@@ -258,7 +258,7 @@ TEST(winapi_logTest, POINT_LogPointerValuePrintPaddedWithCustomformat_PrintPadde
 	EXPECT_EQ("(-010,  020)", str);
 }
 
-TEST(winapi_logTest, POINT_LogPointerNullptrPrintPaddedWithCustomFormat_PrintNull) {
+TEST(winapi_log_Test, POINT_LogPointerNullptrPrintPaddedWithCustomFormat_PrintNull) {
 	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
 	{
 		const POINT* const arg = nullptr;
@@ -274,7 +274,7 @@ TEST(winapi_logTest, POINT_LogPointerNullptrPrintPaddedWithCustomFormat_PrintNul
 // RECT
 //
 
-TEST(winapi_logTest, RECT_LogValue_PrintValue) {
+TEST(winapi_log_Test, RECT_LogValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const RECT arg = {-10, 20, 30, 40};
@@ -285,7 +285,7 @@ TEST(winapi_logTest, RECT_LogValue_PrintValue) {
 	EXPECT_EQ("((-10, 20) - (30, 40))", str);
 }
 
-TEST(winapi_logTest, RECT_LogValuePrintPadded_PrintPadded) {
+TEST(winapi_log_Test, RECT_LogValuePrintPadded_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const RECT arg = {-10, 20, 30, 40};
@@ -296,7 +296,7 @@ TEST(winapi_logTest, RECT_LogValuePrintPadded_PrintPadded) {
 	EXPECT_EQ("((-010,  020) - ( 030,  040))", str);
 }
 
-TEST(winapi_logTest, RECT_LogPointerValue_PrintValue) {
+TEST(winapi_log_Test, RECT_LogPointerValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
 		const RECT value = {-10, 20, 30, 40};
@@ -308,7 +308,7 @@ TEST(winapi_logTest, RECT_LogPointerValue_PrintValue) {
 	EXPECT_EQ("((-10, 20) - (30, 40))", str);
 }
 
-TEST(winapi_logTest, RECT_LogPointerNullptr_PrintNull) {
+TEST(winapi_log_Test, RECT_LogPointerNullptr_PrintNull) {
 	LogLine logLine = GetLogLine();
 	{
 		const RECT* const arg = nullptr;
@@ -319,7 +319,7 @@ TEST(winapi_logTest, RECT_LogPointerNullptr_PrintNull) {
 	EXPECT_EQ("(null)", str);
 }
 
-TEST(winapi_logTest, RECT_LogPointerValueWithCustomformat_PrintValue) {
+TEST(winapi_log_Test, RECT_LogPointerValueWithCustomformat_PrintValue) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const RECT value = {-10, 20, 30, 40};
@@ -331,7 +331,7 @@ TEST(winapi_logTest, RECT_LogPointerValueWithCustomformat_PrintValue) {
 	EXPECT_EQ("((-10, 20) - (30, 40))", str);
 }
 
-TEST(winapi_logTest, RECT_LogPointerNullptrWithCustomformat_PrintNull) {
+TEST(winapi_log_Test, RECT_LogPointerNullptrWithCustomformat_PrintNull) {
 	LogLine logLine = GetLogLine("{:?nullptr}");
 	{
 		const RECT* const arg = nullptr;
@@ -342,7 +342,7 @@ TEST(winapi_logTest, RECT_LogPointerNullptrWithCustomformat_PrintNull) {
 	EXPECT_EQ("nullptr", str);
 }
 
-TEST(winapi_logTest, RECT_LogPointerValuePrintPadded_PrintPadded) {
+TEST(winapi_log_Test, RECT_LogPointerValuePrintPadded_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const RECT value = {-10, 20, 30, 40};
@@ -354,7 +354,7 @@ TEST(winapi_logTest, RECT_LogPointerValuePrintPadded_PrintPadded) {
 	EXPECT_EQ("((-010,  020) - ( 030,  040))", str);
 }
 
-TEST(winapi_logTest, RECT_LogPointerNullptrPrintPadded_PrintNull) {
+TEST(winapi_log_Test, RECT_LogPointerNullptrPrintPadded_PrintNull) {
 	LogLine logLine = GetLogLine("{:0= 4}");
 	{
 		const RECT* const arg = nullptr;
@@ -365,7 +365,7 @@ TEST(winapi_logTest, RECT_LogPointerNullptrPrintPadded_PrintNull) {
 	EXPECT_EQ("(null)", str);
 }
 
-TEST(winapi_logTest, RECT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded) {
+TEST(winapi_log_Test, RECT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded) {
 	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
 	{
 		const RECT value = {-10, 20, 30, 40};
@@ -377,7 +377,7 @@ TEST(winapi_logTest, RECT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded
 	EXPECT_EQ("((-010,  020) - ( 030,  040))", str);
 }
 
-TEST(winapi_logTest, RECT_LogPointerNullptrPrintPaddedWithCustomFormat_PrintNull) {
+TEST(winapi_log_Test, RECT_LogPointerNullptrPrintPaddedWithCustomFormat_PrintNull) {
 	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
 	{
 		const RECT* const arg = nullptr;
