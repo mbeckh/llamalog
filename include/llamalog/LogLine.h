@@ -600,6 +600,12 @@ private:
 	std::unique_ptr<std::byte[]> m_heapBuffer;  ///< The buffer on the heap if the stack buffer became too small.
 };
 
+#ifdef __clang_analyzer__
+// make clang happy and define in namespace for ADL. MSVC can't find correct overload when the declaration is present.
+LogLine& operator<<(LogLine& logLine, std::align_val_t arg);
+LogLine& operator<<(LogLine& logLine, const std::align_val_t* arg);
+#endif
+
 }  // namespace llamalog
 
 
