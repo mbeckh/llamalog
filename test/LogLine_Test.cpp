@@ -123,8 +123,9 @@ template <>
 struct fmt::formatter<llamalog::test::CustomTypeTrivial> {
 public:
 	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) {
-		auto it = ctx.begin();
-		while (*it != '}') {
+		auto it = ctx.end();
+		const auto last = ctx.end();
+		while (it != last && *it != '}') {
 			++it;
 		}
 		return it;
@@ -140,7 +141,8 @@ struct fmt::formatter<llamalog::test::CustomTypeCopyOnly> {
 public:
 	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) {
 		auto it = ctx.begin();
-		while (*it != '}') {
+		const auto last = ctx.end();
+		while (it != last && *it != '}') {
 			++it;
 		}
 		return it;
@@ -156,7 +158,8 @@ struct fmt::formatter<llamalog::test::CustomTypeMove> {
 public:
 	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) {
 		auto it = ctx.begin();
-		while (*it != '}') {
+		const auto last = ctx.end();
+		while (it != last && *it != '}') {
 			++it;
 		}
 		return it;
@@ -907,7 +910,7 @@ TEST(LogLine_Test, charptr_IsValue_PrintValue) {
 TEST(LogLine_Test, charptr_IsUtf8_PrintUtf8) {
 	LogLine logLine = GetLogLine();
 	{
-		const char* const arg = "\u00C3\u00BC";
+		const char* const arg = reinterpret_cast<const char*>(u8"\u00FC");
 		logLine << arg << escape(arg);
 	}
 	const std::string str = logLine.GetLogMessage();

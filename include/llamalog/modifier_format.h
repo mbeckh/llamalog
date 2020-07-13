@@ -87,7 +87,7 @@ struct fmt::formatter<llamalog::internal::PointerArgument<T>> : public llamalog:
 	/// @return see `fmt::formatter::format`.
 	fmt::format_context::iterator format(const llamalog::internal::PointerArgument<T>& arg, fmt::format_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 		const T* const obj = reinterpret_cast<const T*>(&arg);
-		return Format(fmt::internal::make_arg<fmt::format_context>(*obj), ctx);
+		return Format(fmt::detail::make_arg<fmt::format_context>(*obj), ctx);
 	}
 };
 
@@ -101,6 +101,6 @@ struct fmt::formatter<llamalog::internal::EscapedArgument<T>> : public llamalog:
 	/// @return see `fmt::formatter::format`.
 	fmt::format_context::iterator format(const llamalog::internal::EscapedArgument<T>& arg, fmt::format_context& ctx) const {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 		const T* const obj = reinterpret_cast<const T*>(&arg);
-		return Format(fmt::internal::make_arg<fmt::format_context>(*obj), ctx);
+		return Format(fmt::detail::make_arg<fmt::format_context>(*obj), ctx);
 	}
 };

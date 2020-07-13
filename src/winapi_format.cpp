@@ -132,11 +132,12 @@ constexpr char kSuppressErrorCode = '%';  ///< @brief Special character used in 
 
 fmt::format_parse_context::iterator fmt::formatter<llamalog::error_code>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto it = ctx.begin();
-	if (it != ctx.end() && *it == ':') {
+	const auto last = ctx.end();
+	if (it != last && *it == ':') {
 		++it;
 	}
 	auto end = it;
-	while (end != ctx.end() && *end != '}') {
+	while (end != last && *end != '}') {
 		++end;
 	}
 	if (end - it == 1 && *it == llamalog::kSuppressErrorCode) {
@@ -170,11 +171,12 @@ fmt::format_context::iterator fmt::formatter<llamalog::error_code>::format(const
 
 fmt::format_parse_context::iterator fmt::formatter<POINT>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto it = ctx.begin();
-	if (it != ctx.end() && *it == ':') {
+	const auto last = ctx.end();
+	if (it != last && *it == ':') {
 		++it;
 	}
 	auto end = it;
-	while (end != ctx.end() && *end != '}') {
+	while (end != last && *end != '}') {
 		++end;
 	}
 	constexpr std::size_t kGroupingCharacters = 4;
@@ -195,11 +197,12 @@ fmt::format_context::iterator fmt::formatter<POINT>::format(const POINT& arg, fm
 
 fmt::format_parse_context::iterator fmt::formatter<RECT>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto it = ctx.begin();
-	if (it != ctx.end() && *it == ':') {
+	const auto last = ctx.end();
+	if (it != last && *it == ':') {
 		++it;
 	}
 	auto end = it;
-	while (end != ctx.end() && *end != '}') {
+	while (end != last && *end != '}') {
 		++end;
 	}
 	constexpr std::size_t kGroupingCharacters = 13;

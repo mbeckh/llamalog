@@ -45,15 +45,15 @@ template <typename T, bool kPointer, bool kEscape>
 fmt::format_context::format_arg CreateFormatArg(_In_reads_bytes_(sizeof(T)) const std::byte* __restrict const objectData) noexcept {
 	if constexpr (kPointer) {
 		if constexpr (kEscape) {
-			return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<EscapedArgument<const PointerArgument<T>*>*>(objectData));
+			return fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<EscapedArgument<const PointerArgument<T>*>*>(objectData));
 		} else {
-			return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PointerArgument<T>*>(objectData));
+			return fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const PointerArgument<T>*>(objectData));
 		}
 	} else {
 		if constexpr (kEscape) {
-			return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<EscapedArgument<const T*>*>(objectData));
+			return fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<EscapedArgument<const T*>*>(objectData));
 		} else {
-			return fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const T*>(objectData));
+			return fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const T*>(objectData));
 		}
 	}
 }

@@ -75,10 +75,10 @@ template <typename T>
 void DecodeArgument(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const std::byte* __restrict const pData = &buffer[position + sizeof(TypeId)];
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<T>*>(pData)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<T>*>(pData)));
 	} else {
 		const T arg = GetValue<T>(pData);
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(arg));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(arg));
 	}
 	position += kTypeSize<T>;
 }
@@ -93,9 +93,9 @@ void DecodeArgument(_Inout_ std::vector<fmt::format_context::format_arg>& args, 
 template <>
 void DecodeArgument<marker::NullValue>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<marker::NullValue>*>(buffer)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<marker::NullValue>*>(buffer)));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const marker::NullValue*>(buffer)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const marker::NullValue*>(buffer)));
 	}
 	position += kTypeSize<marker::NullValue>;
 }
@@ -115,9 +115,9 @@ void DecodeArgument<const char*>(_Inout_ std::vector<fmt::format_context::format
 	static_assert(alignof(char) == 1, "alignment of char");
 
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<const InlineChar>*>(&buffer[position + sizeof(TypeId)])));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<const InlineChar>*>(&buffer[position + sizeof(TypeId)])));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const InlineChar*>(&buffer[position + sizeof(TypeId)])));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const InlineChar*>(&buffer[position + sizeof(TypeId)])));
 	}
 	position += kTypeSize<const char*> + length * sizeof(char);
 }
@@ -136,9 +136,9 @@ void DecodeArgument<const wchar_t*>(_Inout_ std::vector<fmt::format_context::for
 
 	const std::byte* __restrict const pData = &buffer[position + sizeof(TypeId)];
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<const InlineWideChar>*>(pData)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<const InlineWideChar>*>(pData)));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const InlineWideChar*>(pData)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const InlineWideChar*>(pData)));
 	}
 	position += kTypeSize<const wchar_t*> + padding + length * static_cast<LogLine::Size>(sizeof(wchar_t));
 }
@@ -158,9 +158,9 @@ void DecodePointer(_Inout_ std::vector<fmt::format_context::format_arg>& args, _
 
 	const std::byte* __restrict const pData = &buffer[offset];
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<internal::PointerArgument<T>>*>(pData)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<internal::PointerArgument<T>>*>(pData)));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::PointerArgument<T>*>(pData)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::PointerArgument<T>*>(pData)));
 	}
 	position += kTypeSize<T> + padding;
 }
@@ -209,9 +209,9 @@ template <>
 void DecodeArgument<StackBasedException>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const StackBasedException* const pException = DecodeStackBasedException(buffer, position);
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<StackBasedException>*>(pException)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<StackBasedException>*>(pException)));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*pException));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*pException));
 	}
 }
 
@@ -226,9 +226,9 @@ template <>
 void DecodeArgument<StackBasedSystemError>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const StackBasedException* const pException = DecodeStackBasedException(buffer, position);
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<StackBasedSystemError>*>(pException)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<StackBasedSystemError>*>(pException)));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const StackBasedSystemError*>(pException)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const StackBasedSystemError*>(pException)));
 	}
 
 	position += sizeof(StackBasedSystemError);
@@ -245,9 +245,9 @@ template <>
 void DecodeArgument<HeapBasedException>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const HeapBasedException* const pException = DecodeHeapBasedException(buffer, position);
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<HeapBasedException>*>(pException)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<HeapBasedException>*>(pException)));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*pException));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*pException));
 	}
 }
 
@@ -262,9 +262,9 @@ template <>
 void DecodeArgument<HeapBasedSystemError>(_Inout_ std::vector<fmt::format_context::format_arg>& args, _In_ const std::byte* __restrict const buffer, _Inout_ LogLine::Size& position) {
 	const HeapBasedException* const pException = DecodeHeapBasedException(buffer, position);
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<HeapBasedSystemError>*>(pException)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<HeapBasedSystemError>*>(pException)));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const HeapBasedSystemError*>(pException)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const HeapBasedSystemError*>(pException)));
 	}
 
 	position += sizeof(HeapBasedSystemError);
@@ -282,9 +282,9 @@ void DecodeArgument<PlainException>(_Inout_ std::vector<fmt::format_context::for
 	const LogLine::Length length = GetValue<LogLine::Length>(&buffer[position + sizeof(TypeId) + offsetof(PlainException, length)]);
 
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<PlainException>*>(&buffer[position + sizeof(TypeId)])));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<PlainException>*>(&buffer[position + sizeof(TypeId)])));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PlainException*>(&buffer[position + sizeof(TypeId)])));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const PlainException*>(&buffer[position + sizeof(TypeId)])));
 	}
 	position += kTypeSize<PlainException> + length * sizeof(char);
 }
@@ -302,9 +302,9 @@ void DecodeArgument<PlainSystemError>(_Inout_ std::vector<fmt::format_context::f
 
 	const std::byte* __restrict const pData = &buffer[position + sizeof(TypeId)];
 	if (IsEscaped(static_cast<TypeId>(buffer[position]))) {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<PlainSystemError>*>(pData)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const internal::EscapedArgument<PlainSystemError>*>(pData)));
 	} else {
-		args.push_back(fmt::internal::make_arg<fmt::format_context>(*reinterpret_cast<const PlainSystemError*>(pData)));
+		args.push_back(fmt::detail::make_arg<fmt::format_context>(*reinterpret_cast<const PlainSystemError*>(pData)));
 	}
 	position += kTypeSize<PlainSystemError> + length * sizeof(char);
 }

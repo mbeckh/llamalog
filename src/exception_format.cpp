@@ -615,12 +615,12 @@ bool Format(const T& arg, std::string::const_iterator start, const std::string::
 
 fmt::format_parse_context::iterator ExceptionBaseFormatter::parse(fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto start = ctx.begin();
-	if (start != ctx.end() && *start == ':') {
+	auto const last = ctx.end();
+	if (start != last && *start == ':') {
 		++start;
 	}
 	int open = 1;
 	auto end = start;
-	auto const last = ctx.end();
 	while (end != last && (*end != '}' || open > 1)) {
 		if (*end == '\\') {
 			if (++end == last) {

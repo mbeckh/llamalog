@@ -167,7 +167,7 @@ TEST(winapi_log_Test, POINT_LogInline_PrintValue) {
 }
 
 TEST(winapi_log_Test, POINT_LogValuePrintPadded_PrintPadded) {
-	LogLine logLine = GetLogLine("{:0= 4}");
+	LogLine logLine = GetLogLine("{: > 04}");
 	{
 		const POINT arg = {-10, 20};
 		logLine << arg;
@@ -224,7 +224,7 @@ TEST(winapi_log_Test, POINT_LogPointerNullptrWithCustomformat_PrintNull) {
 }
 
 TEST(winapi_log_Test, POINT_LogPointerValuePrintPadded_PrintPadded) {
-	LogLine logLine = GetLogLine("{:0= 4}");
+	LogLine logLine = GetLogLine("{: > 04}");
 	{
 		const POINT value = {-10, 20};
 		const POINT* const arg = &value;
@@ -236,7 +236,7 @@ TEST(winapi_log_Test, POINT_LogPointerValuePrintPadded_PrintPadded) {
 }
 
 TEST(winapi_log_Test, POINT_LogPointerNullptrPrintPadded_PrintNull) {
-	LogLine logLine = GetLogLine("{:0= 4}");
+	LogLine logLine = GetLogLine("{: > 04}");
 	{
 		const POINT* const arg = nullptr;
 		logLine << arg;
@@ -247,7 +247,7 @@ TEST(winapi_log_Test, POINT_LogPointerNullptrPrintPadded_PrintNull) {
 }
 
 TEST(winapi_log_Test, POINT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded) {
-	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
+	LogLine logLine = GetLogLine("{: > 04?nullptr}");
 	{
 		const POINT value = {-10, 20};
 		const POINT* const arg = &value;
@@ -286,7 +286,7 @@ TEST(winapi_log_Test, RECT_LogValue_PrintValue) {
 }
 
 TEST(winapi_log_Test, RECT_LogValuePrintPadded_PrintPadded) {
-	LogLine logLine = GetLogLine("{:0= 4}");
+	LogLine logLine = GetLogLine("{: > 04}");
 	{
 		const RECT arg = {-10, 20, 30, 40};
 		logLine << arg;
@@ -343,7 +343,7 @@ TEST(winapi_log_Test, RECT_LogPointerNullptrWithCustomformat_PrintNull) {
 }
 
 TEST(winapi_log_Test, RECT_LogPointerValuePrintPadded_PrintPadded) {
-	LogLine logLine = GetLogLine("{:0= 4}");
+	LogLine logLine = GetLogLine("{: > 04}");
 	{
 		const RECT value = {-10, 20, 30, 40};
 		const RECT* const arg = &value;
@@ -355,7 +355,7 @@ TEST(winapi_log_Test, RECT_LogPointerValuePrintPadded_PrintPadded) {
 }
 
 TEST(winapi_log_Test, RECT_LogPointerNullptrPrintPadded_PrintNull) {
-	LogLine logLine = GetLogLine("{:0= 4}");
+	LogLine logLine = GetLogLine("{: > 04}");
 	{
 		const RECT* const arg = nullptr;
 		logLine << arg;
@@ -366,7 +366,7 @@ TEST(winapi_log_Test, RECT_LogPointerNullptrPrintPadded_PrintNull) {
 }
 
 TEST(winapi_log_Test, RECT_LogPointerValuePrintPaddedWithCustomformat_PrintPadded) {
-	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
+	LogLine logLine = GetLogLine("{: > 04?nullptr}");
 	{
 		const RECT value = {-10, 20, 30, 40};
 		const RECT* const arg = &value;
@@ -378,7 +378,7 @@ TEST(winapi_log_Test, RECT_LogPointerValuePrintPaddedWithCustomformat_PrintPadde
 }
 
 TEST(winapi_log_Test, RECT_LogPointerNullptrPrintPaddedWithCustomFormat_PrintNull) {
-	LogLine logLine = GetLogLine("{:0= 4?nullptr}");
+	LogLine logLine = GetLogLine("{: > 04?nullptr}");
 	{
 		const RECT* const arg = nullptr;
 		logLine << arg;

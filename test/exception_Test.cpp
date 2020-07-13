@@ -74,7 +74,7 @@ public:
 	/// @param ctx see `fmt::formatter::parse`.
 	/// @return see `fmt::formatter::parse`.
 	fmt::format_parse_context::iterator parse(const fmt::format_parse_context& ctx) {
-		return ctx.begin();
+		return ctx.end();
 	}
 
 	/// @brief Format the `llamalog::error_code`.

@@ -73,14 +73,15 @@ fmt::format_parse_context::iterator InlineCharBaseFormatter::parse(const fmt::fo
 
 fmt::format_parse_context::iterator fmt::formatter<llamalog::marker::NullValue>::parse(const fmt::format_parse_context& ctx) {  // NOLINT(readability-identifier-naming): MUST use name as in fmt::formatter.
 	auto it = ctx.begin();
-	while (it != ctx.end() && (*it == ':' || (*it != '?' && *it != '}'))) {
+	const auto last = ctx.end();
+	while (it != last && (*it == ':' || (*it != '?' && *it != '}'))) {
 		++it;
 	}
-	if (it != ctx.end() && *it == '?') {
+	if (it != last && *it == '?') {
 		++it;
 	}
 	auto end = it;
-	while (end != ctx.end() && *end != '}') {
+	while (end != last && *end != '}') {
 		++end;
 	}
 	if (it == end) {
