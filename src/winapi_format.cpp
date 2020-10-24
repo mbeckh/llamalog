@@ -60,8 +60,13 @@ fmt::format_context::iterator PostProcessErrorMessage(_In_reads_(length) wchar_t
 		}
 	}
 
+	if (!length) {
+		// calling WideCharToMultiByte with input length 0 is an error
+		return ctx.out();
+	}
+
 	DWORD lastError;  // NOLINT(cppcoreguidelines-init-variables): Guaranteed to be initialized before first read.
-	if (constexpr std::uint_fast16_t kFixedBufferSize = 256; length <= kFixedBufferSize) {
+	if (constexpr std::size_t kFixedBufferSize = 256; length <= kFixedBufferSize) {
 		// try with a fixed size buffer
 		char sz[kFixedBufferSize];
 		const int sizeInBytes = WideCharToMultiByte(CP_UTF8, 0, message, static_cast<int>(length), sz, sizeof(sz), nullptr, nullptr);

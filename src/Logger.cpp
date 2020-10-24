@@ -130,7 +130,7 @@ public:
 	}
 
 public:
-	///< @brief The number of elements in the buffer.
+	/// @brief The number of elements in the buffer.
 	/// @details The size of `m_buffer` is just under 8 MB (to account for the two atomic fields.
 	/// @copyright Same as `Buffer::size` from NanoLog.
 	static constexpr std::uint_fast32_t kBufferSize =
@@ -593,7 +593,7 @@ void CallNoExcept(const char* __restrict const file, const std::uint32_t line, c
 
 void Panic(const char* const file, const std::uint32_t line, const char* const function, const char* const message) noexcept {
 	// avoid anything that could cause an error
-	constexpr std::size_t kDefaultBufferSize = 1024;
+	static constexpr std::size_t kDefaultBufferSize = 1024;
 	char msg[kDefaultBufferSize];
 	if (sprintf_s(msg, "PANIC: %s @ %s(%s:%" PRIu32 ")\n", message, function, file, line) < 0) {  // NOLINT(cppcoreguidelines-pro-type-vararg): sprintf_s as a last resort.
 		OutputDebugStringA("PANIC: Error writing log\n");

@@ -19,7 +19,6 @@ limitations under the License.
 #include "marker_format.h"
 
 #include "buffer_management.h"
-#include "marker_types.h"
 
 #include "llamalog/LogLine.h"
 #include "llamalog/Logger.h"
@@ -31,8 +30,6 @@ limitations under the License.
 
 #include <algorithm>
 #include <cstddef>
-#include <cstdint>
-#include <cstring>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -119,11 +116,15 @@ fmt::format_context::iterator fmt::formatter<llamalog::marker::InlineWideChar>::
 	const std::byte* __restrict const buffer = reinterpret_cast<const std::byte*>(&arg);
 
 	const llamalog::LogLine::Length length = llamalog::buffer::GetValue<llamalog::LogLine::Length>(buffer);
+	if (!length) {
+		// calling WideCharToMultiByte with input length 0 is an error
+		return ctx.out();
+	}
 	const llamalog::LogLine::Align padding = llamalog::buffer::GetPadding<wchar_t>(&buffer[sizeof(length)]);
 	const wchar_t* const wstr = reinterpret_cast<const wchar_t*>(&buffer[sizeof(length) + padding]);
 
 	DWORD lastError;  // NOLINT(cppcoreguidelines-init-variables): Guaranteed to be initialized before first read.
-	if (constexpr std::uint_fast16_t kFixedBufferSize = 256; length <= kFixedBufferSize) {
+	if (constexpr llamalog::LogLine::Length kFixedBufferSize = 256; length <= kFixedBufferSize) {
 		// try with a fixed size buffer
 		char sz[kFixedBufferSize];
 		const int sizeInBytes = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(length), sz, sizeof(sz), nullptr, nullptr);

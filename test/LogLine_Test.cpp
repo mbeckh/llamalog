@@ -896,6 +896,16 @@ TEST(LogLine_Test, charptr_IsLiteral_PrintValue) {
 	EXPECT_EQ("Test Test", str);
 }
 
+TEST(LogLine_Test, charptr_IsLiteralEmpty_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		logLine << "" << escape("");
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(" ", str);
+}
+
 TEST(LogLine_Test, charptr_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
@@ -905,6 +915,17 @@ TEST(LogLine_Test, charptr_IsValue_PrintValue) {
 	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test Test", str);
+}
+
+TEST(LogLine_Test, charptr_IsValueEmpty_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const char* const arg = "";
+		logLine << arg << escape(arg);
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(" ", str);
 }
 
 TEST(LogLine_Test, charptr_IsUtf8_PrintUtf8) {
@@ -995,6 +1016,16 @@ TEST(LogLine_Test, wcharptr_IsLiteral_PrintValue) {
 	EXPECT_EQ("Test Test", str);
 }
 
+TEST(LogLine_Test, wcharptr_IsLiteralEmpty_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		logLine << L"" << escape(L"");
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(" ", str);
+}
+
 TEST(LogLine_Test, wcharptr_IsValue_PrintValue) {
 	LogLine logLine = GetLogLine();
 	{
@@ -1004,6 +1035,17 @@ TEST(LogLine_Test, wcharptr_IsValue_PrintValue) {
 	const std::string str = logLine.GetLogMessage();
 
 	EXPECT_EQ("Test Test", str);
+}
+
+TEST(LogLine_Test, wcharptr_IsValueEmpty_PrintValue) {
+	LogLine logLine = GetLogLine();
+	{
+		const wchar_t* const arg = L"";
+		logLine << arg << escape(arg);
+	}
+	const std::string str = logLine.GetLogMessage();
+
+	EXPECT_EQ(" ", str);
 }
 
 TEST(LogLine_Test, wcharptr_IsUtf8_PrintUtf8) {
