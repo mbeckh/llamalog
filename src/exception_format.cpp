@@ -163,7 +163,7 @@ template <typename T>
 		} else if (*it == ']') {
 			if (--open == 0) {
 				fmt::basic_memory_buffer<char, kDefaultBufferSize> buf;
-				std::back_insert_iterator<fmt::format_context::iterator::container_type> subOut(buf);
+				fmt::format_context::iterator subOut(buf);
 				if (Format<T>(arg, start, it, ctx, subOut, args)) {
 					std::copy(buf.begin(), buf.end(), out);
 					formatted = true;
@@ -653,7 +653,7 @@ fmt::format_context::iterator ExceptionFormatter<T>::format(const T& arg, fmt::f
 	std::vector<fmt::format_context::format_arg> args;
 
 	fmt::basic_memory_buffer<char, kDefaultBufferSize> buf;
-	std::back_insert_iterator<fmt::format_context::iterator::container_type> out(buf);
+	fmt::format_context::iterator out(buf);
 	const std::string& format = GetFormat();
 	Format(arg, format.cbegin(), format.cend(), ctx, out, args);
 	return std::copy(buf.begin(), buf.end(), ctx.out());

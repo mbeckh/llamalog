@@ -71,12 +71,12 @@ jobs:
 
     - name: Configure Debug arguments
       if: matrix.configuration == 'Debug'
-      run: echo "::set-env name=analyze_args::-D_DEBUG"
+      run: echo "analyze_args=-D_DEBUG" >> $GITHUB_ENV
       shell: bash
 
     - name: Configure Release arguments
       if: matrix.configuration != 'Debug'
-      run: echo "::set-env name=analyze_args::-DNDEBUG"
+      run: echo "analyze_args=-DNDEBUG" >> $GITHUB_ENV
       shell: bash
 
     - name: Analyze code
